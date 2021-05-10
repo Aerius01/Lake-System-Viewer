@@ -19,7 +19,7 @@ public class BrowserFileLoadingDialog : MonoBehaviour
     {
         Debug.Log(fileUrl);
         UrlTextField.text = fileUrl;
-        StartCoroutine(LoadBlob(fileUrl));
+        // StartCoroutine(LoadBlob(fileUrl));
     }
 
     IEnumerator LoadBlob(string url)
