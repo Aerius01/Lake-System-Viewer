@@ -8,11 +8,11 @@ public class BrowserFileLoadingDialog : MonoBehaviour
 {
     public Text UrlTextField;
 
-    [DllImport("__Internal")] private static extern void AddClickListenerForFileDialog();
+    [DllImport("__Internal")] private static extern void FileUploaderInit();
 
     void Start()
     {
-        AddClickListenerForFileDialog();
+        FileUploaderInit();
     }
 
     public void FileDialogResult(string fileUrl)
@@ -22,16 +22,16 @@ public class BrowserFileLoadingDialog : MonoBehaviour
         // StartCoroutine(LoadBlob(fileUrl));
     }
 
-    IEnumerator LoadBlob(string url)
-    {
-        UnityWebRequest webRequest = UnityWebRequest.Get(url);
-        yield return webRequest.SendWebRequest();
+    // IEnumerator LoadBlob(string url)
+    // {
+    //     UnityWebRequest webRequest = UnityWebRequest.Get(url);
+    //     yield return webRequest.SendWebRequest();
 
-        if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
-        {
-        // Get text content like this:
-        Debug.Log(webRequest.downloadHandler.text);
+    //     if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
+    //     {
+    //     // Get text content like this:
+    //     Debug.Log(webRequest.downloadHandler.text);
 
-        }
-    }
+    //     }
+    // }
 }

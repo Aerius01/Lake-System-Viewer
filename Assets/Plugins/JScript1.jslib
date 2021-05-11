@@ -1,31 +1,24 @@
 mergeInto(
   LibraryManager.library,
   {
-    AddClickListenerForFileDialog: function () {
-      document.addEventListener('click', function () {
-
-        var fileuploader = document.getElementById('fileuploader');
-        if (!fileuploader) {
-          fileuploader = document.createElement('input');
-          fileuploader.setAttribute('style', 'display:none;');
-          fileuploader.setAttribute('type', 'file');
-          fileuploader.setAttribute('id', 'fileuploader');
-          fileuploader.setAttribute('class', '');
-          document.getElementsByTagName('body')[0].appendChild(fileuploader);
-
-          fileuploader.onchange = function (e) {
-            var files = e.target.files;
-            for (var i = 0, f; f = files[i]; i++) {
-              window.alert(URL.createObjectURL(f));
-              SendMessage('BrowserFileLoading', 'FileDialogResult', URL.createObjectURL(f));
-            }
-          };
+    FileUploaderInit: function() {
+      var fileInput = document.getElementById('fileInput');
+      if (!fileInput) {
+        fileInput = document.createElement('fileInput');
+        fileInput.setAttribute('type', 'file');
+        fileInput.setAttribute('id', 'fileuploader');
+      }
+      fileInput.onclick = function (event) {
+        this.value = null;
+      };
+      fileInput.onchange = function (event) {
+        var files = e.target.files;
+        for (var i = 0, f; f = files[i]; i++) {
+          window.alert(URL.createObjectURL(f));
+          SendMessage('BrowserFileLoading', 'FileDialogResult', URL.createObjectURL(f));
         }
-        if (fileuploader.getAttribute('class') == 'focused') {
-          fileuploader.setAttribute('class', '');
-          fileuploader.click();
-        }
-      });
+      }
+      document.body.appendChild(fileInput);
     }
   }
 );
