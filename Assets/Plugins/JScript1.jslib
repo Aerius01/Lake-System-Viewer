@@ -33,10 +33,11 @@ mergeInto(
 
         var files = event.target.files;
         for (var i = 0, f; f = files[i]; i++) {
-          var objectPath = URL.createObjectURL(f)
-          window.alert(objectPath);
+          var objectPath = URL.createObjectURL(f);
 
+          SendMessage('BrowserFileLoading', 'FileDialogResult', "1");
           SendMessage('BrowserFileLoading', 'FileDialogResult', objectPath);
+          SendMessage('BrowserFileLoading', 'FileDialogResult', "5");
         }
       }
       document.body.appendChild(fileInput);

@@ -28,11 +28,11 @@ public class BrowserFileLoadingDialog : MonoBehaviour
     //     UnityWebRequest webRequest = UnityWebRequest.Get(url);
     //     yield return webRequest.SendWebRequest();
 
-        // if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
-        // {
-        // // Get text content like this:
-        // Debug.Log(webRequest.downloadHandler.text);
+    //     if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
+    //     {
+    //     // Get text content like this:
+    //     Debug.Log(webRequest.downloadHandler.text);
 
-        // }
+    //     }
     // }
 }
