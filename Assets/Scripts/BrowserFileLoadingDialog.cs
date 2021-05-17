@@ -17,22 +17,24 @@ public class BrowserFileLoadingDialog : MonoBehaviour
 
     public void FileDialogResult(string fileUrl)
     {
-        Debug.Log(fileUrl);
-        // UrlTextField.text = fileUrl;
-        // StartCoroutine(LoadBlob(fileUrl));
+        StartCoroutine(LoadBlob(fileUrl));
     }
 
-    // IEnumerator LoadBlob(string url)
-    // {
-    //     Debug.Log(url);
-    //     UnityWebRequest webRequest = UnityWebRequest.Get(url);
-    //     yield return webRequest.SendWebRequest();
+    IEnumerator LoadBlob(string url)
+    {
+        Debug.Log(url);
+        UnityWebRequest webRequest = UnityWebRequest.Get(url);
+        yield return webRequest.SendWebRequest();
+        Debug.Log("Done");
 
-    //     if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
-    //     {
-    //     // Get text content like this:
-    //     Debug.Log(webRequest.downloadHandler.text);
+        if (webRequest.result != UnityWebRequest.Result.ConnectionError && webRequest.result != UnityWebRequest.Result.ProtocolError)
+        {
+        // Get text content like this:
+        // Debug.Log(webRequest.downloadHandler.text);
 
-    //     }
-    // }
+        Debug.Log(webRequest.downloadHandler.text.GetType());
+        Debug.Log(webRequest.downloadHandler.text.Length);
+
+        }
+    }
 }
