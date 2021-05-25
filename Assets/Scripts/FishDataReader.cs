@@ -7,8 +7,8 @@ public class FishDataReader : MonoBehaviour
 {
     public TextAsset csvFile;
 
-    public bool hasHeaders;
-
+    public bool hasHeaders, removeIdRow;
+    
     string[,] stringGrid;
 
     Dictionary<string, string[,]> parsedData;

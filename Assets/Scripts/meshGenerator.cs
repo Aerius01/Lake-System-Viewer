@@ -58,8 +58,6 @@ public class meshGenerator : MonoBehaviour
                 }
 
                 colors[(z * numberOfCols) + x] = gradient.Evaluate(Mathf.InverseLerp(minTerrainHeight, maxTerrainHeight, vertices[(z * numberOfCols) + x].y));
-                //uvs[(z * numberOfCols) + x] = new Vector2((float)x / numberOfCols, (float)z / numberOfRows);
-
             }
             
             if (z < numberOfRows - 1){
