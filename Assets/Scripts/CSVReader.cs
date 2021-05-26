@@ -24,7 +24,7 @@ public class CSVReader
 
             // find how many dead entries per row
             int x = row.Length - 1;
-            while (string.IsNullOrEmpty(row[x].Replace("\"", "").Replace(" ", "")) || string.IsNullOrWhiteSpace(row[x].Replace("\"", "").Replace(" ", "")))
+            while (string.IsNullOrEmpty(row[x].Replace("\"", "").Trim()) || string.IsNullOrWhiteSpace(row[x].Replace("\"", "").Trim()))
             {
                 x--;
 
@@ -35,7 +35,7 @@ public class CSVReader
                 }
                 else
                 {
-                    string tempChar = row[x].Replace("\"", "").Replace(" ", "");
+                    string tempChar = row[x].Replace("\"", "").Trim();
                 
                     // if the new position holds a non-trivial value, this is the end of the row
                     if (!string.IsNullOrEmpty(tempChar) && !string.IsNullOrWhiteSpace(tempChar))
@@ -81,7 +81,7 @@ public class CSVReader
 
             for (int x = 0 + intRemoveIdCol; x < totalColumns; x++)
             {
-                string tempChar = row[x].Replace("\"", "").Replace(" ", "");
+                string tempChar = row[x].Replace("\"", "").Trim();
                 if(string.IsNullOrEmpty(tempChar) || string.IsNullOrWhiteSpace(tempChar))
                 {
                     outputGrid[x - intRemoveIdCol, y - intHasHeaders] = "99999";
@@ -111,7 +111,7 @@ public class CSVReader
 
             for (int x = 0 + intRemoveIdCol; x < totalColumns; x++)
             {
-                string tempChar = row[x].Replace("\"", "").Replace(" ", "");
+                string tempChar = row[x].Replace("\"", "").Trim();
                 if(string.IsNullOrEmpty(tempChar) || string.IsNullOrWhiteSpace(tempChar))
                 {
                     vertices[index] = new Vector3(x, 99999f, z);
@@ -136,7 +136,7 @@ public class CSVReader
     }
 
     public float convertStringLatValue(string stringLat){
-        double doubleLat = double.Parse(stringLat.Replace("\"", "").Replace(" ", ""));
+        double doubleLat = double.Parse(stringLat.Replace("\"", "").Trim());
 
         if (doubleLat > maxLat || doubleLat < minLat)
         {
@@ -147,7 +147,7 @@ public class CSVReader
     }
 
     public float convertStringLongValue(string stringLong){
-        double doubleLong = double.Parse(stringLong.Replace("\"", "").Replace(" ", ""));
+        double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
 
         if (doubleLong > maxLong || doubleLong < minLong)
         {

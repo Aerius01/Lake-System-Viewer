@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System;
 
 public class FishDataReader : MonoBehaviour
 {
@@ -22,10 +23,8 @@ public class FishDataReader : MonoBehaviour
         
         parsedData = createDataStructure(stringGrid);
 
-        Debug.Log(parsedData["74000"][3,0]);
-        // Debug.Log(csvReader.convertStringLongValue(csvReader.minLong.ToString()));
-        // Debug.Log(csvReader.convertStringLatValue(csvReader.minLat.ToString()));
-        // Debug.Log(csvReader.convertStringLatValue(csvReader.maxLong.ToString()));
+        Debug.Log(parsedData["59800"][3,0]);
+        Debug.Log(DateTime.Parse(parsedData["59800"][3,0]));
 
     }
 
@@ -50,7 +49,7 @@ public class FishDataReader : MonoBehaviour
 
         for (int y = 0; y < array.GetLength(1); y++)
         {
-            arraySlice[y] = array[column, y];
+            arraySlice[y] = array[column, y].Trim();
         }
 
         return arraySlice;
@@ -93,7 +92,7 @@ public class FishDataReader : MonoBehaviour
         for (int y = 0; y < cutSize; y++)
         {
             for (int x = 0; x <= to - from; x++ ){
-                arraySlice[x, y] = array[x + from, y + firstInstance]; 
+                arraySlice[x, y] = array[x + from, y + firstInstance].Trim(); 
             }
         }
 
