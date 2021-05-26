@@ -7,89 +7,35 @@ public class FishDataReader : MonoBehaviour
 {
     public TextAsset csvFile;
 
-    public bool hasHeaders, removeIdRow;
+    public bool hasHeaders, removeIdCol;
     
     string[,] stringGrid;
 
     Dictionary<string, string[,]> parsedData;
 
+    private CSVReader csvReader = new CSVReader();
+
     // Start is called before the first frame update
     void Start()
     {
-        stringGrid = readCSV(csvFile.text);
+        stringGrid = csvReader.readCSVOutput2DString(csvFile.text, hasHeaders, removeIdCol);
+        
         parsedData = createDataStructure(stringGrid);
 
-        Debug.Log(parsedData["74000"][0,0]);
+        Debug.Log(parsedData["74000"][3,0]);
+        // Debug.Log(csvReader.convertStringLongValue(csvReader.minLong.ToString()));
+        // Debug.Log(csvReader.convertStringLatValue(csvReader.minLat.ToString()));
+        // Debug.Log(csvReader.convertStringLatValue(csvReader.maxLong.ToString()));
 
     }
 
-    string[,] readCSV(string csvText)
-    {
-        // split the data on split line character
-        string[] lines = csvText.Split("\n"[0]);
-
-        // find the max number of columns
-        int totalColumns = 0;
-        int nullRowCounter = 0;
-        for (int i = 0; i < lines.Length; i++)
-        {
-            string[] row = lines[i].Split(',');
-            totalColumns = Mathf.Max(totalColumns, row.Length);
-
-            if(nullInRow(row) == true){
-                nullRowCounter++;
-            }
-        }
-
-        // define output grid size dependent on whether headers exist
-        string[,] outputGrid;
-        if (hasHeaders == true){
-            outputGrid = new string[totalColumns, lines.Length - nullRowCounter - 1];
-        }
-        else {
-            outputGrid = new string[totalColumns, lines.Length - nullRowCounter];
-        }
-
-        // if a row has an empty string or a null, skip it
-        for (int k = 0, y = 0; y < lines.Length; y++)
-        {
-            if (y == 0 && hasHeaders == true){
-                y++;
-            }
-
-            string[] row = lines[y].Split(',');
-            if(nullInRow(row) == true){
-                continue;
-            }
-            else {
-                for (int x = 0; x < row.Length; x++){
-                    outputGrid[x, k] = row[x];
-                } 
-                k++;
-            }
-        }
-
-        return outputGrid;
-    }
-
-    bool nullInRow(string[] currentRow){
-
-        for (int x = 0; x < currentRow.Length; x++){
-            if (string.IsNullOrEmpty(currentRow[x]) == true){
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // Dictionary<int, List<Object>>
     Dictionary<string, string[,]> createDataStructure(string[,] stringGrid){
 
         string[] stringKeys = SliceCol(stringGrid, 0).Distinct().ToArray();
 
         Dictionary<string, string[,]> dataSet = new Dictionary<string, string[,]>();
-        foreach (string key in stringKeys){
+        foreach (string key in stringKeys)
+        {
             string[,] positions = SliceMultipleColsByKey(stringGrid, 1, 4, key);
             dataSet.Add(key, positions);
         }
