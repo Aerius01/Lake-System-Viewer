@@ -6,6 +6,9 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter))]
 public class meshGenerator : MonoBehaviour
 {
+    // TODO: break the class into generator and reader classes
+    // TODO: have the reader class inherit from CSVReader
+    
     Mesh mesh;
     int[] triangles;
     Color[] colors;

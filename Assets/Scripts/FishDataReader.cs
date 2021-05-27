@@ -6,25 +6,27 @@ using System;
 
 public class FishDataReader : MonoBehaviour
 {
+    // TODO: sort data by DateTime for each fish ID
+    // TODO: have the Dictionary hold the actual types and not the strings
+    // TODO: rework the class to inherit from CSVReader
+
     public TextAsset csvFile;
 
     public bool hasHeaders, removeIdCol;
-    
-    string[,] stringGrid;
 
-    Dictionary<string, string[,]> parsedData;
+    public static Dictionary<string, string[,]> parsedData {get; private set;}
 
     private CSVReader csvReader = new CSVReader();
 
     // Start is called before the first frame update
     void Start()
     {
-        stringGrid = csvReader.readCSVOutput2DString(csvFile.text, hasHeaders, removeIdCol);
+        string[,] stringGrid = csvReader.readCSVOutput2DString(csvFile.text, hasHeaders, removeIdCol);
         
         parsedData = createDataStructure(stringGrid);
 
-        Debug.Log(parsedData["59800"][3,0]);
-        Debug.Log(DateTime.Parse(parsedData["59800"][3,0]));
+        // Debug.Log(parsedData["59800"][3,0]);
+        // Debug.Log(DateTime.Parse(parsedData["59800"][3,0]));
 
     }
 
