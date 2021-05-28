@@ -7,16 +7,16 @@ public class TimeManager : MonoBehaviour
 {
     public static DateTime dateTimer {get; private set;}
 
-    public float speedUpCoefficient = 10f;
+    public static float speedUpCoefficient = 10f;
 
     // Start is called before the first frame update
-    void Start()
+    public static void StartTime(DateTime startTime)
     {
-        dateTimer = DateTime.Parse("2015-11-01 00:00:18");
+        dateTimer = startTime;
     }
 
     // Update is called once per frame
-    void Update()
+    public static void UpdateTime()
     {
         dateTimer = dateTimer.AddSeconds(Time.deltaTime * speedUpCoefficient);
         // Debug.Log(String.Format("{0} {1:00}:{2:00}:{3:00}", dateTimer.Date, dateTimer.Hour, dateTimer.Minute, dateTimer.Second));

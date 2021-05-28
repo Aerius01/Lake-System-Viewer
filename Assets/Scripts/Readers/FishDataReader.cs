@@ -20,15 +20,23 @@ public class FishDataReader : CSVReader
 
     public string[,] stringGrid;
 
+    public static DateTime earliestTimeStamp {get; private set;}
+    public static DateTime latestTimeStamp {get; private set;}
 
     public void ReadFishData() {
         stringGrid = readCSVOutput2DString(csvFile.text);
+        earliestTimeStamp = latestTimeStamp = DateTime.Parse(stringGrid[4,0].Trim());
     }
 
 
     public void ConvertStructure()
     {
         parsedData = createDataStructure(stringGrid);
+
+        foreach (int key in parsedData.Keys)
+        {
+            Debug.Log(key);
+        }
 
         // for (int i = 0; i < 4; i++){
         //     Debug.Log(String.Format("{0}, {1}, {2}, {3}", parsedData[59800][i].x, parsedData[59800][i].y, parsedData[59800][i].z, parsedData[59800][i].obsTime));
@@ -91,9 +99,20 @@ public class FishDataReader : CSVReader
             record.x = convertStringLongValue(array[1, y + firstInstance]);
             record.y = convertStringLatValue(array[2, y + firstInstance]);
             record.z = - float.Parse(array[3, y + firstInstance].Trim());
-            record.obsTime = DateTime.Parse(array[4, y + firstInstance].Trim());
 
+            DateTime parsedDate = DateTime.Parse(array[4, y + firstInstance].Trim());
+            record.obsTime = parsedDate;
             slicedList.Add(record);
+
+            // Establish the bounds on the global data set timestamps
+            if (parsedDate > latestTimeStamp)
+            {
+                latestTimeStamp = parsedDate;
+            }
+            if (parsedDate < earliestTimeStamp)
+            {
+                earliestTimeStamp = parsedDate;
+            }
         }
 
         DataPointClass[] sorted = slicedList.OrderBy(f => f.obsTime).ToArray();
