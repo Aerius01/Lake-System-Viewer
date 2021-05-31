@@ -33,10 +33,10 @@ public class FishDataReader : CSVReader
     {
         parsedData = createDataStructure(stringGrid);
 
-        foreach (int key in parsedData.Keys)
-        {
-            Debug.Log(key);
-        }
+        // foreach (int key in parsedData.Keys)
+        // {
+        //     Debug.Log(key);
+        // }
 
         // for (int i = 0; i < 4; i++){
         //     Debug.Log(String.Format("{0}, {1}, {2}, {3}", parsedData[59800][i].x, parsedData[59800][i].y, parsedData[59800][i].z, parsedData[59800][i].obsTime));

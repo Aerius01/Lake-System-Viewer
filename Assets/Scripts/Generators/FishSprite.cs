@@ -33,7 +33,7 @@ public class FishSprite
 
     public void UpdateFish()
     {
-        if (TimeManager.dateTimer >= startTime || TimeManager.dateTimer <= endTime)
+        if (TimeManager.dateTimer >= startTime && TimeManager.dateTimer <= endTime)
         {
             if(sr.enabled == false)
             {
@@ -47,9 +47,8 @@ public class FishSprite
             {
                 if (FishDataReader.parsedData[fishID][currentRung].obsTime >= currentTime)
                 {
-
                     Vector3 startPos = new Vector3(fish.transform.position.x, fish.transform.position.y, fish.transform.position.z);
-                    Vector3 endPos = new Vector3(FishDataReader.parsedData[fishID][currentRung].x, FishDataReader.parsedData[fishID][currentRung].z, FishDataReader.parsedData[fishID][currentRung].y);
+                    Vector3 endPos = new Vector3(FishDataReader.parsedData[fishID][currentRung].x, FishDataReader.parsedData[fishID][currentRung].z, FishDataReader.parsedData[fishID][currentRung].y) - MeshDataReader.centeringVector;
                     float ratio = Convert.ToSingle((double)(currentTime - FishDataReader.parsedData[fishID][currentRung - 1].obsTime).Ticks / (double)(FishDataReader.parsedData[fishID][currentRung].obsTime - FishDataReader.parsedData[fishID][currentRung - 1].obsTime).Ticks);
                     
                     fish.transform.position = Vector3.Lerp(startPos, endPos, ratio);
@@ -65,6 +64,10 @@ public class FishSprite
             }
             
             fish.transform.LookAt(mainCam.transform);
+        }
+        else if (TimeManager.dateTimer > endTime)
+        {
+            sr.enabled = false;
         }
     }
 }

@@ -68,7 +68,6 @@ public class CSVReader : MonoBehaviour
         }
 
         return (lines);
-
     }
 
     public string[,] readCSVOutput2DString(string csvText)

@@ -11,6 +11,8 @@ public class MeshGenerator : MonoBehaviour
     Color[] colors;
     public Gradient gradient;
     Vector3[] vertices;
+    Vector2[] uv;
+    MeshDataReader meshReader;
 
     // Start is called before the first frame update
     public void StartMeshGen()
@@ -21,20 +23,42 @@ public class MeshGenerator : MonoBehaviour
 
         CreateShape();
         UpdateMesh();
+        PlaceWater();
+    }
+
+    void PlaceWater()
+    {
+        GameObject waterBlock = GameObject.Find("WaterBlock");
+        waterBlock.transform.position = new Vector3(0,-0.3f,0);
+        waterBlock.transform.localScale = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
     }
 
     void CreateShape()
     {
         // Initialize arrays
-        vertices = MeshDataReader.vertices;
-
-        MeshDataReader meshReader = GameObject.Find("ScriptObject").GetComponent<MeshDataReader>();
+        meshReader = GameObject.Find("ScriptObject").GetComponent<MeshDataReader>();
 
         int numberOfCols = meshReader.totalColumns - meshReader.intRemoveIdCol;
-        int numberOfRows = meshReader.totalRows - meshReader.intHasHeaders;
+        int numberOfRows = meshReader.totalRows - meshReader.intHasHeaders; 
+
+        vertices = new Vector3[MeshDataReader.vertices.Length];
+
+        for (int i = 0; i < MeshDataReader.vertices.Length; i++)
+        {
+            vertices[i] = MeshDataReader.vertices[i] - MeshDataReader.centeringVector;
+        }
 
         colors = new Color[vertices.Length];
         triangles = new int [numberOfCols * numberOfRows * 6];
+
+        // Set the UVs
+        uv = new Vector2[vertices.Length];
+		for (int i = 0, y = 0; y < numberOfRows; y++) {
+			for (int x = 0; x < numberOfCols; x++, i++) {
+				uv[i] = new Vector2((float)x / numberOfCols, (float)y / numberOfRows);
+                //Debug.Log(string.Format("x: {0}, y: {1}", uv[i].x, uv[i].y));
+			}
+		}
 
         float maxTerrainHeight = 0;
         float minTerrainHeight = 0;
@@ -81,6 +105,7 @@ public class MeshGenerator : MonoBehaviour
         mesh.vertices = vertices;
         mesh.colors = colors;
         mesh.triangles = triangles;
+        mesh.uv = uv;
         mesh.RecalculateNormals();
     }
 
