@@ -33,10 +33,14 @@ public class FishSprite
 
     public void UpdateFish()
     {
+        // TODO: have the fish move smoothly and constantly
+        // TODO: have the fish spawn at initial location
         if (TimeManager.dateTimer >= startTime && TimeManager.dateTimer <= endTime)
         {
             if(sr.enabled == false)
             {
+                Vector3 startPos = new Vector3(FishDataReader.parsedData[fishID][0].x, FishDataReader.parsedData[fishID][0].z, FishDataReader.parsedData[fishID][0].y) - MeshDataReader.centeringVector;
+                fish.transform.position = startPos;
                 sr.enabled = true;
             }
 
@@ -64,6 +68,7 @@ public class FishSprite
             }
             
             fish.transform.LookAt(mainCam.transform);
+
         }
         else if (TimeManager.dateTimer > endTime)
         {

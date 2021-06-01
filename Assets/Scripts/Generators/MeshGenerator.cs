@@ -30,7 +30,16 @@ public class MeshGenerator : MonoBehaviour
     {
         GameObject waterBlock = GameObject.Find("WaterBlock");
         waterBlock.transform.position = new Vector3(0,-0.3f,0);
-        waterBlock.transform.localScale = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
+        //waterBlock.transform.localScale = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
+        
+        Vector3 scale = transform.localScale;
+        scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
+        transform.localScale = scale;
+
+        // Debug.Log((meshReader.totalColumns - meshReader.intRemoveIdCol - 1));
+        // Debug.Log(waterBlock.GetComponent<MeshRenderer>().bounds.size.x);
+        // Debug.Log((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x);
+
     }
 
     void CreateShape()

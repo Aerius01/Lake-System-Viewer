@@ -1,0 +1,34 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+
+public class SunController : MonoBehaviour
+{
+    // https://www.youtube.com/watch?v=babgYCTyw3Y
+    [SerializeField] private GameObject skyTransform;
+    [SerializeField] private Gradient sunColor;
+
+    public float axisTilt;
+
+    public void AdjustSunPosition()
+    {
+        // TODO: have axisTilt stabilize the intensity. Too severe a tilt keeps dusk lighting for the entire day
+        DateTime currentTime = TimeManager.dateTimer;
+        float sunAngle = (float)currentTime.TimeOfDay.TotalSeconds / 86400;
+
+        skyTransform.transform.localRotation = Quaternion.Euler(new Vector3(axisTilt, 0f, 360f * sunAngle));
+
+        // Control sun intensity
+        Light sun = this.GetComponent<Light>();
+        float intensity = Vector3.Dot(sun.transform.forward, Vector3.down);
+        intensity = Mathf.Clamp01(intensity);
+
+        sun.intensity = intensity;
+
+        sun.color = sunColor.Evaluate(intensity);
+
+    }
+
+
+}

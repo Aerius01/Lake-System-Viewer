@@ -27,5 +27,8 @@ public class ComboReader : MonoBehaviour
 
         FishGenerator fishGenerator = GameObject.Find("SpriteTest").GetComponent<FishGenerator>();
         fishGenerator.UpdateFishPositions();
+
+        SunController sunController = GameObject.Find("Sun").GetComponent<SunController>();
+        sunController.AdjustSunPosition();
     }
 }
