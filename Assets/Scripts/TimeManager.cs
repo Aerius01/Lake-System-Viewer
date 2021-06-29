@@ -7,18 +7,21 @@ public class TimeManager : MonoBehaviour
 {
     public static DateTime dateTimer {get; private set;}
 
-    public static float speedUpCoefficient = 10f;
+    public float speedUpCoefficient = 10f;
+
+    public GameObject fishManager, sunManager;
 
     // Start is called before the first frame update
-    public static void StartTime(DateTime startTime)
+    void Start()
     {
-        dateTimer = startTime;
+        dateTimer = FishDataReader.earliestTimeStamp;
     }
 
     // Update is called once per frame
-    public static void UpdateTime()
+    void Update()
     {
         dateTimer = dateTimer.AddSeconds(Time.deltaTime * speedUpCoefficient);
-        // Debug.Log(String.Format("{0} {1:00}:{2:00}:{3:00}", dateTimer.Date, dateTimer.Hour, dateTimer.Minute, dateTimer.Second));
+        fishManager.GetComponent<FishGenerator>().UpdateFish();
+        sunManager.GetComponent<SunController>().AdjustSunPosition();
     }
 }

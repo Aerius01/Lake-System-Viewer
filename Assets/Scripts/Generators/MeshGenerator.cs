@@ -1,8 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-//[ExecuteInEditMode]
 [RequireComponent(typeof(MeshFilter))]
 public class MeshGenerator : MonoBehaviour
 {
@@ -13,48 +10,36 @@ public class MeshGenerator : MonoBehaviour
     Vector3[] vertices;
     Vector2[] uv;
     MeshDataReader meshReader;
+    public GameObject heightMapUploadObject, waterObject;
+
+    // TODO: make these UI checkboxes
+    public bool hasHeaders, removeIdCol;
 
     // Start is called before the first frame update
-    public void StartMeshGen()
+    void Start()
     {   
         mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
+        this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+
+        meshReader = new MeshDataReader();
+        meshReader.ReadData(heightMapUploadObject, hasHeaders, removeIdCol);
 
         CreateShape();
         UpdateMesh();
         PlaceWater();
     }
 
-    void PlaceWater()
-    {
-        GameObject waterBlock = GameObject.Find("WaterBlock");
-        waterBlock.transform.position = new Vector3(0,-0.3f,0);
-        //waterBlock.transform.localScale = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
-        
-        Vector3 scale = transform.localScale;
-        scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.z);
-        transform.localScale = scale;
-
-        // Debug.Log((meshReader.totalColumns - meshReader.intRemoveIdCol - 1));
-        // Debug.Log(waterBlock.GetComponent<MeshRenderer>().bounds.size.x);
-        // Debug.Log((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterBlock.GetComponent<MeshRenderer>().bounds.size.x);
-
-    }
-
     void CreateShape()
     {
-        // Initialize arrays
-        meshReader = GameObject.Find("ScriptObject").GetComponent<MeshDataReader>();
-
         int numberOfCols = meshReader.totalColumns - meshReader.intRemoveIdCol;
         int numberOfRows = meshReader.totalRows - meshReader.intHasHeaders; 
 
-        vertices = new Vector3[MeshDataReader.vertices.Length];
+        vertices = new Vector3[meshReader.vertices.Length];
 
-        for (int i = 0; i < MeshDataReader.vertices.Length; i++)
+        for (int i = 0; i < meshReader.vertices.Length; i++)
         {
-            vertices[i] = MeshDataReader.vertices[i] - MeshDataReader.centeringVector;
+            vertices[i] = meshReader.vertices[i] - meshReader.centeringVector;
         }
 
         colors = new Color[vertices.Length];
@@ -65,7 +50,6 @@ public class MeshGenerator : MonoBehaviour
 		for (int i = 0, y = 0; y < numberOfRows; y++) {
 			for (int x = 0; x < numberOfCols; x++, i++) {
 				uv[i] = new Vector2((float)x / numberOfCols, (float)y / numberOfRows);
-                //Debug.Log(string.Format("x: {0}, y: {1}", uv[i].x, uv[i].y));
 			}
 		}
 
@@ -118,38 +102,13 @@ public class MeshGenerator : MonoBehaviour
         mesh.RecalculateNormals();
     }
 
-     // http://codesaying.com/unity-parse-excel-in-unity3d/
-    
-    // Vector3[] getVector(string csvText)
-    // {
-    //     // split the data on split line character
-    //     string[] lines = csvText.Split("\n"[0]);
+    void PlaceWater()
+    {
+        waterObject.SetActive(true);
+        waterObject.transform.position = new Vector3(0,-0.3f,0);
 
-    //     // find the max number of columns
-    //     int totalColumns = 0;
-    //     for (int i = 0; i < lines.Length; i++)
-    //     {
-    //         string[] row = lines[i].Split(',');
-    //         totalColumns = Mathf.Max(totalColumns, row.Length);
-    //     }
-
-    //     // creates new 2D string grid to output to
-    //     vertices = new Vector3[(totalColumns-1) * (lines.Length-2)];
-    //     for (int iterator = 0, z = 1; z < lines.Length; z++)
-    //     {
-    //         string[] row = lines[z].Split(',');
-    //         for (int x = 1; x < row.Length; x++)
-    //         {
-    //             vertices[iterator] = new Vector3(x, float.Parse(row[x]), z);
-
-    //             iterator++;
-    //         }
-    //     }
-
-    //     numberOfRows = lines.Length-2;
-    //     numberOfCols = totalColumns-1;
-
-    //     return vertices;
-    // }
-
+        Vector3 scale = transform.localScale;
+        scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
+        transform.localScale = scale;
+    }
 }

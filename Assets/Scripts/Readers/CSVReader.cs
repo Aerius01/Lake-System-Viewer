@@ -1,16 +1,12 @@
 using UnityEngine;
 using System;
 
-public class CSVReader : MonoBehaviour
+public class CSVReader
 {
-    [HideInInspector]
     public int totalColumns, totalRows, intRemoveIdCol, intHasHeaders;
     
     // TODO: automatically read this information --> sequential uploading of files, ie HeightMap first
-    [HideInInspector]
     public static int heightMapXMin = 0, heightMapYMin = 0, heightMapXMax, heightMapYMax;
-
-    public TextAsset csvFile;
 
     public bool hasHeaders, removeIdCol;
 

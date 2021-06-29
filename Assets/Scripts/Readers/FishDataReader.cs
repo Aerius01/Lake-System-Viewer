@@ -16,33 +16,21 @@ public class FishDataReader : CSVReader
 {
     double minLong = 3404493.13224369, maxLong = 3405269.13224369, minLat = 5872333.13262316, maxLat = 5872869.13262316;
     
-    public static Dictionary<int, DataPointClass[]> parsedData {get; private set;}
-
-    public string[,] stringGrid;
+    public Dictionary<int, DataPointClass[]> parsedData {get; private set;}
 
     public static DateTime earliestTimeStamp {get; private set;}
     public static DateTime latestTimeStamp {get; private set;}
 
-    public void ReadFishData() {
-        stringGrid = readCSVOutput2DString(csvFile.text);
+    public void ReadData(GameObject referenceObject, bool Headers, bool IdCol) {
+        hasHeaders = Headers;
+        removeIdCol = IdCol;
+
+        string[,] stringGrid = readCSVOutput2DString(referenceObject.GetComponent<LocalFileBrowser>().csvFile);
+
+        // Initialize time stamps
         earliestTimeStamp = latestTimeStamp = DateTime.Parse(stringGrid[4,0].Trim());
-    }
 
-
-    public void ConvertStructure()
-    {
         parsedData = createDataStructure(stringGrid);
-
-        // foreach (int key in parsedData.Keys)
-        // {
-        //     Debug.Log(key);
-        // }
-
-        // for (int i = 0; i < 4; i++){
-        //     Debug.Log(String.Format("{0}, {1}, {2}, {3}", parsedData[59800][i].x, parsedData[59800][i].y, parsedData[59800][i].z, parsedData[59800][i].obsTime));
-        // }
-        // //Debug.Log(DateTime.Parse(parsedData["59800"][3,0]));
-
     }
 
     Dictionary<int, DataPointClass[]> createDataStructure(string[,] stringGrid){
@@ -58,7 +46,6 @@ public class FishDataReader : CSVReader
         }
         
         return dataSet;
-
     }
 
     string[] SliceCol(string[,] array, int column)

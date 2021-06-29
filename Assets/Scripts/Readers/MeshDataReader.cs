@@ -4,13 +4,16 @@ using UnityEngine;
 
 public class MeshDataReader : CSVReader
 {    
-    public static Vector3[] vertices {get; private set;}
+    [HideInInspector]
+    public Vector3[] vertices;
 
-    public static Vector3 centeringVector;
+    [HideInInspector]
+    public Vector3 centeringVector;
 
-    // Start is called before the first frame update
-    private void Awake() {
-        vertices = readCSVOutputVector3(csvFile.text);
+    public void ReadData(GameObject referenceObject, bool Headers, bool IdCol) {
+        hasHeaders = Headers;
+        removeIdCol = IdCol;
+        vertices = readCSVOutputVector3(referenceObject.GetComponent<LocalFileBrowser>().csvFile);
 
         centeringVector = new Vector3(totalColumns/2, 0, totalRows/2);
     }

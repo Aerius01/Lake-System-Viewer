@@ -11,7 +11,8 @@ public class LocalFileBrowser : MonoBehaviour
     // https://github.com/yasirkula/UnitySimpleFileBrowser
 
     [HideInInspector]
-    public string CsvFile;
+    public string csvFile;
+	public GameObject objectRenderer,canvasObject, timeManagerObject;
 
 	public void ReadStuff()
 	{
@@ -39,11 +40,17 @@ public class LocalFileBrowser : MonoBehaviour
 
 		if( FileBrowser.Success )
 		{
-			CsvFile = FileBrowserHelpers.ReadTextFromFile( FileBrowser.Result[0] );
+			csvFile = FileBrowserHelpers.ReadTextFromFile( FileBrowser.Result[0] );
 
             ColorBlock cb = this.gameObject.GetComponent<Button>().colors;
             cb.normalColor = new Color(0, 1, 0, 1);
             this.gameObject.GetComponent<Button>().colors = cb;
+
+			objectRenderer.SetActive(true);
+			yield return new WaitForSeconds(3f);
+
+			canvasObject.SetActive(false);
+			timeManagerObject.SetActive(true);
 		}
         else
         {
