@@ -39,7 +39,7 @@ public class MeshGenerator : MonoBehaviour
 
         for (int i = 0; i < meshReader.vertices.Length; i++)
         {
-            vertices[i] = meshReader.vertices[i] - meshReader.centeringVector;
+            vertices[i] = meshReader.vertices[i];// - meshReader.centeringVector;
         }
 
         colors = new Color[vertices.Length];
@@ -105,7 +105,7 @@ public class MeshGenerator : MonoBehaviour
     void PlaceWater()
     {
         waterObject.SetActive(true);
-        waterObject.transform.position = new Vector3(0,-0.3f,0);
+        waterObject.transform.position = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1) / 2, -0.3f, (meshReader.totalRows - meshReader.intHasHeaders - 1) / 2);
 
         Vector3 scale = transform.localScale;
         scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);

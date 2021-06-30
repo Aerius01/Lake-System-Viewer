@@ -15,6 +15,7 @@ public class TimeManager : MonoBehaviour
     void Start()
     {
         dateTimer = FishDataReader.earliestTimeStamp;
+        fishManager.GetComponent<FishGenerator>().SetUpFish();
     }
 
     // Update is called once per frame

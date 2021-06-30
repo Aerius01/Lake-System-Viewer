@@ -12,7 +12,7 @@ public class LocalFileBrowser : MonoBehaviour
 
     [HideInInspector]
     public string csvFile;
-	public GameObject objectRenderer,canvasObject, timeManagerObject;
+	public GameObject objectRenderer, canvasObject, timeManagerObject, companionObject;
 
 	public void ReadStuff()
 	{
@@ -47,10 +47,12 @@ public class LocalFileBrowser : MonoBehaviour
             this.gameObject.GetComponent<Button>().colors = cb;
 
 			objectRenderer.SetActive(true);
-			yield return new WaitForSeconds(3f);
 
-			canvasObject.SetActive(false);
-			timeManagerObject.SetActive(true);
+			if (companionObject.GetComponent<LocalFileBrowser>().objectRenderer.activeSelf == true)
+			{
+				canvasObject.SetActive(false);
+				timeManagerObject.SetActive(true);
+			}
 		}
         else
         {

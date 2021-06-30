@@ -14,22 +14,25 @@ public class DataPointClass
 
 public class FishDataReader : CSVReader
 {
+    // TODO: have this be part of the UI
     double minLong = 3404493.13224369, maxLong = 3405269.13224369, minLat = 5872333.13262316, maxLat = 5872869.13262316;
-    
     public Dictionary<int, DataPointClass[]> parsedData {get; private set;}
-
     public static DateTime earliestTimeStamp {get; private set;}
     public static DateTime latestTimeStamp {get; private set;}
+    public string[,] stringGrid;
 
     public void ReadData(GameObject referenceObject, bool Headers, bool IdCol) {
         hasHeaders = Headers;
         removeIdCol = IdCol;
 
-        string[,] stringGrid = readCSVOutput2DString(referenceObject.GetComponent<LocalFileBrowser>().csvFile);
-
+        stringGrid = readCSVOutput2DString(referenceObject.GetComponent<LocalFileBrowser>().csvFile);
+        
         // Initialize time stamps
         earliestTimeStamp = latestTimeStamp = DateTime.Parse(stringGrid[4,0].Trim());
+    }
 
+    public void parseFishData()
+    {
         parsedData = createDataStructure(stringGrid);
     }
 
