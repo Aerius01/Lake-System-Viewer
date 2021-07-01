@@ -6,6 +6,7 @@ using UnityEngine.Networking;
 using System.Runtime.InteropServices;
 public class BrowserFileLoadingDialog : MonoBehaviour
 {
+    // THIS IS FOR THE WEBGL BUILD
     public Text UrlTextField;
 
     [DllImport("__Internal")] private static extern void FileUploaderInit();

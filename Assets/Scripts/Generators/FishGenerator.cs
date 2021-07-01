@@ -90,6 +90,7 @@ public class FishGenerator : MonoBehaviour
     void UpdateFishPosition(Fish fish)
     {
         int currentRung = 1;
+        bool levelFish = false;
 
         while (currentRung < fish.totalReadings)
         {
@@ -101,25 +102,70 @@ public class FishGenerator : MonoBehaviour
                     fish.startPos = new Vector3(fish.dataPoints[currentRung - 1].x, fish.dataPoints[currentRung - 1].z, fish.dataPoints[currentRung - 1].y);
                     fish.endPos = new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z, fish.dataPoints[currentRung].y);
 
-                    // Use the terminal rotation from the previous rung if possible, otherwise the current rotation
-                    if (currentRung >= 2)
-                    {
-                        fish.startOrient = Quaternion.LookRotation(fish.startPos - (new Vector3(fish.dataPoints[currentRung - 2].x, fish.dataPoints[currentRung - 2].z, fish.dataPoints[currentRung - 2].y)), Vector3.up);
-                    }
-                    else
-                    {
-                        fish.startOrient = fish.fishObject.transform.rotation;
-                    }
-
+                    fish.startOrient = fish.fishObject.transform.rotation;
                     fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
                 }
 
                 float ratio = Convert.ToSingle((double)(TimeManager.dateTimer - fish.dataPoints[currentRung - 1].obsTime).Ticks 
                     / (double)(fish.dataPoints[currentRung].obsTime - fish.dataPoints[currentRung - 1].obsTime).Ticks);
 
-                // TODO: make rotations more realistic by leveling the fish off at the end of the motion (prevent a fish from looking straight up)
-                // use an exponentiated inerpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
-                fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio))));
+
+                // Section to enhance fish rotation believability
+                if (Vector3.Magnitude(fish.endPos - fish.startPos) > 5f)
+                {
+                    // longer distance, keep extreme angle but level off in final 20% of movement
+                    if ((fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f) && ratio >= 0.8)
+                    {
+                        levelFish = true;
+
+                        Vector3 currentAngles = fish.endOrient.eulerAngles;
+                        fish.startOrient = fish.fishObject.transform.rotation;
+
+                        if (fish.endOrient.eulerAngles.x > 25f)
+                        {
+                            currentAngles.x = 25f;
+                        }
+                        else
+                        {
+                            currentAngles.x = -25f;
+                        }
+
+                        fish.endOrient = Quaternion.Euler(currentAngles);
+                    }
+                }
+                else
+                {
+                    // shorter distance, remove extreme angles
+                    if (fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f)
+                    {
+                        Vector3 currentAngles = fish.endOrient.eulerAngles;
+                        fish.startOrient = fish.fishObject.transform.rotation;
+
+                        if (fish.endOrient.eulerAngles.x > 25f)
+                        {
+                            currentAngles.x = 25f;
+                        }
+                        else
+                        {
+                            currentAngles.x = -25f;
+                        }
+
+                        fish.endOrient = Quaternion.Euler(currentAngles);
+                    }
+                }
+
+                // SLERP according to required method
+                if (levelFish)
+                {
+                    // map the final range [0.8, 1] to the range [0, 1]
+                    fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(5 * (ratio - 0.8)));
+                }
+                else
+                {
+                    // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
+                    fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio))));
+                }
+
                 fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
 
                 break;
