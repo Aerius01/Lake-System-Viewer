@@ -12,8 +12,7 @@ public class MeshGenerator : MonoBehaviour
     MeshDataReader meshReader;
     public GameObject heightMapUploadObject, waterObject;
 
-    // TODO: make these UI checkboxes
-    public bool hasHeaders, removeIdCol;
+    public float waterLevel;
 
     // Start is called before the first frame update
     void Start()
@@ -22,8 +21,10 @@ public class MeshGenerator : MonoBehaviour
         this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
+        waterLevel = heightMapUploadObject.GetComponent<LocalFileBrowser>().waterLevel;
+
         meshReader = new MeshDataReader();
-        meshReader.ReadData(heightMapUploadObject, hasHeaders, removeIdCol);
+        meshReader.ReadData(heightMapUploadObject, heightMapUploadObject.GetComponent<LocalFileBrowser>().headers, heightMapUploadObject.GetComponent<LocalFileBrowser>().colIDs);
 
         CreateShape();
         UpdateMesh();
@@ -104,8 +105,9 @@ public class MeshGenerator : MonoBehaviour
 
     void PlaceWater()
     {
+        // Can use this for water level adjustment in UI
         waterObject.SetActive(true);
-        waterObject.transform.position = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1) / 2, -0.3f, (meshReader.totalRows - meshReader.intHasHeaders - 1) / 2);
+        waterObject.transform.position = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1) / 2, waterLevel, (meshReader.totalRows - meshReader.intHasHeaders - 1) / 2);
 
         Vector3 scale = transform.localScale;
         scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);

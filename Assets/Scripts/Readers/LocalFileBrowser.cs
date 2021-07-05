@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using SimpleFileBrowser;
+using TMPro;
 
 public class LocalFileBrowser : MonoBehaviour
 {
@@ -12,8 +13,15 @@ public class LocalFileBrowser : MonoBehaviour
 
     [HideInInspector]
     public string csvFile;
-	public GameObject objectRenderer, canvasObject, timeManagerObject, companionObject;
+	public GameObject objectRenderer, canvasObject, timeManagerObject, companionObject, paramsObject;
 
+	[HideInInspector]
+	public bool headers = true, colIDs = true;
+	
+	[HideInInspector]
+	public float waterLevel;
+
+	
 	public void ReadStuff()
 	{
         // Coroutine example
@@ -22,6 +30,30 @@ public class LocalFileBrowser : MonoBehaviour
 
 	IEnumerator ShowLoadDialogCoroutine()
 	{
+		// Set the parameter information
+		if (paramsObject.transform.Find("HeaderToggle").GetComponent<Toggle>().isOn)
+		{
+			headers = true;
+		}
+		else
+		{
+			headers = false;
+		}
+
+		if (paramsObject.transform.Find("ColumnIDToggle").GetComponent<Toggle>().isOn)
+		{
+			colIDs = true;
+		}
+		else
+		{
+			colIDs = false;
+		}
+
+		if (paramsObject.transform.Find("WaterLevelInput") != null)
+		{
+			waterLevel = float.Parse(paramsObject.transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
+		}
+		
 		FileBrowser.SetFilters(true, new FileBrowser.Filter( "CSV File", ".csv" ));
 		FileBrowser.SetDefaultFilter( ".csv" );
 
@@ -47,7 +79,6 @@ public class LocalFileBrowser : MonoBehaviour
             this.gameObject.GetComponent<Button>().colors = cb;
 
 			objectRenderer.SetActive(true);
-
 			if (companionObject.GetComponent<LocalFileBrowser>().objectRenderer.activeSelf == true)
 			{
 				canvasObject.SetActive(false);
