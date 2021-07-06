@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using TMPro;
 
 public class Fish
 {   
@@ -47,6 +48,12 @@ public class FishGenerator : MonoBehaviour
             fish.earliestTime = fishReader.parsedData[key][0].obsTime;
             fish.latestTime = fishReader.parsedData[key][fish.totalReadings - 1].obsTime;
 
+            GameObject obj = (Instantiate (fishPrefab, fish.startPos, fish.startOrient) as GameObject);
+            obj.transform.parent = this.gameObject.transform;
+            obj.name = string.Format("Fish{0}", fish.id);
+            fish.fishObject = obj;
+            obj.SetActive(false);
+
             fishDict.Add(key, fish);
         }
     }
@@ -55,13 +62,8 @@ public class FishGenerator : MonoBehaviour
     {
         foreach (var key in fishDict.Keys)
         {
-            // if before first time step, do nothing
-            if (TimeManager.dateTimer < fishDict[key].earliestTime)
-            {
-
-            }
-            // if after last time step, check if despawned
-            else if (TimeManager.dateTimer > fishDict[key].latestTime)
+            // if before first time step or after last, check if despawned
+            if (TimeManager.dateTimer < fishDict[key].earliestTime || TimeManager.dateTimer > fishDict[key].latestTime)
             {
                 if (fishDict[key].fishObject.activeSelf == true)
                 {
@@ -71,12 +73,9 @@ public class FishGenerator : MonoBehaviour
             else
             {
                 // spawn the fish if it isn't already
-                if (fishDict[key].fishObject == null)
+                if (fishDict[key].fishObject.activeSelf == false)
                 {
-                    GameObject obj = (Instantiate (fishPrefab, fishDict[key].startPos, fishDict[key].startOrient) as GameObject);
-
-                    obj.transform.parent = this.gameObject.transform;
-                    fishDict[key].fishObject = obj;
+                    fishDict[key].fishObject.SetActive(true);
                 }
                 // Update position if already spawned
                 else
@@ -167,6 +166,12 @@ public class FishGenerator : MonoBehaviour
                 }
 
                 fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
+
+                // Update info text
+                Debug.Log(fish.fishObject.transform.Find("Canvas").Find("Panel").transform.Find("Background").transform.Find("InfoText") == null);
+                fish.fishObject.transform.Find("Canvas").Find("Panel").transform.Find("Background").
+                    transform.Find("InfoText").GetComponent<TextMeshProUGUI>().text = string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
+                    fish.id, fish.fishObject.transform.position.y);
 
                 break;
             }
