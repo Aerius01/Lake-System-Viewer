@@ -26,9 +26,23 @@ public class FishDataReader : CSVReader
         removeIdCol = IdCol;
 
         stringGrid = readCSVOutput2DString(referenceObject.GetComponent<LocalFileBrowser>().csvFile);
-        
+
+        // TODO: Combine this with the initial read operations for efficiency. HM have no dates, so only output2dString
         // Initialize time stamps
         earliestTimeStamp = latestTimeStamp = DateTime.Parse(stringGrid[4,0].Trim());
+
+        for (int j = 0; j < stringGrid.GetLength(1); j++)
+        {
+            // Establish the bounds on the global data set timestamps
+            if (DateTime.Parse(stringGrid[4,j].Trim()) > latestTimeStamp)
+            {
+                latestTimeStamp = DateTime.Parse(stringGrid[4,j].Trim());
+            }
+            if (DateTime.Parse(stringGrid[4,j].Trim()) < earliestTimeStamp)
+            {
+                earliestTimeStamp = DateTime.Parse(stringGrid[4,j].Trim());
+            }
+        }
     }
 
     public void parseFishData()
@@ -93,16 +107,6 @@ public class FishDataReader : CSVReader
             DateTime parsedDate = DateTime.Parse(array[4, y + firstInstance].Trim());
             record.obsTime = parsedDate;
             slicedList.Add(record);
-
-            // Establish the bounds on the global data set timestamps
-            if (parsedDate > latestTimeStamp)
-            {
-                latestTimeStamp = parsedDate;
-            }
-            if (parsedDate < earliestTimeStamp)
-            {
-                earliestTimeStamp = parsedDate;
-            }
         }
 
         DataPointClass[] sorted = slicedList.OrderBy(f => f.obsTime).ToArray();

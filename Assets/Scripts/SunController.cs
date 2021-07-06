@@ -17,7 +17,8 @@ public class SunController : MonoBehaviour
         DateTime currentTime = TimeManager.dateTimer;
         float sunAngle = (float)currentTime.TimeOfDay.TotalSeconds / 86400;
 
-        skyTransform.transform.localRotation = Quaternion.Euler(new Vector3(axisTilt, 0f, 360f * sunAngle));
+        // The sun rises at 6h, and sets at 18h
+        skyTransform.transform.localRotation = Quaternion.Euler(new Vector3(axisTilt, 0f, 360f * sunAngle + 90));
 
         // Control sun intensity
         Light sun = this.GetComponent<Light>();
