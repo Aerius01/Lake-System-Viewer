@@ -22,6 +22,7 @@ public class FishGenerator : MonoBehaviour
     Fish fishClass;
     public GameObject fishDataUploadObject, fishPrefab;
     public bool hasHeaders, removeIdCol;
+    public float scalingFactor = 1f;
 
     // Start is called before the first frame update
     private void Start()
@@ -43,7 +44,7 @@ public class FishGenerator : MonoBehaviour
             fish.id = key;
             fish.dataPoints = fishReader.parsedData[key];
             fish.totalReadings = fish.dataPoints.Length;
-            fish.startPos = new Vector3(fishReader.parsedData[key][0].x, fishReader.parsedData[key][0].z, fishReader.parsedData[key][0].y);
+            fish.startPos = new Vector3(fishReader.parsedData[key][0].x, fishReader.parsedData[key][0].z * scalingFactor, fishReader.parsedData[key][0].y);
             fish.startOrient = Quaternion.Euler(0f, 0f, 0f);
             fish.earliestTime = fishReader.parsedData[key][0].obsTime;
             fish.latestTime = fishReader.parsedData[key][fish.totalReadings - 1].obsTime;
@@ -99,10 +100,10 @@ public class FishGenerator : MonoBehaviour
             if (fish.dataPoints[currentRung].obsTime >= TimeManager.dateTimer)
             {
                 // Set the new positions if we're in a different rung
-                if (fish.endPos != new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z, fish.dataPoints[currentRung].y))
+                if (fish.endPos != new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z * scalingFactor, fish.dataPoints[currentRung].y))
                 {
-                    fish.startPos = new Vector3(fish.dataPoints[currentRung - 1].x, fish.dataPoints[currentRung - 1].z, fish.dataPoints[currentRung - 1].y);
-                    fish.endPos = new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z, fish.dataPoints[currentRung].y);
+                    fish.startPos = new Vector3(fish.dataPoints[currentRung - 1].x, fish.dataPoints[currentRung - 1].z * scalingFactor, fish.dataPoints[currentRung - 1].y);
+                    fish.endPos = new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z * scalingFactor, fish.dataPoints[currentRung].y);
 
                     fish.startOrient = fish.fishObject.transform.rotation;
                     fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
@@ -173,7 +174,7 @@ public class FishGenerator : MonoBehaviour
                 // Update info text
                 fish.canvasObject.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
                     GetComponent<TextMeshProUGUI>().text = string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
-                    fish.id, fish.fishObject.transform.position.y);
+                    fish.id, fish.fishObject.transform.position.y / scalingFactor);
 
                 break;
             }

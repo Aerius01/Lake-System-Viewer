@@ -51,7 +51,15 @@ public class LocalFileBrowser : MonoBehaviour
 
 		if (paramsObject.transform.Find("WaterLevelInput") != null)
 		{
-			waterLevel = float.Parse(paramsObject.transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
+			if (!string.IsNullOrEmpty(paramsObject.transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text) ||
+				!string.IsNullOrWhiteSpace(paramsObject.transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text))
+			{
+				waterLevel = float.Parse(paramsObject.transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
+			}
+			else
+			{
+				waterLevel = 0f;
+			}
 		}
 		
 		FileBrowser.SetFilters(true, new FileBrowser.Filter( "CSV File", ".csv" ));
