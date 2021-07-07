@@ -10,14 +10,14 @@ public class Fish
     public Vector3 startPos, endPos;
     public Quaternion startOrient, endOrient;
     public DateTime earliestTime, latestTime;
-    public GameObject fishObject = null;
+    public GameObject fishObject = null, canvasObject = null;
     public DataPointClass[] dataPoints;
     public int totalReadings, id;
 }
 
 public class FishGenerator : MonoBehaviour
 {
-    Dictionary<int, Fish> fishDict;
+    public static Dictionary<int, Fish> fishDict;
     FishDataReader fishReader;
     Fish fishClass;
     public GameObject fishDataUploadObject, fishPrefab;
@@ -50,8 +50,11 @@ public class FishGenerator : MonoBehaviour
 
             GameObject obj = (Instantiate (fishPrefab, fish.startPos, fish.startOrient) as GameObject);
             obj.transform.parent = this.gameObject.transform;
-            obj.name = string.Format("Fish{0}", fish.id);
+            obj.name = string.Format("{0}", fish.id);
             fish.fishObject = obj;
+            fish.canvasObject = obj.transform.Find("Canvas").gameObject;
+
+            fish.canvasObject.SetActive(false);
             obj.SetActive(false);
 
             fishDict.Add(key, fish);
@@ -168,9 +171,8 @@ public class FishGenerator : MonoBehaviour
                 fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
 
                 // Update info text
-                Debug.Log(fish.fishObject.transform.Find("Canvas").Find("Panel").transform.Find("Background").transform.Find("InfoText") == null);
-                fish.fishObject.transform.Find("Canvas").Find("Panel").transform.Find("Background").
-                    transform.Find("InfoText").GetComponent<TextMeshProUGUI>().text = string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
+                fish.canvasObject.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
+                    GetComponent<TextMeshProUGUI>().text = string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
                     fish.id, fish.fishObject.transform.position.y);
 
                 break;
