@@ -47,6 +47,23 @@ public class EventSystemManager : MonoBehaviour
             }
         }
     }
+    public void DepthLineToggle()
+    {
+        if (settingsMenu.transform.Find("Toggles").transform.Find("DepthLineToggle").GetComponent<Toggle>().isOn)
+        {
+            foreach (var key in FishGenerator.fishDict.Keys)
+            {
+                FishGenerator.fishDict[key].depthLineObject.SetActive(true);
+            }
+        }
+        else
+        {
+            foreach (var key in FishGenerator.fishDict.Keys)
+            {
+                FishGenerator.fishDict[key].depthLineObject.SetActive(false);
+            }
+        }
+    }
 
     public void AdjustWaterHeight()
     {
@@ -83,6 +100,27 @@ public class EventSystemManager : MonoBehaviour
             meshObject.transform.localScale = scaler;
 
             fishManagerObject.GetComponent<FishGenerator>().scalingFactor = scaleValue;
+        }
+    }
+
+    public void AdjustTimeSpeed()
+    {
+        if (!string.IsNullOrEmpty(settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>().text) 
+            || !string.IsNullOrWhiteSpace(settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>().text))
+        {
+            TimeManager timeManager = GameObject.Find("TimeManager").GetComponent<TimeManager>();
+
+            float enteredValue = float.Parse(settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>().text);
+
+            if (enteredValue <= 0)
+            {
+                // we only want positive scaling factors
+                enteredValue = 10f;
+                settingsMenu.transform.Find("Inputs").transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").
+                    GetComponent<TMP_InputField>().text = string.Format("{0}", enteredValue);
+            }
+
+            timeManager.speedUpCoefficient = enteredValue;
         }
     }
 }

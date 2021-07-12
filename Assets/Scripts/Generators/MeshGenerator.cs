@@ -40,7 +40,7 @@ public class MeshGenerator : MonoBehaviour
 
         for (int i = 0; i < meshReader.vertices.Length; i++)
         {
-            vertices[i] = meshReader.vertices[i];// - meshReader.centeringVector;
+            vertices[i] = meshReader.vertices[i];
         }
 
         colors = new Color[vertices.Length];

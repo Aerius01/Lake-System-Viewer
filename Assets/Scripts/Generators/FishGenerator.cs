@@ -10,7 +10,7 @@ public class Fish
     public Vector3 startPos, endPos;
     public Quaternion startOrient, endOrient;
     public DateTime earliestTime, latestTime;
-    public GameObject fishObject = null, canvasObject = null;
+    public GameObject fishObject = null, canvasObject = null, depthLineObject = null;
     public DataPointClass[] dataPoints;
     public int totalReadings, id;
 }
@@ -54,8 +54,10 @@ public class FishGenerator : MonoBehaviour
             obj.name = string.Format("{0}", fish.id);
             fish.fishObject = obj;
             fish.canvasObject = obj.transform.Find("Canvas").gameObject;
+            fish.depthLineObject = obj.transform.Find("DepthLine").gameObject;
 
             fish.canvasObject.SetActive(false);
+            fish.depthLineObject.SetActive(false);
             obj.SetActive(false);
 
             fishDict.Add(key, fish);
@@ -169,12 +171,23 @@ public class FishGenerator : MonoBehaviour
                     fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio))));
                 }
 
-                fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
+                Vector3 LinePoint = fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
 
                 // Update info text
                 fish.canvasObject.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
                     GetComponent<TextMeshProUGUI>().text = string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
                     fish.id, fish.fishObject.transform.position.y / scalingFactor);
+
+                // Update depth indicator line
+                LineRenderer line = fish.fishObject.transform.Find("DepthLine").GetComponent<LineRenderer>();
+                GameObject waterblock = GameObject.Find("WaterBlock");
+                
+                // TODO: find the lake depth at the position of the fish
+                LinePoint.y = - MeshDataReader.maxDepth * scalingFactor;
+                line.SetPosition(0, LinePoint);
+
+                LinePoint.y = waterblock.transform.position.y;
+                line.SetPosition(1, LinePoint);
 
                 break;
             }
