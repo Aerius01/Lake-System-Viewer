@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 [RequireComponent(typeof(MeshFilter))]
 public class MeshGenerator : MonoBehaviour
@@ -105,12 +106,16 @@ public class MeshGenerator : MonoBehaviour
 
     void PlaceWater()
     {
-        // Can use this for water level adjustment in UI
         waterObject.SetActive(true);
         waterObject.transform.position = new Vector3((meshReader.totalColumns - meshReader.intRemoveIdCol - 1) / 2, waterLevel, (meshReader.totalRows - meshReader.intHasHeaders - 1) / 2);
 
         Vector3 scale = transform.localScale;
         scale.Set((meshReader.totalColumns - meshReader.intRemoveIdCol - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (meshReader.totalRows - meshReader.intHasHeaders - 1)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
         transform.localScale = scale;
+
+        // Set the text in the settings menu
+        GameObject.Find("Canvas").transform.Find("MainPanel").transform.Find("Settings").transform.Find("SettingsMenu").
+            transform.Find("Inputs").transform.Find("WaterLevel").transform.Find("WaterLevelInput").
+            GetComponent<TMP_InputField>().text = string.Format("{0}", waterObject.transform.position.y);
     }
 }

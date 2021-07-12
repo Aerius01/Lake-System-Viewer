@@ -12,7 +12,7 @@ public class TimeManager : MonoBehaviour
 
     public float speedUpCoefficient = 10f;
 
-    private float speedUpCoefficientHolder;
+    private bool playBacker = true;
 
     public GameObject fishManager, sunManager, timeDisplayObject, timeSliderObject;
 
@@ -38,23 +38,34 @@ public class TimeManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        dateTimer = dateTimer.AddSeconds(Time.deltaTime * speedUpCoefficient);
-        timeDisplayObject.GetComponent<TextMeshProUGUI>().text = dateTimer.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
-
-        if (!sliderSelect)
+        if (playBacker)
         {
-           // dynamically adjust the slider value
-           slider.normalizedValue = Convert.ToSingle((double)(dateTimer - FishDataReader.earliestTimeStamp).Ticks / (double)totalTicks);
+            dateTimer = dateTimer.AddSeconds(Time.deltaTime * speedUpCoefficient);
+            timeDisplayObject.GetComponent<TextMeshProUGUI>().text = dateTimer.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+
+            if (!sliderSelect)
+            {
+            // dynamically adjust the slider value
+            slider.normalizedValue = Convert.ToSingle((double)(dateTimer - FishDataReader.earliestTimeStamp).Ticks / (double)totalTicks);
+            }
+            
+            fishManager.GetComponent<FishGenerator>().UpdateFish();
+            sunManager.GetComponent<SunController>().AdjustSunPosition();
         }
-        
-        fishManager.GetComponent<FishGenerator>().UpdateFish();
-        sunManager.GetComponent<SunController>().AdjustSunPosition();
     }
 
     // Slider controls
     public void ChangeSlider()
     {
-        dateTimer = FishDataReader.earliestTimeStamp.AddTicks((long)(slider.normalizedValue * totalTicks));
+        if (sliderSelect)
+        {
+            dateTimer = FishDataReader.earliestTimeStamp.AddTicks((long)(slider.normalizedValue * totalTicks));
+
+            foreach (var key in FishGenerator.fishDict.Keys)
+            {
+                FishGenerator.fishDict[key].trailObject.GetComponent<TrailRenderer>().Clear();
+            }
+        }
     }
 
     public void SliderSelected()
@@ -70,15 +81,11 @@ public class TimeManager : MonoBehaviour
     // Playback controls
     public void PlayButton()
     {
-        speedUpCoefficient = speedUpCoefficientHolder;
+        playBacker = true;
     }
 
     public void PauseButton()
     {
-        if (speedUpCoefficient != 0f)
-        {
-            speedUpCoefficientHolder = speedUpCoefficient;
-        }
-        speedUpCoefficient = 0f;
+        playBacker = false;
     }
 }

@@ -10,7 +10,7 @@ public class Fish
     public Vector3 startPos, endPos;
     public Quaternion startOrient, endOrient;
     public DateTime earliestTime, latestTime;
-    public GameObject fishObject = null, canvasObject = null, depthLineObject = null;
+    public GameObject fishObject = null, canvasObject = null, depthLineObject = null, trailObject = null;
     public DataPointClass[] dataPoints;
     public int totalReadings, id;
 }
@@ -55,9 +55,11 @@ public class FishGenerator : MonoBehaviour
             fish.fishObject = obj;
             fish.canvasObject = obj.transform.Find("Canvas").gameObject;
             fish.depthLineObject = obj.transform.Find("DepthLine").gameObject;
+            fish.trailObject = obj.transform.Find("Trail").gameObject;
 
             fish.canvasObject.SetActive(false);
             fish.depthLineObject.SetActive(false);
+            fish.trailObject.SetActive(false);
             obj.SetActive(false);
 
             fishDict.Add(key, fish);

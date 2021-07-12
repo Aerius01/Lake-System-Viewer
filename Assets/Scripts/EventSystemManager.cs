@@ -11,6 +11,8 @@ public class EventSystemManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        settingsMenu.transform.Find("Inputs").transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>().text = "1";
+        settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>().text = "10";
         
     }
 
@@ -61,6 +63,24 @@ public class EventSystemManager : MonoBehaviour
             foreach (var key in FishGenerator.fishDict.Keys)
             {
                 FishGenerator.fishDict[key].depthLineObject.SetActive(false);
+            }
+        }
+    }
+
+    public void TrailToggle()
+    {
+        if (settingsMenu.transform.Find("Toggles").transform.Find("TrailToggle").GetComponent<Toggle>().isOn)
+        {
+            foreach (var key in FishGenerator.fishDict.Keys)
+            {
+                FishGenerator.fishDict[key].trailObject.SetActive(true);
+            }
+        }
+        else
+        {
+            foreach (var key in FishGenerator.fishDict.Keys)
+            {
+                FishGenerator.fishDict[key].trailObject.SetActive(false);
             }
         }
     }
