@@ -6,7 +6,7 @@ using TMPro;
 
 public class EventSystemManager : MonoBehaviour
 {
-    public GameObject settingsMenu, heightMapObject, fishManagerObject;
+    public GameObject settingsMenu, heightMapObject, fishManagerObject, gisTogglePanel, datePickerTogglePanel;
 
     // Start is called before the first frame update
     void Start()
@@ -82,6 +82,33 @@ public class EventSystemManager : MonoBehaviour
             {
                 FishGenerator.fishDict[key].trailObject.SetActive(false);
             }
+        }
+    }
+
+    public void GISToggle()
+    {
+        // This and DatePickerToggle are identical, and can be collapsed
+        GameObject gisToggle = gisTogglePanel.transform.parent.gameObject;
+        if (gisToggle.GetComponent<Toggle>().isOn)
+        {
+            gisTogglePanel.SetActive(true);
+        }
+        else
+        {
+            gisTogglePanel.SetActive(false);
+        }
+    }
+
+    public void datePickerToggle()
+    {
+        GameObject datePickerToggle = datePickerTogglePanel.transform.parent.gameObject;
+        if (datePickerToggle.GetComponent<Toggle>().isOn)
+        {
+            datePickerTogglePanel.SetActive(true);
+        }
+        else
+        {
+            datePickerTogglePanel.SetActive(false);
         }
     }
 

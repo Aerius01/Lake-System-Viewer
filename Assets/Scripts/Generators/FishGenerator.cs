@@ -21,11 +21,13 @@ public class FishGenerator : MonoBehaviour
     FishDataReader fishReader;
     Fish fishClass;
     public GameObject fishDataUploadObject, fishPrefab;
+    [HideInInspector]
     public bool hasHeaders, removeIdCol;
+    [HideInInspector]
     public float scalingFactor = 1f;
 
     // Start is called before the first frame update
-    private void Start()
+    private void Awake()
     {
         fishReader = new FishDataReader();
         fishReader.ReadData(fishDataUploadObject, hasHeaders, removeIdCol);
@@ -110,7 +112,15 @@ public class FishGenerator : MonoBehaviour
                     fish.endPos = new Vector3(fish.dataPoints[currentRung].x, fish.dataPoints[currentRung].z * scalingFactor, fish.dataPoints[currentRung].y);
 
                     fish.startOrient = fish.fishObject.transform.rotation;
-                    fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
+
+                    if (fish.endPos - fish.startPos == new Vector3(0f, 0f, 0f))
+                    {
+                        fish.endOrient = Quaternion.Euler(20f, 0f, 0f);
+                    }
+                    else
+                    {
+                        fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
+                    }
                 }
 
                 float ratio = Convert.ToSingle((double)(TimeManager.dateTimer - fish.dataPoints[currentRung - 1].obsTime).Ticks 

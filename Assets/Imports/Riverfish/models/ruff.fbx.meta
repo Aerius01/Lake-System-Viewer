@@ -1,0 +1,162 @@
+fileFormatVersion: 2
+guid: c680dba5c35d5304299beb4e1ce6dc13
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: Armature
+    100002: body
+    100004: fin_1.L
+    100006: fin_1.L_end
+    100008: fin_1.R
+    100010: fin_1.R_end
+    100012: fin_2.L
+    100014: fin_2.L_end
+    100016: fin_2.R
+    100018: fin_2.R_end
+    100020: fin_3.L
+    100022: fin_3.L_end
+    100024: fin_3.R
+    100026: fin_3.R_end
+    100028: general
+    100030: head
+    100032: mounth
+    100034: mounth_end
+    100036: neak
+    100038: //RootNode
+    100040: ruffe
+    100042: tail
+    100044: tail_1
+    100046: tail_2
+    100048: tail_end
+    100050: head_end
+    100052: ruff
+    100054: ruff_f
+    400000: Armature
+    400002: body
+    400004: fin_1.L
+    400006: fin_1.L_end
+    400008: fin_1.R
+    400010: fin_1.R_end
+    400012: fin_2.L
+    400014: fin_2.L_end
+    400016: fin_2.R
+    400018: fin_2.R_end
+    400020: fin_3.L
+    400022: fin_3.L_end
+    400024: fin_3.R
+    400026: fin_3.R_end
+    400028: general
+    400030: head
+    400032: mounth
+    400034: mounth_end
+    400036: neak
+    400038: ruffe
+    400040: //RootNode
+    400042: tail
+    400044: tail_1
+    400046: tail_2
+    400048: tail_end
+    400050: head_end
+    400052: ruff
+    400054: ruff_f
+    4300000: ruffe
+    4300002: ruff
+    4300004: ruff_f
+    7400000: fish_idle
+    7400002: fish_catch
+    9500000: //RootNode
+    13700000: ruffe
+    13700002: ruff
+    13700004: ruff_f
+    2186277476908879412: ImportLogs
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: fish
+    second: {fileID: 2100000, guid: 926d0e4e01d43a4419cec6cba46d5628, type: 2}
+  materials:
+    importMaterials: 1
+    materialName: 1
+    materialSearch: 1
+    materialLocation: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 0.9999999
+    hasPreviousCalculatedGlobalScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

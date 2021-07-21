@@ -87,6 +87,7 @@ public class LocalFileBrowser : MonoBehaviour
             this.gameObject.GetComponent<Button>().colors = cb;
 
 			objectRenderer.SetActive(true);
+			
 			if (companionObject.GetComponent<LocalFileBrowser>().objectRenderer.activeSelf == true)
 			{
 				canvasObject.SetActive(false);
