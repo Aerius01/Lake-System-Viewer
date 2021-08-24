@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class NavigationScript : MonoBehaviour
 {
-    public GameObject confirmQuitObject;
+    public GameObject confirmQuitObject, fadingMenu;
 
     // Start is called before the first frame update
     public void GoToMesh()
@@ -40,5 +40,16 @@ public class NavigationScript : MonoBehaviour
         }
     }
 
-    // TODO: animation to fade the background
+    public void FadePanel()
+    {
+        if (fadingMenu != null)
+        {
+            Animator animator = fadingMenu.GetComponent<Animator>();
+            if(animator != null)
+            {
+                bool triggerActive = animator.GetBool("Activated");
+                animator.SetBool("Activated", !triggerActive);
+            }
+        }
+    }
 }
