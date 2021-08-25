@@ -3619,7 +3619,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Format:\n - An Excel file\n\n - Cells represent local evenly spaced depth
+  m_text: "Format:\n - A CSV file\n\n - Cells represent local evenly spaced depth
     readings\n\n - The rendered lake will sit at a reference level of 0. All depths
     should be reported relative to this reference level\n\n - The absolute value
     of the depth is used during parsing, and so depths can be reported as positive
@@ -4180,8 +4180,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Format:\n - An Excel file\n\n - Depths need to be reported in identical
-    units to the height map depths\n\n - Position data in GIS coordinates will require
+  m_text: "Format:\n - A CSV file\n\n - Depths need to be reported in identical units
+    to the height map depths\n\n - Position data in GIS coordinates will require
     a bounding box to localize the position data\n\n - Localized GIS position data,
     or data reported in local coordinates, is mapped directly onto the height map"
   m_isRightToLeft: 0

@@ -4,14 +4,16 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Data;
 
 
 public class MeshUploader : MonoBehaviour
 {
-    public GameObject prefabObject, contentPanel;
+    public GameObject prefabObject, contentPanel, paramsPanel;
     public List<GameObject> listOfObjects;
-    private int columnCount, rowCount;
+    private int totalColumnCount, totalRowCount, viewPortColumns, viewPortRows;
     private List<int> clickList;
+    private UploadData parameters;
 
     // Start is called before the first frame update
     void Start()
@@ -30,21 +32,29 @@ public class MeshUploader : MonoBehaviour
     {
         // Get the uploaded file as a DataTable
         NewCSVReader reader = GameObject.Find("MeshReader").GetComponent<NewCSVReader>();
-        columnCount = Math.Min(reader.stringTable.Columns.Count, 20);
-        rowCount = Math.Min(reader.stringTable.Rows.Count, 20);
+
+        totalColumnCount = reader.stringTable.Columns.Count;
+        totalRowCount = reader.stringTable.Rows.Count;
+
+        viewPortColumns = Math.Min(totalColumnCount, 20);
+        viewPortRows = Math.Min(totalRowCount, 20);
+
+        parameters = new UploadData();
+        parameters.uploadTable = reader.stringTable.Copy();
 
         // Adjust layout parameters to simulate the table
         GridLayoutGroup layout = contentPanel.GetComponent<GridLayoutGroup>();
         layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = columnCount;
+        layout.constraintCount = viewPortColumns;
 
         // Set the content window to the size of the displayed data, or the window boundaries (whichever is bigger)
         RectTransform parentTransform = contentPanel.transform.parent.gameObject.GetComponent<RectTransform>();
-        parentTransform.sizeDelta = new Vector2(Math.Max(parentTransform.rect.width, columnCount * (layout.spacing.x + layout.cellSize.x)), Math.Max(parentTransform.rect.height, rowCount * (layout.spacing.y + layout.cellSize.y)));
+        parentTransform.sizeDelta = new Vector2(Math.Max(parentTransform.rect.width, viewPortColumns * (layout.spacing.x +
+            layout.cellSize.x)), Math.Max(parentTransform.rect.height, viewPortRows * (layout.spacing.y + layout.cellSize.y)));
 
-        for (int i = 0; i < rowCount; i++)
+        for (int i = 0; i < viewPortRows; i++)
         {
-            for (int j = 0; j < columnCount; j++)
+            for (int j = 0; j < viewPortColumns; j++)
             {
                 GameObject go = (Instantiate (prefabObject) as GameObject);
                 go.transform.SetParent(contentPanel.transform);
@@ -117,27 +127,134 @@ public class MeshUploader : MonoBehaviour
                 clickList = DetermineGreySquares(i);
                 listOfObjects[i].GetComponent<SCUtils>().clicked = false;
 
+                parameters.ResetParams(i, totalColumnCount, totalRowCount);
+                paramsPanel.transform.Find("StatisticsFrame").transform.
+                    Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = parameters.text;
+
                 break;
             }
         }
-
-        // TODO: fetch standard data to update parameters text
     }
 
     List<int> DetermineGreySquares(int idNumber)
     {
         // Determine the cells above and behind the cell at the passed ID number
         List<int> greySquares = new List<int>();
-        int refValue = idNumber - (int)Math.Floor((double)idNumber/(double)columnCount) * columnCount;
+        int refValue = idNumber - (int)Math.Floor((double)idNumber/(double)viewPortColumns) * viewPortColumns;
 
-        for (int i = 0; i < columnCount * rowCount; i++)
+        for (int i = 0; i < viewPortColumns * viewPortRows; i++)
         {
-            if (i < idNumber || i - (int)Math.Floor((double)i/(double)columnCount) * columnCount < refValue)
+            if (i < idNumber || i - (int)Math.Floor((double)i/(double)viewPortColumns) * viewPortColumns < refValue)
             {
                 greySquares.Add(i);
             }
         }
 
         return greySquares;
+    }
+}
+
+public class UploadData
+{
+    public float maxDepth, minDepth;
+
+    public int columnCount, rowCount, nullCount;
+
+    public DataTable uploadTable;
+
+    public String text;
+
+    public void ResetParams(int i, int maxColumns, int maxRows)
+    {
+        int viewPortColumns = Math.Min(maxColumns, 20);
+        int viewPortRows = Math.Min(maxRows, 20);
+
+        int columnsToRemove = i - (int)Math.Floor((double)i/(double)viewPortColumns) * viewPortColumns;
+        int rowsToRemove = (int)Math.Floor((double)i/(double)viewPortColumns);
+
+        columnCount = maxColumns - columnsToRemove;
+        rowCount = maxRows - rowsToRemove;
+
+        minDepth = int.MaxValue;
+        maxDepth = int.MinValue;
+        nullCount = 0;
+
+        for (int row = rowsToRemove; row < maxRows; row++)
+        {
+            for (int column = columnsToRemove; column < maxColumns; column++)
+            {
+                string stringValue = uploadTable.Rows[row][column].ToString().Trim();
+                if (string.IsNullOrEmpty(stringValue))
+                {
+                    nullCount++;
+                }
+                else
+                {
+                    try
+                    {
+                        float value = float.Parse(stringValue);
+                        minDepth = Math.Min(minDepth, value);
+                        maxDepth = Math.Max(maxDepth, value);
+                    }
+                    catch (FormatException)
+                    {
+                        Debug.Log("Format Exception: At least one entry in your selection could not be converted into a decimal number" +
+                            ", are you sure you've removed all headers and columns in your selection?");
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        text = string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
+            maxDepth, minDepth, columnCount, rowCount, nullCount);
+    }
+
+    public void SetTable(int i, int maxColumns)
+    {
+        int columnsToRemove = i - (int)Math.Floor((double)i/(double)maxColumns) * maxColumns;
+        int rowsToRemove = (int)Math.Floor((double)i/(double)maxColumns);
+
+        // TODO: convert to floats, if failed, raise error.
+
+        // Trim non-data rows/columns
+        for (int r = rowsToRemove; r > 0; r--)
+        {
+            uploadTable.Rows[r].Delete();
+        }
+        uploadTable.AcceptChanges();
+
+        for (int c = columnsToRemove; c > 0; c--)
+        {
+            uploadTable.Columns.RemoveAt(c);
+        }
+        uploadTable.AcceptChanges();
+
+        columnCount = uploadTable.Columns.Count;
+        rowCount = uploadTable.Rows.Count;
+
+        // Find counts
+        minDepth = int.MaxValue;
+        maxDepth = int.MinValue;
+        nullCount = 0;
+
+        foreach (DataRow row in uploadTable.Rows)
+        {
+            for (int column = 0; column < columnCount; column++)
+            {
+                //test for null here
+                if (row[uploadTable.Columns[column]] == DBNull.Value)
+                {
+                    nullCount++;
+                }
+                else
+                {
+                    float value = (float)row[column];
+                    minDepth = Math.Min(minDepth, value);
+                    maxDepth = Math.Max(maxDepth, value);
+                }
+            }
+        }
     }
 }

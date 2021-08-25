@@ -4912,9 +4912,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a3567c52d2b3004a88a1561c860a5f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  reader: {fileID: 0}
   prefabObject: {fileID: 36494870428970452, guid: 92363aad710f14446b53dec388fadfd4, type: 3}
   contentPanel: {fileID: 595713434}
+  paramsPanel: {fileID: 494290942}
   listOfObjects: []
 --- !u!1 &1344655600
 GameObject:

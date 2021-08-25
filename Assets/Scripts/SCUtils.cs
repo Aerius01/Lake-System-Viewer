@@ -19,6 +19,5 @@ public class SCUtils : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler,
     public void OnPointerClick(PointerEventData eventData)
     {
         clicked = true;
-        Debug.Log("clicked");
     }
 }
