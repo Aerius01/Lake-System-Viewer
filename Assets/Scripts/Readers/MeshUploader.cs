@@ -41,6 +41,8 @@ public class MeshUploader : MonoBehaviour
 
         parameters = new UploadData();
         parameters.uploadTable = reader.stringTable.Copy();
+        parameters.paramsPanel = this.paramsPanel;
+        parameters.contentPanel = this.contentPanel;
 
         // Adjust layout parameters to simulate the table
         GridLayoutGroup layout = contentPanel.GetComponent<GridLayoutGroup>();
@@ -63,6 +65,10 @@ public class MeshUploader : MonoBehaviour
                 listOfObjects.Add(go);
             }
         }
+
+        GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
+        instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Please select the upper left corner of your data, excluding headers and ID columns.";
+        instructionPanel.GetComponent<FadeCanvasGroup>().Fade(4f);
     }
 
     void MouseOverGreying()
@@ -164,6 +170,8 @@ public class UploadData
 
     public String text;
 
+    public GameObject paramsPanel, contentPanel;
+
     public void ResetParams(int i, int maxColumns, int maxRows)
     {
         int viewPortColumns = Math.Min(maxColumns, 20);
@@ -198,8 +206,10 @@ public class UploadData
                     }
                     catch (FormatException)
                     {
-                        Debug.Log("Format Exception: At least one entry in your selection could not be converted into a decimal number" +
-                            ", are you sure you've removed all headers and columns in your selection?");
+                        GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
+                        instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Format Exception: At least one entry in your selection could not be converted into a decimal number" +
+                            ", are you sure you've removed all headers and columns in your selection?";
+                        instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
 
                         break;
                     }
@@ -209,6 +219,27 @@ public class UploadData
 
         text = string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
             maxDepth, minDepth, columnCount, rowCount, nullCount);
+        
+        if (nullCount > 0)
+        {
+            CanvasGroup nullcontent = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").gameObject.GetComponent<CanvasGroup>();
+            nullcontent.alpha = 1;
+            nullcontent.interactable = true;
+
+            TextMeshProUGUI textContent = paramsPanel.transform.Find("NullFrame").transform.Find("WarningText").gameObject.GetComponent<TextMeshProUGUI>();
+            textContent.text = "!! Null or NaN values detected";
+            textContent.color = new Color(255f, 0f, 0f, 1f);
+        }
+        else
+        {
+            CanvasGroup nullcontent = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").gameObject.GetComponent<CanvasGroup>();
+            nullcontent.alpha = 0;
+            nullcontent.interactable = false;
+
+            TextMeshProUGUI textContent = paramsPanel.transform.Find("NullFrame").transform.Find("WarningText").gameObject.GetComponent<TextMeshProUGUI>();
+            textContent.text = "No Null or NaN values detected";
+            textContent.color = new Color(0f, 255f, 0f, 1f);
+        }
     }
 
     public void SetTable(int i, int maxColumns)
