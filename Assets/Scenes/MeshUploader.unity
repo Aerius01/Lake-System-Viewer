@@ -1700,7 +1700,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 507875279}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1337484032}
+        m_TargetAssemblyTypeName: MeshUploader, Assembly-CSharp
+        m_MethodName: ExitChecks
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &507875279
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4335,7 +4347,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Water level:'
+  m_text: 'Water level below ref.:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -5147,7 +5159,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1337484029}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a3567c52d2b3004a88a1561c860a5f1, type: 3}
+  m_Script: {fileID: 11500000, guid: b8fa2b90c7cdfac4fb43e3c74cd7ef40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   prefabObject: {fileID: 36494870428970452, guid: 92363aad710f14446b53dec388fadfd4, type: 3}

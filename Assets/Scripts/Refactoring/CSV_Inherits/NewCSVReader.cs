@@ -5,27 +5,20 @@ using System.Data;
 public class NewCSVReader : MonoBehaviour
 {
     public DataTable stringTable;
-
     [HideInInspector]
     public int nullCounter;
+    public GameObject scriptObject;
 
-    public GameObject navigationObject;
 
-    void Awake()
-    {
-        DontDestroyOnLoad(this.transform.parent.gameObject);
-    }
-
-    public void Upload()
+    public void Start()
     {
         StartCoroutine(CallDialog());
     }
 
-    IEnumerator CallDialog()
+    protected virtual IEnumerator CallDialog()
 	{	
         // TODO: when file is open, the reading fails
-        GameObject go = new GameObject();
-        NewLocalFileBrowser fileDialog = go.AddComponent<NewLocalFileBrowser>() as NewLocalFileBrowser;
+        NewLocalFileBrowser fileDialog = this.gameObject.AddComponent<NewLocalFileBrowser>() as NewLocalFileBrowser;
         fileDialog.ReadData();
 
         while (!fileDialog.operationComplete)
@@ -37,8 +30,6 @@ public class NewCSVReader : MonoBehaviour
         stringTable = reader.parseTable(fileDialog.csvFile);
         nullCounter = reader.nullCounter;
 
-        Destroy(go);
-
-        navigationObject.GetComponent<NavigationScript>().GoToMesh();
+        Destroy(this.gameObject.GetComponent<NewLocalFileBrowser>());
 	}
 }
