@@ -14,6 +14,7 @@ public class MeshUploader : MonoBehaviour
     private int totalColumnCount, totalRowCount, viewPortColumns, viewPortRows;
     private List<int> currentClickList;
     private UploadData parameters;
+    private bool continueColoring = true;
 
     // Start is called before the first frame update
     private void Start()
@@ -74,6 +75,7 @@ public class MeshUploader : MonoBehaviour
         {
             List<int> greyIndices = new List<int>();
             List<int> newClickList = new List<int>();
+            continueColoring = true;
 
             // Find out where the mouse is and whether something has been clicked
             for (int i = 0; i < listOfObjects.Count; i++)
@@ -149,6 +151,25 @@ public class MeshUploader : MonoBehaviour
                 }
             }
         }
+        else
+        {
+            // Avoid looping every update when not necessary
+            if (continueColoring)
+            {
+                continueColoring = false;
+                for (int j = 0; j < listOfObjects.Count; j++)
+                {
+                    if (currentClickList.Contains(j))
+                    {
+                        listOfObjects[j].GetComponent<Image>().color = new Color32(160,160,160,255);
+                    }
+                    else
+                    {
+                        listOfObjects[j].GetComponent<Image>().color = new Color32(255,255,255,255);
+                    }
+                }
+            }
+        }
     }
 
     List<int> DetermineGreySquares(int idNumber)
@@ -168,44 +189,61 @@ public class MeshUploader : MonoBehaviour
         return greySquares;
     }
 
+    public void BackButton()
+    {
+        MeshClass mesh = GameObject.Find("MeshReader").GetComponent<MeshClass>();
+        mesh.backButton = true;
+
+        SceneManager.LoadScene("StartMenu");
+    }
+
     public void ExitChecks()
     {
         GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
+        GameObject activeToggle = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>().ActiveToggles().FirstOrDefault().gameObject;
                             
         if (!currentClickList.Any())
         {
+            // Ensure data has been selected
             instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "No data has been selected in the viewport. Please select only the heightmap data, omitting header rows and ID columns";
             instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
         }
         else if (String.IsNullOrEmpty(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text))
         {
+            // Ensure a water level has been entered
             instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "No water level has been specified. Please specify a water level (you can change this later)";
+            instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
+        }
+        else if (parameters.nullCount > 0 && activeToggle.name == "Toggle_2" && string.IsNullOrEmpty(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text))
+        {
+            // Ensure a replacement value has been entered
+            instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "You've selected 'replacement' null handling but specified no value. Please specify a null/NaN replacment value";
             instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
         }
         else
         {   
-            // Trim the MeshClass table
+            // Successful checks
+            // Modify the MeshClass table based on selection & nulls
             MeshClass mesh = GameObject.Find("MeshReader").GetComponent<MeshClass>();
 
-            int maxRow = 0;
-            int maxCol = 0;
-            foreach (int idNumber in currentClickList)
-            {
-                maxRow = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPortColumns) * viewPortColumns, maxRow);
-                maxCol = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPortRows) * viewPortRows, maxCol);
-            }
-
-            mesh.stringTable = SetTable(mesh.stringTable, maxCol, maxRow);
-
+            mesh.stringTable = SetTable(mesh.stringTable);
             mesh.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
             mesh.meshUploaded = true;
             SceneManager.LoadScene("StartMenu");
         }
     }
 
-    private DataTable SetTable(DataTable uploadTable, int columnsToRemove, int rowsToRemove)
+    private DataTable SetTable(DataTable uploadTable)
     {
         // Trim non-data rows/columns
+        int rowsToRemove = 0;
+        int columnsToRemove = 0;
+        foreach (int idNumber in currentClickList)
+        {
+            rowsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPortColumns) * viewPortColumns, rowsToRemove);
+            columnsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPortRows) * viewPortRows, columnsToRemove);
+        }
+
         for (int r = rowsToRemove; r > 0; r--)
         {
             uploadTable.Rows[r].Delete();
@@ -218,33 +256,77 @@ public class MeshUploader : MonoBehaviour
         }
         uploadTable.AcceptChanges();
 
-        // TODO: IF INTERP, else replace vals
-        foreach (int[] entry in parameters.nullList)
+        if (parameters.nullCount > 0)
         {
-            // check boundary conditions
-            List<float> boundingValues = new List<float>();
-            
-            if (entry[0] - 1 > 0)
+            ToggleGroup toggleGroup = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>();
+            Toggle selectedToggle = toggleGroup.ActiveToggles().FirstOrDefault();
+
+            if (selectedToggle.gameObject.name == "Toggle_1")
             {
-                boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] - 1][entry[1]].ToString()));
+                // Interpolate
+                foreach (int[] entry in parameters.nullList)
+                {
+                    // check boundary conditions
+                    List<float> boundingValues = new List<float>();
+                    
+                    if (entry[0] - 1 > rowsToRemove)
+                    {
+                        // if the entry is within the table limits, check if it is also null
+                        if (!parameters.nullList.Any(p => p.SequenceEqual(new int[] {entry[0] - 1, entry[1]})))
+                        {
+                            boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] - 1][entry[1]].ToString()));
+                        }
+                    }
+
+                    if (entry[0] + 1 < uploadTable.Rows.Count)
+                    {
+                        if (!parameters.nullList.Any(p => p.SequenceEqual(new int[] {entry[0] + 1, entry[1]})))
+                        {
+                            boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] + 1][entry[1]].ToString()));
+                        }
+                    }
+
+                    if (entry[1] - 1 > columnsToRemove)
+                    {
+                        if (!parameters.nullList.Any(p => p.SequenceEqual(new int[] {entry[0], entry[1] - 1})))
+                        {
+                            boundingValues.Add(float.Parse(uploadTable.Rows[entry[0]][entry[1] - 1].ToString()));
+                        }
+                    }
+
+                    if (entry[1] + 1 < uploadTable.Columns.Count)
+                    {
+                        if (!parameters.nullList.Any(p => p.SequenceEqual(new int[] {entry[0], entry[1] + 1})))
+                        {  
+                            boundingValues.Add(float.Parse(uploadTable.Rows[entry[0]][entry[1] + 1].ToString()));
+                        }
+                    }
+                    
+                    if (!boundingValues.Any())
+                    {
+                        // All surrounding values are null
+                        Debug.Log(string.Format("Value at [row][column] [{0}][{1}] is surrounded by nulls, interpolation not possible", entry[0], entry[1]));
+                        Debug.Log("Replacing this value with a value of 99999");
+
+                        uploadTable.Rows[entry[0]][entry[1]] = 99999;
+                    }
+                    else
+                    {
+                        uploadTable.Rows[entry[0]][entry[1]] = boundingValues.Sum() / boundingValues.Count;
+                    }
+                }
+            }
+            else
+            {
+                // Replace
+                float replacementVal = float.Parse(selectedToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
+                foreach (int[] entry in parameters.nullList)
+                {
+                    uploadTable.Rows[entry[0]][entry[1]] = replacementVal;
+                }
             }
 
-            if (entry[0] + 1 < uploadTable.Rows.Count)
-            {
-                boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] + 1][entry[1]].ToString()));
-            }
-
-            if (entry[1] - 1 > 0)
-            {
-                 float.Parse(uploadTable.Rows[entry[0]][entry[1] - 1].ToString());
-            }
-
-            if (entry[1] + 1 < uploadTable.Columns.Count)
-            {
-                float.Parse(uploadTable.Rows[entry[0]][entry[1] + 1].ToString());
-            }
-
-            uploadTable.Rows[entry[0]][entry[1]] = boundingValues.Sum() / boundingValues.Count;
+            uploadTable.AcceptChanges();
         }
 
         return uploadTable;
@@ -282,6 +364,7 @@ public class UploadData
         maxDepth = int.MinValue;
 
         bool exceptionThrown = false;
+        nullList = new List<int[]>();
 
         for (int row = rowsToRemove; row < maxRows; row++)
         {
@@ -342,49 +425,5 @@ public class UploadData
             textContent.color = new Color(0f, 255f, 0f, 1f);
         }
     }
-
-    // public DataTable SetTable(DataTable uploadTable, int columnsToRemove, int rowsToRemove)
-    // {
-    //     // Trim non-data rows/columns
-    //     for (int r = rowsToRemove; r > 0; r--)
-    //     {
-    //         uploadTable.Rows[r].Delete();
-    //     }
-    //     uploadTable.AcceptChanges();
-
-    //     for (int c = columnsToRemove; c > 0; c--)
-    //     {
-    //         uploadTable.Columns.RemoveAt(c);
-    //     }
-    //     uploadTable.AcceptChanges();
-
-    //     columnCount = uploadTable.Columns.Count;
-    //     rowCount = uploadTable.Rows.Count;
-
-    //     // Find counts
-    //     minDepth = int.MaxValue;
-    //     maxDepth = int.MinValue;
-    //     nullCount = 0;
-
-    //     return uploadTable;
-
-    //     foreach (DataRow row in uploadTable.Rows)
-    //     {
-    //         for (int column = 0; column < columnCount; column++)
-    //         {
-    //             //test for null here
-    //             if (row[uploadTable.Columns[column]] == DBNull.Value)
-    //             {
-    //                 nullCount++;
-    //             }
-    //             else
-    //             {
-    //                 float value = (float)row[column];
-    //                 minDepth = Math.Min(minDepth, value);
-    //                 maxDepth = Math.Max(maxDepth, value);
-    //             }
-    //         }
-    //     }
-    // }
 }
 

@@ -1880,6 +1880,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a9b2765d1bb82b43973ac9847c9ab2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uploadMenu: {fileID: 1201677031}
 --- !u!1 &785889276
 GameObject:
   m_ObjectHideFlags: 0
