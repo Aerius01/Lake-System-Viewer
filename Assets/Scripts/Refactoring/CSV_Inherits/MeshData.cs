@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class MeshClass : NewCSVReader
+public class MeshData : NewCSVReader
 {
     [HideInInspector]
     public bool meshUploaded = false, backButton = false;

@@ -5,10 +5,7 @@ using System.Data;
 public class NewCSVReader : MonoBehaviour
 {
     public DataTable stringTable;
-    [HideInInspector]
-    public int nullCounter;
     public GameObject scriptObject;
-
 
     public void Start()
     {
@@ -28,7 +25,6 @@ public class NewCSVReader : MonoBehaviour
 
         StringTable reader = new StringTable();
         stringTable = reader.parseTable(fileDialog.csvFile);
-        nullCounter = reader.nullCounter;
 
         Destroy(this.gameObject.GetComponent<NewLocalFileBrowser>());
 	}

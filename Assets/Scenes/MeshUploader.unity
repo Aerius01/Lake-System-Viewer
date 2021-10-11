@@ -283,7 +283,19 @@ MonoBehaviour:
   m_Group: {fileID: 1770209007}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 979618370}
+        m_TargetAssemblyTypeName: UnityEngine.UI.Selectable, UnityEngine.UI
+        m_MethodName: set_interactable
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 0
 --- !u!1 &64381147
 GameObject:
@@ -3389,7 +3401,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 979618371}
   m_TextViewport: {fileID: 1309695112}
   m_TextComponent: {fileID: 434574166}
@@ -4665,7 +4677,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 500, y: 120}
+  m_SizeDelta: {x: 1000, y: 120}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1247279958
 MonoBehaviour:
@@ -5171,13 +5183,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1337484029}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b8fa2b90c7cdfac4fb43e3c74cd7ef40, type: 3}
+  m_Script: {fileID: 11500000, guid: 9e5634cad66510d4e8a1309e6867555a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prefabObject: {fileID: 36494870428970452, guid: 92363aad710f14446b53dec388fadfd4, type: 3}
+  cellPreFab: {fileID: 36494870428970452, guid: 92363aad710f14446b53dec388fadfd4, type: 3}
   contentPanel: {fileID: 595713434}
   paramsPanel: {fileID: 494290942}
-  listOfObjects: []
 --- !u!1 &1344655600
 GameObject:
   m_ObjectHideFlags: 0
@@ -5716,14 +5727,14 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 58.95
-  m_fontSizeBase: 36
+  m_fontSize: 60
+  m_fontSizeBase: 60
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 2
+  m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0

@@ -3644,9 +3644,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NavigationScript, Assembly-CSharp
-        m_MethodName: GoToPositionDataUploader
+      - m_Target: {fileID: 725790644}
+        m_TargetAssemblyTypeName: UploadUtils, Assembly-CSharp
+        m_MethodName: PositionsUploadButton
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
