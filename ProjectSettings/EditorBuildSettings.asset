@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MeshUploader.unity
     guid: 04e1a0a11ed91b24b8d1fca43eaba932
+  - enabled: 1
+    path: Assets/Scenes/PosUploader.unity
+    guid: c4d00d2c395fb1e4483c3f8d6f03e707
   m_configObjects: {}

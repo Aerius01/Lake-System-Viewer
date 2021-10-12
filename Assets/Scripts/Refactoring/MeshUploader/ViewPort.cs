@@ -9,7 +9,7 @@ public class ViewPort
     public List<int> greyIndices, currentClickList;
     public int Columns, Rows;
     private GameObject viewPortPanel;
-    public List<GameObject> listOfObjects;
+    public List<GameObject> listOfObjects, listOfDropdowns;
     public UploadTable uploadedTable;
     private bool rootClicked, rootMouseOver;
 

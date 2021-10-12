@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 public class PositionUploader : MonoBehaviour
 {
-    public GameObject cellPreFab, contentPanel, paramsPanel;
+    public GameObject cellPreFab, dropdownPrefab, contentPanel, paramsPanel;
     private List<int> currentClickList;
     private UploadTable uploadedTable;
     private ViewPort viewPort;
@@ -32,6 +32,8 @@ public class PositionUploader : MonoBehaviour
         // Get the uploaded file as a DataTable
         viewPort.SetGridParams();
         List<GameObject> listOfObjects = new List<GameObject>();
+        List<GameObject> listOfDropdowns = new List<GameObject>();
+
 
         for (int i = 0; i < viewPort.Rows; i++)
         {
@@ -42,10 +44,19 @@ public class PositionUploader : MonoBehaviour
                 go.transform.Find("Text").GetComponent<TextMeshProUGUI>().text = string.Format("{0}", uploadedTable.uploadTable.Rows[i].ItemArray[j]);
 
                 listOfObjects.Add(go);
+
+                if (i == 0)
+                {
+                    GameObject ddo = (Instantiate (dropdownPrefab) as GameObject);
+                    ddo.transform.SetParent(contentPanel.transform.parent.Find("DropDownFrame"));
+
+                    listOfDropdowns.Add(ddo);
+                }
             }
         }
 
         viewPort.listOfObjects = listOfObjects;
+        viewPort.listOfDropdowns = listOfDropdowns;
 
         GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
         instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Please select the upper left corner of your data, excluding headers and ID columns.";

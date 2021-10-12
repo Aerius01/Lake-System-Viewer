@@ -15,7 +15,7 @@ public class NavigationScript : MonoBehaviour
 
     public void GoToPositionDataUploader()
     {
-        SceneManager.LoadScene("PositionDataUploader");
+        SceneManager.LoadScene("PosUploader");
     }
 
     public void GoToMetadataUploader()
