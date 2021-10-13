@@ -10,7 +10,7 @@ public class PositionUploader : MonoBehaviour
 {
     public GameObject cellPreFab, dropdownPrefab, contentPanel, paramsPanel;
     private List<int> currentClickList;
-    private UploadTable uploadedTable;
+    private PositionUploadTable uploadedTable;
     private ViewPort viewPort;
     private bool continueColoring = false;
 
@@ -19,7 +19,7 @@ public class PositionUploader : MonoBehaviour
     {
         PositionData reader = GameObject.Find("PositionReader").GetComponent<PositionData>();
 
-        uploadedTable = new UploadTable(reader.stringTable.Copy());
+        uploadedTable = new PositionUploadTable(reader.stringTable.Copy());
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
@@ -33,7 +33,6 @@ public class PositionUploader : MonoBehaviour
         viewPort.SetGridParams();
         List<GameObject> listOfObjects = new List<GameObject>();
         List<GameObject> listOfDropdowns = new List<GameObject>();
-
 
         for (int i = 0; i < viewPort.Rows; i++)
         {
@@ -83,10 +82,10 @@ public class PositionUploader : MonoBehaviour
         // ADJUST HERE
             // ToggleNullFrame();
 
-            paramsPanel.transform.Find("StatisticsFrame").transform.
-                Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
-                string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
-                uploadedTable.maxDepth, uploadedTable.minDepth, uploadedTable.adjustedColumnCount, uploadedTable.adjustedRowCount, uploadedTable.nullCount);
+        //     paramsPanel.transform.Find("StatisticsFrame").transform.
+        //         Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
+        //         string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
+        //         uploadedTable.maxDepth, uploadedTable.minDepth, uploadedTable.adjustedColumnCount, uploadedTable.adjustedRowCount, uploadedTable.nullCount);
         }
         else
         {
@@ -131,6 +130,11 @@ public class PositionUploader : MonoBehaviour
 
     public void ExitChecks()
     {
+        // start date <= end date
+        // GIS coords form a box
+        // required dropdown options are selected without duplicate selection
+        // format checks since columns are now identified
+
         GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
         GameObject activeToggle = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>().ActiveToggles().FirstOrDefault().gameObject;
                             

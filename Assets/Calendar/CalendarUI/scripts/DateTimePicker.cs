@@ -2,14 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class DateTimePicker : MonoBehaviour
 {
     public DatePicker datePicker;
     public TimePicker timePicker;
-
-    public DateTime fullDate;
-
+    [SerializeField] private GameObject buttonObject;
 
     public DateTime? SelectedDateTime(){
         var d = datePicker.SelectedDate;
@@ -22,7 +21,7 @@ public class DateTimePicker : MonoBehaviour
     }
 
     public void GetSelectedDate(){
-        fullDate = (DateTime)SelectedDateTime();
+        buttonObject.GetComponentInChildren<TextMeshProUGUI>().text = ((DateTime)SelectedDateTime()).ToString("dd.MM.yyyy HH:mm:ss");
     }
 
     public void SetSelectedDateTime(DateTime value){

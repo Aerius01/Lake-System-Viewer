@@ -6,7 +6,6 @@ using System.Linq;
 
 public class UploadTable
 {
-    public float maxDepth, minDepth;
     public int adjustedColumnCount, adjustedRowCount, nullCount, totalColumnCount, totalRowCount;
     public List<int[]> nullList;
     public bool throwException;
@@ -21,16 +20,13 @@ public class UploadTable
         totalRowCount = this.uploadTable.Rows.Count;
     }
 
-    public void ResetParams(int i)
+    public virtual void ResetParams(int i)
     {
         int columnsToRemove = i - (int)Math.Floor((double)i/(double)viewPort.Columns) * viewPort.Columns;
         int rowsToRemove = (int)Math.Floor((double)i/(double)viewPort.Columns);
 
         adjustedColumnCount = totalColumnCount - columnsToRemove;
         adjustedRowCount = totalRowCount - rowsToRemove;
-
-        minDepth = int.MaxValue;
-        maxDepth = int.MinValue;
 
         nullList = new List<int[]>();
         throwException = false;
@@ -46,22 +42,17 @@ public class UploadTable
                 }
                 else
                 {
-                    try
-                    {
-                        float value = float.Parse(stringValue);
-                        minDepth = Math.Min(minDepth, value);
-                        maxDepth = Math.Max(maxDepth, value);
-                    }
-                    catch (FormatException)
-                    {
-                        throwException = true;
-                        nullList.Add(new int[] {row, column});
-                    }
+                    AdditionalOperations(stringValue, row, column);
                 }
             }
         }
 
         nullCount = nullList.Count;
+    }
+
+    protected virtual void AdditionalOperations(string stringValue, int row, int column)
+    {
+
     }
 
     public void SetTable(List<int> currentClickList, int toggleID = -1, float replacementVal = 0f)

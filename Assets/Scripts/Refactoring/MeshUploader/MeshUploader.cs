@@ -10,7 +10,7 @@ public class MeshUploader : MonoBehaviour
 {
     public GameObject cellPreFab, contentPanel, paramsPanel;
     private List<int> currentClickList;
-    private UploadTable uploadedTable;
+    private MeshUploadTable uploadedTable;
     private ViewPort viewPort;
     private bool continueColoring = false;
 
@@ -19,7 +19,7 @@ public class MeshUploader : MonoBehaviour
     {
         MeshData reader = GameObject.Find("MeshReader").GetComponent<MeshData>();
 
-        uploadedTable = new UploadTable(reader.stringTable.Copy());
+        uploadedTable = new MeshUploadTable(reader.stringTable.Copy());
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
