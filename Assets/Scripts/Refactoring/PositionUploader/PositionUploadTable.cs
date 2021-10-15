@@ -9,117 +9,60 @@ public class PositionUploadTable: UploadTable
     private DateTime earliestTS, latestTS;
     private List<int> uniqueIDs;
 
-    public PositionUploadTable(DataTable uploadTable) : base(uploadTable)
+    public DateTime[] dateFilter;
+
+
+    public PositionUploadTable(DataTable uploadTable, GameObject statsFrame) : base(uploadTable, statsFrame)
     {
 
     }
 
     protected override void AdditionalOperations(string stringValue, int row, int column)
     {
-        // compare value against TS
+        // compare values for earliest/latest timestamps
+        try
+        {
+            DateTime value = DateTime.Parse(stringValue);
 
-        // earliestTS = Math.Min(minDepth, value);
-        // latestTS = Math.Max(maxDepth, value);
+            if (DateTime.Compare(earliestTS, value) > 0)
+            {
+                earliestTS = value;
+            }
+
+            if (DateTime.Compare(latestTS, value) < 0)
+            {
+                latestTS = value;
+            }
+        }
+        catch (FormatException)
+        {
+            throwException = true;
+            nullList.Add(new int[] {row, column});
+        }
     }
 
     public override void ResetParams(int i)
     {
-        // earliestTS = int.MaxValue;
-        // latestTS = int.MinValue;
+        earliestTS = DateTime.MinValue;
+        latestTS = DateTime.MaxValue;
 
         base.ResetParams(i);
     }
 
-    // public void SetTable(List<int> currentClickList, int toggleID = -1, float replacementVal = 0f)
-    // {
-    //     // Trim non-data rows/columns
-    //     int rowsToRemove = 0;
-    //     int columnsToRemove = 0;
-    //     foreach (int idNumber in currentClickList)
-    //     {
-    //         rowsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Columns) * viewPort.Columns, rowsToRemove);
-    //         columnsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Rows) * viewPort.Rows, columnsToRemove);
-    //     }
+    public override void SetTable(List<int> currentClickList)
+    {
+        base.SetTable(currentClickList);
 
-    //     for (int r = rowsToRemove; r > 0; r--)
-    //     {
-    //         uploadTable.Rows[r].Delete();
-    //     }
-    //     uploadTable.AcceptChanges();
+        
+        // retrieve dropdown to column mapping
+        // apply column names to the datable
 
-    //     for (int c = columnsToRemove; c > 0; c--)
-    //     {
-    //         uploadTable.Columns.RemoveAt(c);
-    //     }
-    //     uploadTable.AcceptChanges();
 
-    //     if (toggleID > 0)
-    //     {
-    //         if (toggleID == 1)
-    //         {
-    //             // Interpolate
-    //             foreach (int[] entry in nullList)
-    //             {
-    //                 // check boundary conditions
-    //                 List<float> boundingValues = new List<float>();
-                    
-    //                 if (entry[0] - 1 > rowsToRemove)
-    //                 {
-    //                     // if the entry is within the table limits, check if it is also null
-    //                     if (!nullList.Any(p => p.SequenceEqual(new int[] {entry[0] - 1, entry[1]})))
-    //                     {
-    //                         boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] - 1][entry[1]].ToString()));
-    //                     }
-    //                 }
+        // apply datetime filter to time column
+        dateFilter = new DateTime[2];
+        // run through timestamp column & delete as necessary
 
-    //                 if (entry[0] + 1 < uploadTable.Rows.Count)
-    //                 {
-    //                     if (!nullList.Any(p => p.SequenceEqual(new int[] {entry[0] + 1, entry[1]})))
-    //                     {
-    //                         boundingValues.Add(float.Parse(uploadTable.Rows[entry[0] + 1][entry[1]].ToString()));
-    //                     }
-    //                 }
-
-    //                 if (entry[1] - 1 > columnsToRemove)
-    //                 {
-    //                     if (!nullList.Any(p => p.SequenceEqual(new int[] {entry[0], entry[1] - 1})))
-    //                     {
-    //                         boundingValues.Add(float.Parse(uploadTable.Rows[entry[0]][entry[1] - 1].ToString()));
-    //                     }
-    //                 }
-
-    //                 if (entry[1] + 1 < uploadTable.Columns.Count)
-    //                 {
-    //                     if (!nullList.Any(p => p.SequenceEqual(new int[] {entry[0], entry[1] + 1})))
-    //                     {  
-    //                         boundingValues.Add(float.Parse(uploadTable.Rows[entry[0]][entry[1] + 1].ToString()));
-    //                     }
-    //                 }
-                    
-    //                 if (!boundingValues.Any())
-    //                 {
-    //                     // All surrounding values are null
-    //                     Debug.Log(string.Format("Value at [row][column] [{0}][{1}] is surrounded by nulls, interpolation not possible", entry[0], entry[1]));
-    //                     Debug.Log("Replacing this value with a value of 99999");
-
-    //                     uploadTable.Rows[entry[0]][entry[1]] = 99999;
-    //                 }
-    //                 else
-    //                 {
-    //                     uploadTable.Rows[entry[0]][entry[1]] = boundingValues.Sum() / boundingValues.Count;
-    //                 }
-    //             }
-    //         }
-    //         else
-    //         {
-    //             // Replace
-    //             foreach (int[] entry in nullList)
-    //             {
-    //                 uploadTable.Rows[entry[0]][entry[1]] = replacementVal;
-    //             }
-    //         }
-
-    //         uploadTable.AcceptChanges();
-    //     }
-    // }
+        // apply GIS conversion
+        // delete rows that contain nulls -> convert 2D list to 1D row-based bool
+    }
 }

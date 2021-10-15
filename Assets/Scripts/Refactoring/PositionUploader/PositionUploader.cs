@@ -19,7 +19,7 @@ public class PositionUploader : MonoBehaviour
     {
         PositionData reader = GameObject.Find("PositionReader").GetComponent<PositionData>();
 
-        uploadedTable = new PositionUploadTable(reader.stringTable.Copy());
+        uploadedTable = new PositionUploadTable(reader.stringTable.Copy(), paramsPanel);
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
@@ -162,19 +162,19 @@ public class PositionUploader : MonoBehaviour
             // Modify the PositionData table based on selection & nulls
             PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
 
-            if (activeToggle.name == "Toggle_1")
-            {
-                uploadedTable.SetTable(currentClickList, 1);
-            }
-            else if (activeToggle.name == "Toggle_2")
-            {
-                float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
-                uploadedTable.SetTable(currentClickList, 2, replacementVal);
-            }
-            else
-            {
-                uploadedTable.SetTable(currentClickList);
-            }
+            // if (activeToggle.name == "Toggle_1")
+            // {
+            //     uploadedTable.SetTable(currentClickList, 1);
+            // }
+            // else if (activeToggle.name == "Toggle_2")
+            // {
+            //     float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
+            //     uploadedTable.SetTable(currentClickList, 2, replacementVal);
+            // }
+            // else
+            // {
+            //     uploadedTable.SetTable(currentClickList);
+            // }
 
             positionData.stringTable = uploadedTable.uploadTable;
             // positionData.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);

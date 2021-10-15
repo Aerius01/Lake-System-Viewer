@@ -88,6 +88,17 @@ public class ViewPort
                 }
                 
                 listOfObjects[i].GetComponent<SCUtils>().clicked = false;
+
+                if (uploadedTable.secondaryThread == null)
+                {
+                    // first runthrough, thread not yet initialized
+                }
+                else if (uploadedTable.secondaryThread.IsAlive)
+                {
+                    uploadedTable.stopThread = true;
+                    uploadedTable.secondaryThread.Join();
+                }
+
                 uploadedTable.ResetParams(i);
             }
 

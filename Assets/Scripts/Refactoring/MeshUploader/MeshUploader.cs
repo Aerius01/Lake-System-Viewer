@@ -9,7 +9,6 @@ using UnityEngine.SceneManagement;
 public class MeshUploader : MonoBehaviour
 {
     public GameObject cellPreFab, contentPanel, paramsPanel;
-    private List<int> currentClickList;
     private MeshUploadTable uploadedTable;
     private ViewPort viewPort;
     private bool continueColoring = false;
@@ -19,12 +18,11 @@ public class MeshUploader : MonoBehaviour
     {
         MeshData reader = GameObject.Find("MeshReader").GetComponent<MeshData>();
 
-        uploadedTable = new MeshUploadTable(reader.stringTable.Copy());
+        uploadedTable = new MeshUploadTable(reader.stringTable.Copy(), paramsPanel);
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
         FillViewPort();
-        currentClickList = new List<int>();
     }
 
     private void FillViewPort()
@@ -71,10 +69,23 @@ public class MeshUploader : MonoBehaviour
 
             ToggleNullFrame();
 
-            paramsPanel.transform.Find("StatisticsFrame").transform.
-                Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
-                string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
-                uploadedTable.maxDepth, uploadedTable.minDepth, uploadedTable.adjustedColumnCount, uploadedTable.adjustedRowCount, uploadedTable.nullCount);
+            if (uploadedTable.resetComplete)
+            {
+                // Update only if we've reset the params successfully
+                paramsPanel.transform.Find("StatisticsFrame").transform.Find("TextContainer").transform.
+                    Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
+                    string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
+                    uploadedTable.maxDepth, uploadedTable.minDepth, uploadedTable.adjustedColumnCount, uploadedTable.adjustedRowCount, uploadedTable.nullCount);
+
+                uploadedTable.containerCG.alpha = 1f;
+                uploadedTable.loadingIcon.SetActive(false);
+            }
+            else if (uploadedTable.stopThread)
+            {
+                // if we've commanded the thread to stop, reset the UI
+                uploadedTable.containerCG.alpha = 1f;
+                uploadedTable.loadingIcon.SetActive(false);
+            }
         }
         else
         {
@@ -122,7 +133,7 @@ public class MeshUploader : MonoBehaviour
         GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
         GameObject activeToggle = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>().ActiveToggles().FirstOrDefault().gameObject;
                             
-        if (!currentClickList.Any())
+        if (!viewPort.currentClickList.Any())
         {
             // Ensure data has been selected
             instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "No data has been selected in the viewport. Please select only the heightmap data, omitting header rows and ID columns";
@@ -148,16 +159,18 @@ public class MeshUploader : MonoBehaviour
 
             if (activeToggle.name == "Toggle_1")
             {
-                uploadedTable.SetTable(currentClickList, 1);
+                uploadedTable.toggleID = 1;
+                uploadedTable.SetTable(viewPort.currentClickList);
             }
             else if (activeToggle.name == "Toggle_2")
             {
-                float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
-                uploadedTable.SetTable(currentClickList, 2, replacementVal);
+                uploadedTable.toggleID = 2;
+                uploadedTable.replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
+                uploadedTable.SetTable(viewPort.currentClickList);
             }
             else
             {
-                uploadedTable.SetTable(currentClickList);
+                uploadedTable.SetTable(viewPort.currentClickList);
             }
 
             mesh.stringTable = uploadedTable.uploadTable;
