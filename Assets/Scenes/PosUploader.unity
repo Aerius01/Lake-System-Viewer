@@ -1003,6 +1003,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 674718656}
     m_Modifications:
     - target: {fileID: 5944160460552536090, guid: 5b97d361cb9884f1a9d868177276c7e9, type: 3}
+      propertyPath: startTime
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5944160460552536090, guid: 5b97d361cb9884f1a9d868177276c7e9, type: 3}
       propertyPath: buttonObject
       value: 
       objectReference: {fileID: 1460587169}

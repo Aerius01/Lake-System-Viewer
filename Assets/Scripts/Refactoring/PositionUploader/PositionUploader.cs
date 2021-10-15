@@ -14,6 +14,8 @@ public class PositionUploader : MonoBehaviour
     private ViewPort viewPort;
     private bool continueColoring = false;
 
+    private Toggle dateTimeToggle;
+
     // Start is called before the first frame update
     private void Start()
     {
@@ -130,10 +132,35 @@ public class PositionUploader : MonoBehaviour
 
     public void ExitChecks()
     {
-        // start date <= end date
+        Toggle dateTimeToggle = paramsPanel.transform.Find("ParametersFrame").transform.Find("DateTimeFrame").transform.Find("Toggle_1").GetComponent<Toggle>();
+
+        if (!viewPort.ColumnReqsSatisfied())
+        {
+            // throw error
+        }
+        else if (dateTimeToggle.isOn)
+        {
+            if (PositionUploadTable.startCutoff == null || PositionUploadTable.endCutoff == null)
+            {
+                // throw error
+            }
+            else if (DateTime.Compare(PositionUploadTable.startCutoff, PositionUploadTable.endCutoff) > 0)
+            {
+                // throw error
+            }
+            else
+            {
+                PositionUploadTable.applyDateFilter = true;
+            }
+        }
+        else // if, the date filter can be in this next block as it already is, regardless of the content of that block
+        {
+            PositionUploadTable.applyDateFilter = false;
+        }
+
         // GIS coords form a box
-        // required dropdown options are selected without duplicate selection
-        // format checks since columns are now identified
+        // viewport Column formatting checks as optional --> proceed and delete format-erroneous rows, or cancel.
+
 
         GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
         GameObject activeToggle = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>().ActiveToggles().FirstOrDefault().gameObject;

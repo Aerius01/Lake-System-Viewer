@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Linq;
+using TMPro;
 
 public class ViewPort
 {
@@ -12,6 +13,7 @@ public class ViewPort
     public List<GameObject> listOfObjects, listOfDropdowns;
     public UploadTable uploadedTable;
     private bool rootClicked, rootMouseOver;
+    protected Dictionary<int, string> dropdownMapper;
 
     public ViewPort(UploadTable uploadTable, GameObject viewPortPanel)
     {
@@ -178,5 +180,77 @@ public class ViewPort
         }
 
         return greySquares;
+    }
+
+    public string GetColumnName(int columnID)
+    {
+        if (dropdownMapper == null)
+        {
+            CreateMap();
+        }
+
+        try
+        {
+            return dropdownMapper[columnID];
+        }
+        catch (KeyNotFoundException e)
+        {
+            return null;
+        }
+    }
+
+    private void CreateMap()
+    {
+        dropdownMapper = new Dictionary<int, string>();
+        Dictionary<int, string> tempMap = new Dictionary<int, string>() {{1, "ID"}, {2, "x"}, {3, "y"}, {4, "D"}, {5, "Time"}};
+
+        for (int i = 0; i < listOfDropdowns.Count; i++)
+        {
+            if (listOfDropdowns[i].GetComponent<TMP_Dropdown>().value != 0)
+            {
+                dropdownMapper.Add(i, tempMap[listOfDropdowns[i].GetComponent<TMP_Dropdown>().value]);
+            }
+        }
+    }
+
+    public bool ColumnReqsSatisfied()
+    {
+        // Create the map if it doesn't exist
+        if (dropdownMapper == null)
+        {
+            CreateMap();
+        }
+
+        // Assemble headers list
+        List<int> dropdownHeaders = new List<int>();
+        foreach (GameObject dropdown in listOfDropdowns)
+        {
+            if (dropdown.GetComponent<TMP_Dropdown>().value != 0)
+            {
+                dropdownHeaders.Add(dropdown.GetComponent<TMP_Dropdown>().value);
+            }
+        }
+
+        // Make sure each header is present
+        List<int> requirementsList = new List<int> {1, 2, 3, 4, 5};
+        foreach (int header in requirementsList)
+        {
+            if (!dropdownHeaders.Contains(header))
+            {
+                return false;
+            }
+        }
+
+        // Make sure headers are not duplicated
+        var groupedHeaders = dropdownHeaders.GroupBy( i => i );
+        foreach(var grp in groupedHeaders)
+        {
+            if (grp.Count() > 1)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
