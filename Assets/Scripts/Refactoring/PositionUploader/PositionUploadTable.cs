@@ -8,7 +8,7 @@ public class PositionUploadTable: UploadTable
 {
     private DateTime earliestTS, latestTS;
     static public DateTime startCutoff, endCutoff;
-    static public bool applyDateFilter;
+    static public bool applyDateFilter, applyGISConversion;
     private List<int> uniqueIDs;
     private DateTime[] dateFilter;
 
@@ -76,23 +76,56 @@ public class PositionUploadTable: UploadTable
 
         // apply GIS conversion
         // delete rows that contain nulls -> convert 2D list to 1D row-based bool
+        // remove unnamed columns
     }
 
-    public void AttributeColumnNames()
+    public DataTable AttributeColumnNames(DataTable table, bool removeUnnamed = false)
     {
         // Apply column names to the datable so we know what is what
-        for (int c = 0; c < uploadTable.Columns.Count; c++)
+        for (int c = 0; c < table.Columns.Count; c++)
         {
             if (viewPort.GetColumnName(c) != null)
             {
-                uploadTable.Columns[c].ColumnName = viewPort.GetColumnName(c);
+                Debug.Log("attempting col ID: " + c);
+                table.Columns[c].ColumnName = viewPort.GetColumnName(c);
             }      
             else
             {
-                uploadTable.Columns.RemoveAt(c);
+                Debug.Log("failed name attribution");
+                if (removeUnnamed)
+                {
+                    table.Columns.RemoveAt(c);
+                }
             }      
         }
 
-        uploadTable.AcceptChanges();
+        table.AcceptChanges();
+        return table;
+    }
+
+    public List<int> CheckColumnFormatting(DataTable namedColumnsTable, Dictionary<string, Type> types)
+    {
+        List<int> issueList = new List<int>();
+        foreach (DataRow row in namedColumnsTable.Rows)
+        {
+            foreach (string columnName in types.Keys)
+            {
+                try
+                {
+                    // ISSUE CONVERTING
+                    Convert.ChangeType(row[columnName].ToString(), (types[columnName]));
+                }
+                catch(InvalidCastException)
+                {
+                    // Add row to problem list and move on
+                    issueList.Add(namedColumnsTable.Rows.IndexOf(row));
+                    break;
+                }
+            }
+
+            Debug.Log("next row");
+        }
+
+        return issueList;
     }
 }

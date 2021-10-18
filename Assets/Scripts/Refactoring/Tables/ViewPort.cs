@@ -184,16 +184,11 @@ public class ViewPort
 
     public string GetColumnName(int columnID)
     {
-        if (dropdownMapper == null)
-        {
-            CreateMap();
-        }
-
         try
         {
             return dropdownMapper[columnID];
         }
-        catch (KeyNotFoundException e)
+        catch (KeyNotFoundException)
         {
             return null;
         }
@@ -211,16 +206,17 @@ public class ViewPort
                 dropdownMapper.Add(i, tempMap[listOfDropdowns[i].GetComponent<TMP_Dropdown>().value]);
             }
         }
+
+        foreach (int key in dropdownMapper.Keys)
+        {
+            Debug.Log(key + ", " + dropdownMapper[key]);
+        }
     }
 
     public bool ColumnReqsSatisfied()
     {
-        // Create the map if it doesn't exist
-        if (dropdownMapper == null)
-        {
-            CreateMap();
-        }
-
+        CreateMap();
+        
         // Assemble headers list
         List<int> dropdownHeaders = new List<int>();
         foreach (GameObject dropdown in listOfDropdowns)

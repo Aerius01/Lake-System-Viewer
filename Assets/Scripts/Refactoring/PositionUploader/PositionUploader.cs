@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
-using System.Linq;
+using System.Data;
 using UnityEngine.SceneManagement;
 
 public class PositionUploader : MonoBehaviour
@@ -14,12 +14,15 @@ public class PositionUploader : MonoBehaviour
     private ViewPort viewPort;
     private bool continueColoring = false;
 
+    private GameObject instructionPanel;
+
     private Toggle dateTimeToggle;
 
     // Start is called before the first frame update
     private void Start()
     {
         PositionData reader = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
 
         uploadedTable = new PositionUploadTable(reader.stringTable.Copy(), paramsPanel);
         viewPort = new ViewPort(uploadedTable, contentPanel);
@@ -59,9 +62,7 @@ public class PositionUploader : MonoBehaviour
         viewPort.listOfObjects = listOfObjects;
         viewPort.listOfDropdowns = listOfDropdowns;
 
-        GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
-        instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Please select the upper left corner of your data, excluding headers and ID columns.";
-        instructionPanel.GetComponent<FadeCanvasGroup>().Fade(4f);
+        CallDialogBox(instructionPanel, "Please select the upper left corner of your\ndata, excluding headers and ID columns.");
     }
 
     // Update is called once per frame
@@ -74,11 +75,8 @@ public class PositionUploader : MonoBehaviour
 
             if (uploadedTable.throwException)
             {
-                GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
-
-                instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "Format Exception: At least one entry in your selection could not be converted into a decimal number" +
-                    ", are you sure you've removed all headers and columns in your selection?";
-                instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
+                CallDialogBox(instructionPanel, "Format Exception: At least one entry in your selection\ncould not be converted into a decimal number" +
+                    ", are you sure\nyou've removed all headers and columns in your selection?");
             }
 
         // ADJUST HERE
@@ -132,82 +130,154 @@ public class PositionUploader : MonoBehaviour
 
     public void ExitChecks()
     {
-        Toggle dateTimeToggle = paramsPanel.transform.Find("ParametersFrame").transform.Find("DateTimeFrame").transform.Find("Toggle_1").GetComponent<Toggle>();
+        // Find toggles
+        GameObject paramFrame = paramsPanel.transform.Find("ParametersFrame").gameObject;
+        Toggle dateTimeToggle = paramFrame.transform.Find("DateTimeFrame").transform.Find("Toggle_1").GetComponent<Toggle>();
+        Toggle GISToggle = paramFrame.transform.Find("GISToggle").transform.Find("Toggle_2").GetComponent<Toggle>();
 
+        if (!dateTimeToggle.isOn)
+        {
+            PositionUploadTable.applyDateFilter = false;
+        }
+        if (!GISToggle.isOn)
+        {
+            PositionUploadTable.applyGISConversion = false;
+        }
+
+        // Approvals gauntlet for exit
         if (!viewPort.ColumnReqsSatisfied())
         {
-            // throw error
+            CallDialogBox(instructionPanel, "Either not all required columns are present" +
+                "\nin the dropdown selection, or some are duplicated.\n\nPlease verify the dropdowns.");
         }
         else if (dateTimeToggle.isOn)
         {
             if (PositionUploadTable.startCutoff == null || PositionUploadTable.endCutoff == null)
             {
-                // throw error
+                CallDialogBox(instructionPanel, "Either the start or the end time for" +
+                    "\nthe date filter has not been selected.\n\nPlease verify the date selection.");
             }
             else if (DateTime.Compare(PositionUploadTable.startCutoff, PositionUploadTable.endCutoff) > 0)
             {
-                // throw error
+                CallDialogBox(instructionPanel, "The selected start date takes place after the" +
+                    "\nselected end date.\n\nPlease ensure that the start date takes place before the end date.");
             }
             else
             {
                 PositionUploadTable.applyDateFilter = true;
             }
         }
-        else // if, the date filter can be in this next block as it already is, regardless of the content of that block
+        else if (GISToggle.isOn)
         {
-            PositionUploadTable.applyDateFilter = false;
-        }
+            // Get GIS inputs
+            Dictionary<string, TMP_InputField> GISBox = new Dictionary<string, TMP_InputField> {
+                {"MinLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLong").GetComponent<TMP_InputField>()},
+                {"MaxLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLong").GetComponent<TMP_InputField>()},
+                {"MinLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLat").GetComponent<TMP_InputField>()},
+                {"MaxLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLat").GetComponent<TMP_InputField>()}};
 
-        // GIS coords form a box
-        // viewport Column formatting checks as optional --> proceed and delete format-erroneous rows, or cancel.
-
-
-        GameObject instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
-        GameObject activeToggle = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").GetComponent<ToggleGroup>().ActiveToggles().FirstOrDefault().gameObject;
-                            
-        if (!currentClickList.Any())
-        {
-            // Ensure data has been selected
-            instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "No data has been selected in the viewport. Please select only the heightmap data, omitting header rows and ID columns";
-            instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
-        }
-        else if (String.IsNullOrEmpty(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text))
-        {
-            // Ensure a water level has been entered
-            instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "No water level has been specified. Please specify a water level (you can change this later)";
-            instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
-        }
-        else if (uploadedTable.nullCount > 0 && activeToggle.name == "Toggle_2" && string.IsNullOrEmpty(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text))
-        {
-            // Ensure a replacement value has been entered
-            instructionPanel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = "You've selected 'replacement' null handling but specified no value. Please specify a null/NaN replacment value";
-            instructionPanel.GetComponent<FadeCanvasGroup>().Fade(6f);
+            if (String.IsNullOrEmpty(GISBox["MinLong"].text) ||
+                String.IsNullOrEmpty(GISBox["MaxLong"].text) ||
+                String.IsNullOrEmpty(GISBox["MinLat"].text) ||
+                String.IsNullOrEmpty(GISBox["MaxLat"].text))
+            {
+                CallDialogBox(instructionPanel, "One of the values entered for the GIS bounding" +
+                    "\nbox is either null or empty.\n\nPlease verify the GIS coordinates entered.");
+            }
+            else if (float.Parse(GISBox["MinLong"].text) > float.Parse(GISBox["MaxLong"].text))
+            {
+                CallDialogBox(instructionPanel, "The minimum longitude specified in the GIS bounding" +
+                    "\nbox is larger than the maximum longitude.\n\nPlease verify the GIS coordinates entered.");
+            }
+            else if (float.Parse(GISBox["MinLat"].text) > float.Parse(GISBox["MaxLat"].text))
+            {
+                CallDialogBox(instructionPanel, "The minimum latitude specified in the GIS bounding" +
+                    "\nbox is larger than the maximum latitude.\n\nPlease verify the GIS coordinates entered.");
+            }
+            else
+            {
+                PositionUploadTable.applyGISConversion = true;
+            }
         }
         else
-        {   
-            // Successful checks
-            // Modify the PositionData table based on selection & nulls
-            PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        {
+            Dictionary<string, Type> typeRequirements = new Dictionary<string, Type>() {
+                {"ID", typeof(string)}, 
+                {"x", typeof(float)}, 
+                {"y", typeof(float)}, 
+                {"D", typeof(float)}, 
+                {"Time", typeof(DateTime)}};
 
-            // if (activeToggle.name == "Toggle_1")
-            // {
-            //     uploadedTable.SetTable(currentClickList, 1);
-            // }
-            // else if (activeToggle.name == "Toggle_2")
-            // {
-            //     float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
-            //     uploadedTable.SetTable(currentClickList, 2, replacementVal);
-            // }
-            // else
-            // {
-            //     uploadedTable.SetTable(currentClickList);
-            // }
+            uploadedTable.uploadTable = uploadedTable.AttributeColumnNames(uploadedTable.uploadTable);
+            List<int> rowsWithIssues = uploadedTable.CheckColumnFormatting(uploadedTable.uploadTable, typeRequirements);
 
-            positionData.stringTable = uploadedTable.uploadTable;
-            // positionData.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
-            positionData.positionsUploaded = true;
-            SceneManager.LoadScene("StartMenu");
+            if (rowsWithIssues.Count > 0)
+            {
+                CallDialogBox(instructionPanel, string.Format("There are {0} rows that failed conversions to their" +
+                    "\nrequired data types (a string that couldn't be converted due to formatting). Either" + 
+                    "\npress OKAY to continue with these rows removed, or correct the source data and re-upload.", rowsWithIssues.Count),
+                    fade: false);
+
+                // Call to finalize table happens externally in the UI by clicking the OKAY button
+            }
+            else
+            {
+                FinalizeTable();
+            }
         }
+    }
+
+    private void CallDialogBox(GameObject panel, string message, bool fade = true)
+    {
+        panel.GetComponent<CanvasGroup>().alpha = 0;
+        panel.transform.Find("Image").transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text = message;
+
+        // Refresh canvas calculations
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panel.GetComponent<RectTransform>());
+
+        if (fade)
+        {
+            panel.GetComponent<FadeCanvasGroup>().Fade(6f);
+        }
+        else
+        {
+            panel.GetComponent<CanvasGroup>().alpha = 1;
+            panel.transform.parent.transform.Find("Buttons").GetComponent<CanvasGroup>().alpha = 1;
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panel.GetComponent<RectTransform>());
+    }
+        
+
+    public void FinalizeTable()
+    {
+
+        uploadedTable.uploadTable = uploadedTable.AttributeColumnNames(uploadedTable.uploadTable, removeUnnamed: true);
+        // if
+        // {   
+        //     // Successful checks
+        //     // Modify the PositionData table based on selection & nulls
+        //     PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
+
+        //     // if (activeToggle.name == "Toggle_1")
+        //     // {
+        //     //     uploadedTable.SetTable(currentClickList, 1);
+        //     // }
+        //     // else if (activeToggle.name == "Toggle_2")
+        //     // {
+        //     //     float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
+        //     //     uploadedTable.SetTable(currentClickList, 2, replacementVal);
+        //     // }
+        //     // else
+        //     // {
+        //     //     uploadedTable.SetTable(currentClickList);
+        //     // }
+
+        //     positionData.stringTable = uploadedTable.uploadTable;
+        //     // positionData.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
+        //     positionData.positionsUploaded = true;
+        //     SceneManager.LoadScene("StartMenu");
+        // }
     }
 }
 
