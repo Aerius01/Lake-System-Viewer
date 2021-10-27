@@ -6,9 +6,12 @@ public class StringTable
 {
     public DataTable table;
     public int nullCounter = 0;
+    public bool parsingComplete = false;
 
     public DataTable parseTable(string csvText)
     {
+        parsingComplete = false;
+
         // determine number of columns by splitting on the commas before the first linebreak
         int positionOfNewLine = csvText.IndexOf("\n");
         if (positionOfNewLine >= 0)
@@ -52,6 +55,7 @@ public class StringTable
             }
         }
 
+        parsingComplete = true;
         return table;
     }
 }

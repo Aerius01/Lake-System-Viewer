@@ -9,7 +9,7 @@ public class UploadTable
 {
     public int adjustedColumnCount, adjustedRowCount, nullCount, totalColumnCount, totalRowCount;
     public List<int[]> nullList;
-    public bool throwException, stopThread, resetComplete;
+    public bool throwException, stopThread, resetComplete, waitingOnReset = false;
     public DataTable uploadTable;
     public ViewPort viewPort;
     protected int rowsToRemove = 0, columnsToRemove = 0;
@@ -33,6 +33,7 @@ public class UploadTable
     {
         stopThread = false;
         resetComplete = false;
+        waitingOnReset = true;
 
         secondaryThread = new Thread(() => BaseReset(i));
         secondaryThread.Start();
@@ -43,8 +44,8 @@ public class UploadTable
 
     protected void BaseReset(int i)
     {
-        int columnsToRemove = i - (int)Math.Floor((double)i/(double)viewPort.Columns) * viewPort.Columns;
-        int rowsToRemove = (int)Math.Floor((double)i/(double)viewPort.Columns);
+        columnsToRemove = i - (int)Math.Floor((double)i/(double)viewPort.Columns) * viewPort.Columns;
+        rowsToRemove = (int)Math.Floor((double)i/(double)viewPort.Columns);
 
         adjustedColumnCount = totalColumnCount - columnsToRemove;
         adjustedRowCount = totalRowCount - rowsToRemove;
@@ -85,6 +86,10 @@ public class UploadTable
             nullCount = nullList.Count;
             resetComplete = true;
         }
+        else
+        {
+            waitingOnReset = false;
+        }
     }
 
     protected virtual void AdditionalOperations(string stringValue, int row, int column)
@@ -95,13 +100,13 @@ public class UploadTable
     public virtual void SetTable(List<int> currentClickList)
     {
         // Trim non-data rows/columns
-        rowsToRemove = 0;
-        columnsToRemove = 0;
-        foreach (int idNumber in currentClickList)
-        {
-            rowsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Columns) * viewPort.Columns, rowsToRemove);
-            columnsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Rows) * viewPort.Rows, columnsToRemove);
-        }
+        // rowsToRemove = 0;
+        // columnsToRemove = 0;
+        // foreach (int idNumber in currentClickList)
+        // {
+        //     rowsToRemove = Mathf.Max((int)Math.Floor((double)idNumber/(double)viewPort.Columns), rowsToRemove);
+        //     columnsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Rows) * viewPort.Rows, columnsToRemove);
+        // }
 
         for (int r = rowsToRemove; r > 0; r--)
         {

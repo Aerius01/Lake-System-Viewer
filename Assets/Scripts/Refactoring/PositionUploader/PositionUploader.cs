@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Linq;
 using System.Data;
 using UnityEngine.SceneManagement;
 
@@ -10,6 +11,7 @@ public class PositionUploader : MonoBehaviour
 {
     public GameObject cellPreFab, dropdownPrefab, contentPanel, paramsPanel;
     private List<int> currentClickList;
+    private Dictionary<string, float> GISBox;
     private PositionUploadTable uploadedTable;
     private ViewPort viewPort;
     private bool continueColoring = false;
@@ -78,14 +80,6 @@ public class PositionUploader : MonoBehaviour
                 CallDialogBox(instructionPanel, "Format Exception: At least one entry in your selection\ncould not be converted into a decimal number" +
                     ", are you sure\nyou've removed all headers and columns in your selection?");
             }
-
-        // ADJUST HERE
-            // ToggleNullFrame();
-
-        //     paramsPanel.transform.Find("StatisticsFrame").transform.
-        //         Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
-        //         string.Format("Max Depth: {0: 0.00}\nMin Depth: {1: 0.00}\n# Columns: {2}\n# Rows: {3}\n# Null/NaNs: {4}",
-        //         uploadedTable.maxDepth, uploadedTable.minDepth, uploadedTable.adjustedColumnCount, uploadedTable.adjustedRowCount, uploadedTable.nullCount);
         }
         else
         {
@@ -96,34 +90,35 @@ public class PositionUploader : MonoBehaviour
                 viewPort.ApplyOutOfBoxColoring();
             }
         }
+
+        if (uploadedTable.waitingOnReset)
+        {
+            if (uploadedTable.resetComplete)
+            {
+                // Update only if we've reset the params successfully
+                paramsPanel.transform.Find("StatisticsFrame").transform.Find("TextContainer").transform.
+                    Find("Text (TMP)").GetComponent<TextMeshProUGUI>().text =
+                    string.Format("# Sel. Rows: {0}\n# Sel. Columns: {1}\n# Null/NaNs: {2}",
+                    uploadedTable.adjustedRowCount, uploadedTable.adjustedColumnCount, uploadedTable.nullCount);
+
+                uploadedTable.containerCG.alpha = 1f;
+                uploadedTable.loadingIcon.SetActive(false);
+                uploadedTable.waitingOnReset = false;
+            }
+            else if (uploadedTable.stopThread)
+            {
+                // if we've commanded the thread to stop, reset the UI
+                uploadedTable.containerCG.alpha = 1f;
+                uploadedTable.loadingIcon.SetActive(false);
+                // waitingOnReset is set to false in the UploadTable reset loop
+            }
+        }
     }
-
-    // private void ToggleNullFrame()
-    // {
-    //     CanvasGroup nullcontent = paramsPanel.transform.Find("NullFrame").transform.Find("ToggleGroup").gameObject.GetComponent<CanvasGroup>();
-    //     TextMeshProUGUI textContent = paramsPanel.transform.Find("NullFrame").transform.Find("WarningText").gameObject.GetComponent<TextMeshProUGUI>();
-    //     if (uploadedTable.nullCount > 0)
-    //     {
-    //         nullcontent.alpha = 1;
-    //         nullcontent.interactable = true;
-            
-    //         textContent.text = "!! Null or NaN values detected";
-    //         textContent.color = new Color(255f, 0f, 0f, 1f);
-    //     }
-    //     else
-    //     {
-    //         nullcontent.alpha = 0;
-    //         nullcontent.interactable = false;
-
-    //         textContent.text = "No Null or NaN values detected";
-    //         textContent.color = new Color(0f, 255f, 0f, 1f);
-    //     }
-    // }
 
     public void BackButton()
     {
-        PositionData mesh = GameObject.Find("MeshReader").GetComponent<PositionData>();
-        mesh.backButton = true;
+        PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        positionData.backButton = true;
 
         SceneManager.LoadScene("StartMenu");
     }
@@ -135,71 +130,98 @@ public class PositionUploader : MonoBehaviour
         Toggle dateTimeToggle = paramFrame.transform.Find("DateTimeFrame").transform.Find("Toggle_1").GetComponent<Toggle>();
         Toggle GISToggle = paramFrame.transform.Find("GISToggle").transform.Find("Toggle_2").GetComponent<Toggle>();
 
-        if (!dateTimeToggle.isOn)
+        // Get GIS inputs
+        Dictionary<string, TMP_InputField> GIS = new Dictionary<string, TMP_InputField> {
+            {"MinLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLong").GetComponent<TMP_InputField>()},
+            {"MaxLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLong").GetComponent<TMP_InputField>()},
+            {"MinLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLat").GetComponent<TMP_InputField>()},
+            {"MaxLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLat").GetComponent<TMP_InputField>()}};
+
+        bool error = false;
+
+        // Ensure data has been selected
+        if (!viewPort.currentClickList.Any())
         {
-            PositionUploadTable.applyDateFilter = false;
-        }
-        if (!GISToggle.isOn)
-        {
-            PositionUploadTable.applyGISConversion = false;
+            CallDialogBox(instructionPanel, "No data has been selected in the viewport. Please" +
+                "\nselect only the actual data, omitting the header row");
+            error = true;
         }
 
-        // Approvals gauntlet for exit
+        // General column checks
         if (!viewPort.ColumnReqsSatisfied())
         {
             CallDialogBox(instructionPanel, "Either not all required columns are present" +
                 "\nin the dropdown selection, or some are duplicated.\n\nPlease verify the dropdowns.");
+            error = true;
         }
-        else if (dateTimeToggle.isOn)
-        {
-            if (PositionUploadTable.startCutoff == null || PositionUploadTable.endCutoff == null)
-            {
-                CallDialogBox(instructionPanel, "Either the start or the end time for" +
-                    "\nthe date filter has not been selected.\n\nPlease verify the date selection.");
-            }
-            else if (DateTime.Compare(PositionUploadTable.startCutoff, PositionUploadTable.endCutoff) > 0)
-            {
-                CallDialogBox(instructionPanel, "The selected start date takes place after the" +
-                    "\nselected end date.\n\nPlease ensure that the start date takes place before the end date.");
-            }
-            else
-            {
-                PositionUploadTable.applyDateFilter = true;
-            }
-        }
-        else if (GISToggle.isOn)
-        {
-            // Get GIS inputs
-            Dictionary<string, TMP_InputField> GISBox = new Dictionary<string, TMP_InputField> {
-                {"MinLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLong").GetComponent<TMP_InputField>()},
-                {"MaxLong", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLong").GetComponent<TMP_InputField>()},
-                {"MinLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLat").GetComponent<TMP_InputField>()},
-                {"MaxLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLat").GetComponent<TMP_InputField>()}};
 
-            if (String.IsNullOrEmpty(GISBox["MinLong"].text) ||
-                String.IsNullOrEmpty(GISBox["MaxLong"].text) ||
-                String.IsNullOrEmpty(GISBox["MinLat"].text) ||
-                String.IsNullOrEmpty(GISBox["MaxLat"].text))
+        // DateTime filter checks
+        if (!error)
+        {
+            if (dateTimeToggle.isOn)
             {
-                CallDialogBox(instructionPanel, "One of the values entered for the GIS bounding" +
-                    "\nbox is either null or empty.\n\nPlease verify the GIS coordinates entered.");
-            }
-            else if (float.Parse(GISBox["MinLong"].text) > float.Parse(GISBox["MaxLong"].text))
-            {
-                CallDialogBox(instructionPanel, "The minimum longitude specified in the GIS bounding" +
-                    "\nbox is larger than the maximum longitude.\n\nPlease verify the GIS coordinates entered.");
-            }
-            else if (float.Parse(GISBox["MinLat"].text) > float.Parse(GISBox["MaxLat"].text))
-            {
-                CallDialogBox(instructionPanel, "The minimum latitude specified in the GIS bounding" +
-                    "\nbox is larger than the maximum latitude.\n\nPlease verify the GIS coordinates entered.");
+                if (PositionUploadTable.startCutoff == null || PositionUploadTable.endCutoff == null)
+                {
+                    CallDialogBox(instructionPanel, "Either the start or the end time for" +
+                        "\nthe date filter has not been selected.\n\nPlease verify the date selection.");
+                        error = true;
+                }
+                else if (DateTime.Compare(PositionUploadTable.startCutoff, PositionUploadTable.endCutoff) > 0)
+                {
+                    CallDialogBox(instructionPanel, "The selected start date takes place after the" +
+                        "\nselected end date.\n\nPlease ensure that the start date takes place before the end date.");
+                        error = true;
+                }
+                else
+                {
+                    PositionUploadTable.applyDateFilter = true;
+                }
             }
             else
             {
-                PositionUploadTable.applyGISConversion = true;
+                PositionUploadTable.applyDateFilter = false;
             }
         }
-        else
+
+        // GIS conversion checks
+        if (!error)
+        {
+            if (GISToggle.isOn)
+            {
+                if (String.IsNullOrEmpty(GIS["MinLong"].text) ||
+                    String.IsNullOrEmpty(GIS["MaxLong"].text) ||
+                    String.IsNullOrEmpty(GIS["MinLat"].text) ||
+                    String.IsNullOrEmpty(GIS["MaxLat"].text))
+                {
+                    CallDialogBox(instructionPanel, "One of the values entered for the GIS bounding" +
+                        "\nbox is either null or empty.\n\nPlease verify the GIS coordinates entered.");
+                    error = true;
+                }
+                else if (float.Parse(GIS["MinLong"].text) > float.Parse(GIS["MaxLong"].text))
+                {
+                    CallDialogBox(instructionPanel, "The minimum longitude specified in the GIS bounding" +
+                        "\nbox is larger than the maximum longitude.\n\nPlease verify the GIS coordinates entered.");
+                    error = true;
+                }
+                else if (float.Parse(GIS["MinLat"].text) > float.Parse(GIS["MaxLat"].text))
+                {
+                    CallDialogBox(instructionPanel, "The minimum latitude specified in the GIS bounding" +
+                        "\nbox is larger than the maximum latitude.\n\nPlease verify the GIS coordinates entered.");
+                    error = true;
+                }
+                else
+                {
+                    PositionUploadTable.applyGISConversion = true;
+                }
+            }
+            else
+            {
+                PositionUploadTable.applyGISConversion = false;
+            }
+        }
+        
+        // Successfully met requirements
+        if (!error)
         {
             Dictionary<string, Type> typeRequirements = new Dictionary<string, Type>() {
                 {"ID", typeof(string)}, 
@@ -208,6 +230,15 @@ public class PositionUploader : MonoBehaviour
                 {"D", typeof(float)}, 
                 {"Time", typeof(DateTime)}};
 
+            if (PositionUploadTable.applyGISConversion)
+            {
+                GISBox = new Dictionary<string, float> {
+                    {"MinLong", float.Parse(GIS["MinLong"].text)},
+                    {"MaxLong", float.Parse(GIS["MaxLong"].text)},
+                    {"MinLat", float.Parse(GIS["MinLat"].text)},
+                    {"MaxLat", float.Parse(GIS["MaxLat"].text)}};
+            }
+            
             uploadedTable.uploadTable = uploadedTable.AttributeColumnNames(uploadedTable.uploadTable);
             List<int> rowsWithIssues = uploadedTable.CheckColumnFormatting(uploadedTable.uploadTable, typeRequirements);
 
@@ -247,37 +278,30 @@ public class PositionUploader : MonoBehaviour
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(panel.GetComponent<RectTransform>());
     }
-        
 
     public void FinalizeTable()
     {
+        PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
 
-        uploadedTable.uploadTable = uploadedTable.AttributeColumnNames(uploadedTable.uploadTable, removeUnnamed: true);
-        // if
-        // {   
-        //     // Successful checks
-        //     // Modify the PositionData table based on selection & nulls
-        //     PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        uploadedTable.SetTable(viewPort.currentClickList);
 
-        //     // if (activeToggle.name == "Toggle_1")
-        //     // {
-        //     //     uploadedTable.SetTable(currentClickList, 1);
-        //     // }
-        //     // else if (activeToggle.name == "Toggle_2")
-        //     // {
-        //     //     float replacementVal = float.Parse(activeToggle.transform.Find("Input").GetComponent<TMP_InputField>().text);
-        //     //     uploadedTable.SetTable(currentClickList, 2, replacementVal);
-        //     // }
-        //     // else
-        //     // {
-        //     //     uploadedTable.SetTable(currentClickList);
-        //     // }
+        // Start filling out the PositionData object
+        positionData.stringTable = uploadedTable.uploadTable;
+        positionData.usingFilterDates = PositionUploadTable.applyDateFilter;
+        positionData.usingGIS = PositionUploadTable.applyGISConversion;
 
-        //     positionData.stringTable = uploadedTable.uploadTable;
-        //     // positionData.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
-        //     positionData.positionsUploaded = true;
-        //     SceneManager.LoadScene("StartMenu");
-        // }
+        if (positionData.usingFilterDates)
+        {
+            positionData.filterDates = uploadedTable.dateFilter;
+        }
+
+        if (positionData.usingGIS)
+        {
+            positionData.GISCoords = GISBox;
+        }
+
+        positionData.positionsUploaded = true;
+        SceneManager.LoadScene("StartMenu");
     }
 }
 

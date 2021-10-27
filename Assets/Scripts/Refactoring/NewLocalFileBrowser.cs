@@ -8,7 +8,6 @@ public class NewLocalFileBrowser : MonoBehaviour
 
     [HideInInspector]
     public string csvFile;
-
 	public bool operationComplete = false;
 	
 	public void ReadData()

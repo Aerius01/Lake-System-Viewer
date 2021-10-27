@@ -99,6 +99,8 @@ public class ViewPort
                 {
                     uploadedTable.stopThread = true;
                     uploadedTable.secondaryThread.Join();
+                    uploadedTable.containerCG.alpha = 1f;
+                    uploadedTable.loadingIcon.SetActive(false);
                 }
 
                 uploadedTable.ResetParams(i);
