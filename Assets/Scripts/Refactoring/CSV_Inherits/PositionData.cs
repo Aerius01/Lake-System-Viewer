@@ -11,10 +11,30 @@ public class PositionData : NewCSVReader
     public DateTime[] filterDates;
     public Dictionary<string, float> GISCoords;
 
+    private static PositionData _instance;
+    [HideInInspector]
+    public static PositionData instance {get { return _instance; } set {_instance = value; }}
+
+    private void Awake()
+    {
+        // Destroy duplicates instances
+        if (_instance != null && _instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            _instance = this;
+        }
+    }
 
     protected override IEnumerator CallDialog()
 	{	
         yield return StartCoroutine(base.CallDialog());
-        scriptObject.GetComponent<NavigationScript>().GoToPositionDataUploader();
+
+        if (!failedUpload)
+        {
+            scriptObject.GetComponent<NavigationScript>().GoToPositionDataUploader();
+        }
 	}
 }

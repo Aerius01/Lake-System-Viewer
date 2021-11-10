@@ -1,21 +1,22 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Threading;
 using System.Linq;
-using System.Data;
 using UnityEngine.SceneManagement;
 
 public class PositionUploader : MonoBehaviour
 {
     public GameObject cellPreFab, dropdownPrefab, contentPanel, paramsPanel;
     private List<int> currentClickList;
-    private Dictionary<string, float> GISBox;
+    public static Dictionary<string, float> GISBox;
     private PositionUploadTable uploadedTable;
     private ViewPort viewPort;
-    private bool continueColoring = false;
-
+    private bool continueColoring = false, finalizingTable = false;
+    private Thread execThread;
     private GameObject instructionPanel;
 
     private Toggle dateTimeToggle;
@@ -23,10 +24,10 @@ public class PositionUploader : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        PositionData reader = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        PositionData.instance.positionsUploaded = PositionData.instance.backButton = false;
         instructionPanel = contentPanel.transform.parent.transform.parent.Find("InstructionPanel").gameObject;
 
-        uploadedTable = new PositionUploadTable(reader.stringTable.Copy(), paramsPanel);
+        uploadedTable = new PositionUploadTable(PositionData.instance.stringTable.Copy(), paramsPanel);
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
@@ -70,24 +71,27 @@ public class PositionUploader : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        if (contentPanel.transform.parent.gameObject.transform.parent.gameObject.GetComponent<SCUtils>().mouse_over)
+        if (!finalizingTable)
         {
-            continueColoring = true;
-            viewPort.ApplyColoring();
+            if (contentPanel.transform.parent.gameObject.transform.parent.gameObject.GetComponent<SCUtils>().mouse_over)
+            {
+                continueColoring = true;
+                viewPort.ApplyColoring();
 
-            if (uploadedTable.throwException)
-            {
-                CallDialogBox(instructionPanel, "Format Exception: At least one entry in your selection\ncould not be converted into a decimal number" +
-                    ", are you sure\nyou've removed all headers and columns in your selection?");
+                if (uploadedTable.throwException)
+                {
+                    CallDialogBox(instructionPanel, "Format Exception: At least one entry in your selection\ncould not be converted into a decimal number" +
+                        ", are you sure\nyou've removed all headers and columns in your selection?");
+                }
             }
-        }
-        else
-        {
-            // Avoid looping every update when not necessary
-            if (continueColoring)
+            else
             {
-                continueColoring = false;
-                viewPort.ApplyOutOfBoxColoring();
+                // Avoid looping every update when not necessary
+                if (continueColoring)
+                {
+                    continueColoring = false;
+                    viewPort.ApplyOutOfBoxColoring();
+                }
             }
         }
 
@@ -137,6 +141,7 @@ public class PositionUploader : MonoBehaviour
             {"MinLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MinLat").GetComponent<TMP_InputField>()},
             {"MaxLat", paramFrame.transform.Find("GISToggle").transform.Find("Inputs").transform.Find("MaxLat").GetComponent<TMP_InputField>()}};
 
+        // Gauntlet bool
         bool error = false;
 
         // Ensure data has been selected
@@ -188,7 +193,13 @@ public class PositionUploader : MonoBehaviour
         {
             if (GISToggle.isOn)
             {
-                if (String.IsNullOrEmpty(GIS["MinLong"].text) ||
+                if (GameObject.Find("MeshReader") == null)
+                {
+                    CallDialogBox(instructionPanel, "In order to use GIS coordinates, you must first" +
+                        "\nupload a heightmap.\n\nPlease navigate back to the start menu to do so.");
+                    error = true;
+                }
+                else if (String.IsNullOrEmpty(GIS["MinLong"].text) ||
                     String.IsNullOrEmpty(GIS["MaxLong"].text) ||
                     String.IsNullOrEmpty(GIS["MinLat"].text) ||
                     String.IsNullOrEmpty(GIS["MaxLat"].text))
@@ -223,12 +234,11 @@ public class PositionUploader : MonoBehaviour
         // Successfully met requirements
         if (!error)
         {
-            Dictionary<string, Type> typeRequirements = new Dictionary<string, Type>() {
-                {"ID", typeof(string)}, 
-                {"x", typeof(float)}, 
-                {"y", typeof(float)}, 
-                {"D", typeof(float)}, 
-                {"Time", typeof(DateTime)}};
+            finalizingTable = true;
+
+            CanvasGroup loadingIcon = GameObject.Find("Panel_3").transform.Find("Okay").transform.Find("OKLoadingIcon").GetComponent<CanvasGroup>();
+            loadingIcon.alpha = 1f;
+            GameObject.Find("Canvas").GetComponent<CanvasGroup>().interactable = false;
 
             if (PositionUploadTable.applyGISConversion)
             {
@@ -240,21 +250,42 @@ public class PositionUploader : MonoBehaviour
             }
             
             uploadedTable.uploadTable = uploadedTable.AttributeColumnNames(uploadedTable.uploadTable);
-            List<int> rowsWithIssues = uploadedTable.CheckColumnFormatting(uploadedTable.uploadTable, typeRequirements);
+            StartCoroutine(ListenToThread());
+        }
+    }
 
-            if (rowsWithIssues.Count > 0)
-            {
-                CallDialogBox(instructionPanel, string.Format("There are {0} rows that failed conversions to their" +
-                    "\nrequired data types (a string that couldn't be converted due to formatting). Either" + 
-                    "\npress OKAY to continue with these rows removed, or correct the source data and re-upload.", rowsWithIssues.Count),
-                    fade: false);
+    private IEnumerator ListenToThread()
+    {
+        Dictionary<string, Type> typeRequirements = new Dictionary<string, Type>() {
+            {"ID", typeof(string)}, 
+            {"x", typeof(float)}, 
+            {"y", typeof(float)}, 
+            {"D", typeof(float)}, 
+            {"Time", typeof(DateTime)}};
 
-                // Call to finalize table happens externally in the UI by clicking the OKAY button
-            }
-            else
-            {
-                FinalizeTable();
-            }
+        List<int> rowsWithIssues = new List<int>();
+        Thread execThread = new Thread(() => { rowsWithIssues = uploadedTable.CheckColumnFormatting(uploadedTable.uploadTable, typeRequirements); });
+        execThread.Start();
+
+        PositionUploadTable.checkOpComplete = false;
+        while (!PositionUploadTable.checkOpComplete)
+        {
+            yield return new WaitForSeconds(1f);
+        }
+
+        if (rowsWithIssues.Count > 0)
+        {
+            GameObject.Find("Canvas").GetComponent<CanvasGroup>().interactable = true;
+            CallDialogBox(instructionPanel, string.Format("There are {0} rows that failed conversions to their" +
+                "\nrequired data types (a string that couldn't be converted due to formatting). Either" + 
+                "\npress OKAY to continue with these rows removed, or correct the source data and re-upload.", rowsWithIssues.Count),
+                fade: false);
+
+            // Call to finalize table happens externally in the UI by clicking the OKAY button
+        }
+        else
+        {
+            FinalizeTable();
         }
     }
 
@@ -281,9 +312,19 @@ public class PositionUploader : MonoBehaviour
 
     public void FinalizeTable()
     {
-        PositionData positionData = GameObject.Find("PositionReader").GetComponent<PositionData>();
+        StartCoroutine(FinalizeTableCR());
+    }
+
+    private IEnumerator FinalizeTableCR()
+    {
+        GameObject.Find("Canvas").GetComponent<CanvasGroup>().interactable = false;
+        PositionData positionData = PositionData.instance;
 
         uploadedTable.SetTable(viewPort.currentClickList);
+        while (!PositionUploadTable.setTableComplete)
+        {
+            yield return new WaitForSeconds(1f);
+        }
 
         // Start filling out the PositionData object
         positionData.stringTable = uploadedTable.uploadTable;
@@ -299,6 +340,9 @@ public class PositionUploader : MonoBehaviour
         {
             positionData.GISCoords = GISBox;
         }
+
+        CanvasGroup loadingIcon = GameObject.Find("Panel_3").transform.Find("Okay").transform.Find("OKLoadingIcon").GetComponent<CanvasGroup>();
+        loadingIcon.alpha = 0f;
 
         positionData.positionsUploaded = true;
         SceneManager.LoadScene("StartMenu");

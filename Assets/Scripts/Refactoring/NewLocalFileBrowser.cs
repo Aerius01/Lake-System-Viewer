@@ -8,7 +8,7 @@ public class NewLocalFileBrowser : MonoBehaviour
 
     [HideInInspector]
     public string csvFile;
-	public bool operationComplete = false;
+	public bool operationComplete = false, success = false;
 	
 	public void ReadData()
 	{
@@ -26,6 +26,11 @@ public class NewLocalFileBrowser : MonoBehaviour
 		if( FileBrowser.Success )
 		{
 			csvFile = FileBrowserHelpers.ReadTextFromFile( FileBrowser.Result[0] );
+			success = true;
+		}
+		else
+		{
+			success = false;
 		}
 
 		operationComplete = true;

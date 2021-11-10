@@ -24,23 +24,24 @@ public class UploadUtils : MonoBehaviour
             readers = GameObject.Find("Readers").gameObject;
         }
 
-        if (readers.transform.Find("MeshReader") != null)
+        if (MeshData.instance != null)
         {
-            meshReader = readers.transform.Find("MeshReader").gameObject;
-            meshData = meshReader.GetComponent<MeshData>();
+            meshReader = MeshData.instance.gameObject;
+            meshData = MeshData.instance;
             meshExists = true;
         }
 
-        if (readers.transform.Find("PositionReader") != null)
+        if (PositionData.instance != null)
         {
-            positionReader = readers.transform.Find("PositionReader").gameObject;
-            positionData = positionReader.GetComponent<PositionData>();
+            positionReader = PositionData.instance.gameObject;
+            positionData = PositionData.instance;
             positionExists = true;
         }
     }
 
-    private void Update()
+    private void Start()
     {
+        // if an existing reader comes back successfully, change button color
         if (meshExists)
         {
             if (meshData.meshUploaded)
@@ -50,8 +51,6 @@ public class UploadUtils : MonoBehaviour
                 ColorBlock cb = uploadButton.colors;
                 cb.normalColor = new Color(0, 1, 0, 1);
                 uploadButton.colors = cb;
-
-                meshData.meshUploaded = false;
             }
             else if (meshData.backButton)
             {
@@ -60,8 +59,6 @@ public class UploadUtils : MonoBehaviour
                 ColorBlock cb = uploadButton.colors;
                 cb.normalColor = new Color(1, 0, 0, 1);
                 uploadButton.colors = cb;
-
-                meshData.backButton = false;
             }
         }
 
@@ -74,8 +71,6 @@ public class UploadUtils : MonoBehaviour
                 ColorBlock cb = uploadButton.colors;
                 cb.normalColor = new Color(0, 1, 0, 1);
                 uploadButton.colors = cb;
-
-                positionData.positionsUploaded = false;
             }
             else if (positionData.backButton)
             {
@@ -84,17 +79,42 @@ public class UploadUtils : MonoBehaviour
                 ColorBlock cb = uploadButton.colors;
                 cb.normalColor = new Color(1, 0, 0, 1);
                 uploadButton.colors = cb;
-
-                positionData.backButton = false;
             }
         }
-        // if an existing reader comes back successfully, change button color
+    }
+
+    private void Update()
+    {
+        if (meshExists)
+        {
+            if (meshData.failedUpload)
+            {
+                Button uploadButton = uploadMenu.transform.Find("Panel_1").transform.Find("UploadButton").GetComponent<Button>();
+
+                ColorBlock cb = uploadButton.colors;
+                cb.normalColor = new Color(1, 0, 0, 1);
+                uploadButton.colors = cb;
+            }
+        }
+
+        if (positionExists)
+        {
+            if (positionData.failedUpload)
+            {
+                Button uploadButton = uploadMenu.transform.Find("Panel_2").transform.Find("UploadButton").GetComponent<Button>();
+
+                ColorBlock cb = uploadButton.colors;
+                cb.normalColor = new Color(1, 0, 0, 1);
+                uploadButton.colors = cb;
+            }
+        }
     }
 
     public void MeshUploadButton()
     {
         if (meshReader != null)
         {
+            MeshData.instance = null;
             Destroy(meshReader);
         }
 
@@ -105,12 +125,14 @@ public class UploadUtils : MonoBehaviour
         
         meshData = meshReader.AddComponent<MeshData>() as MeshData;
         meshData.scriptObject = this.gameObject;
+        meshExists = true;
     }
 
     public void PositionsUploadButton()
     {
         if (positionReader != null)
         {
+            PositionData.instance = null;
             Destroy(positionReader);
         }
 
@@ -121,5 +143,6 @@ public class UploadUtils : MonoBehaviour
         
         positionData = positionReader.AddComponent<PositionData>() as PositionData;
         positionData.scriptObject = this.gameObject;
+        positionExists = true;
     }
 }

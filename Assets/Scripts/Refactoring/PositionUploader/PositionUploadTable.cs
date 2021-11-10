@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System;
 using System.Data;
 using UnityEngine;
@@ -7,8 +8,10 @@ using System.Linq;
 public class PositionUploadTable: UploadTable
 {
     private DateTime earliestTS, latestTS;
+    private MeshData meshData;
     static public DateTime startCutoff, endCutoff;
-    static public bool applyDateFilter, applyGISConversion;
+    static volatile public bool checkOpComplete;
+    static public bool applyDateFilter, applyGISConversion, setTableComplete;
     private List<int> uniqueIDs;
     public DateTime[] dateFilter;
 
@@ -20,6 +23,7 @@ public class PositionUploadTable: UploadTable
 
     public override void SetTable(List<int> currentClickList)
     {
+        setTableComplete = false;
         base.SetTable(currentClickList);
 
         // Remove unnamed columns
@@ -40,25 +44,45 @@ public class PositionUploadTable: UploadTable
             dateFilter = new DateTime[2] {startCutoff, endCutoff};
         }
 
-        // Apply date and null filters
-        for (int r = uploadTable.Rows.Count - 1; r > 0; r--)
+        if (applyGISConversion)
         {
-            if (nullRows.Contains(r)) // null or NaN values
+            meshData = GameObject.Find("MeshReader").GetComponent<MeshData>();
+        }
+
+        // Apply date and null filters
+        Thread filtersThread = new Thread(() => {
+            for (int r = uploadTable.Rows.Count - 1; r > 0; r--)
             {
-                uploadTable.Rows[r].Delete();
-            }
-            else if (applyDateFilter) // filter time values
-            {
-                if (DateTime.Compare(DateTime.Parse(uploadTable.Rows[r]["Time"].ToString()), dateFilter[0]) < 0 || DateTime.Compare(dateFilter[1], DateTime.Parse(uploadTable.Rows[r]["Time"].ToString())) > 0)
+                if (nullRows.Contains(r)) // null or NaN values
                 {
                     uploadTable.Rows[r].Delete();
                 }
+                else
+                {
+                    bool rowDeleted = false;
+
+                    if (applyDateFilter) // filter time values
+                    {
+                        if (DateTime.Compare(DateTime.Parse(uploadTable.Rows[r]["Time"].ToString()), dateFilter[0]) < 0 || DateTime.Compare(dateFilter[1], DateTime.Parse(uploadTable.Rows[r]["Time"].ToString())) > 0)
+                        {
+                            uploadTable.Rows[r].Delete();
+                            rowDeleted = true;
+                        }
+                    }
+
+                    if (!rowDeleted && applyGISConversion)
+                    {
+                        uploadTable.Rows[r]["x"] = (convertStringLongValue(uploadTable.Rows[r]["x"].ToString())).ToString();
+                        uploadTable.Rows[r]["y"] = (convertStringLatValue(uploadTable.Rows[r]["y"].ToString())).ToString();
+                    }
+                }
             }
-        }
 
-        uploadTable.AcceptChanges();
+            uploadTable.AcceptChanges();
+            setTableComplete = true;
+        });
 
-        // GIS conversion needs the mesh uploader units, must take place later
+        filtersThread.Start();
     }
 
     public DataTable AttributeColumnNames(DataTable table, bool removeUnnamed = false)
@@ -87,6 +111,8 @@ public class PositionUploadTable: UploadTable
 
     public List<int> CheckColumnFormatting(DataTable namedColumnsTable, Dictionary<string, Type> types)
     {
+        checkOpComplete = false;
+        
         List<int> issueList = new List<int>();
         foreach (DataRow row in namedColumnsTable.Rows)
         {
@@ -108,6 +134,32 @@ public class PositionUploadTable: UploadTable
             }
         }
 
+        checkOpComplete = true;
+        Debug.Log("Done check");
         return issueList;
+    }
+
+    public float convertStringLatValue(string stringLat)
+    {
+        double doubleLat = double.Parse(stringLat.Replace("\"", "").Trim());
+
+        if (doubleLat > PositionUploader.GISBox["MaxLat"] || doubleLat < PositionUploader.GISBox["MinLat"])
+        {
+            throw new FormatException("The provided latitude is outside the range of the bounding box");
+        }
+
+        return (float)((meshData.rowCount) * ((doubleLat - PositionUploader.GISBox["MinLat"]) / (PositionUploader.GISBox["MaxLat"] - PositionUploader.GISBox["MinLat"])));
+    }
+
+    public float convertStringLongValue(string stringLong)
+    {
+        double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
+
+        if (doubleLong > PositionUploader.GISBox["MaxLong"] || doubleLong < PositionUploader.GISBox["MinLong"])
+        {
+            throw new FormatException("The provided longitude is outside the range of the bounding box");
+        }
+
+        return (float)((meshData.columnCount) * ((doubleLong - PositionUploader.GISBox["MinLong"]) / (PositionUploader.GISBox["MaxLong"] - PositionUploader.GISBox["MinLong"])));
     }
 }

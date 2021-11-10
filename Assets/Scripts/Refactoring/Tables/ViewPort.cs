@@ -209,10 +209,10 @@ public class ViewPort
             }
         }
 
-        foreach (int key in dropdownMapper.Keys)
-        {
-            Debug.Log(key + ", " + dropdownMapper[key]);
-        }
+        // foreach (int key in dropdownMapper.Keys)
+        // {
+        //     Debug.Log(key + ", " + dropdownMapper[key]);
+        // }
     }
 
     public bool ColumnReqsSatisfied()

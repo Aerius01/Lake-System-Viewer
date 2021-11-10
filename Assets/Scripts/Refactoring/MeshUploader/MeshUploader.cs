@@ -16,9 +16,9 @@ public class MeshUploader : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        MeshData reader = GameObject.Find("MeshReader").GetComponent<MeshData>();
-
-        uploadedTable = new MeshUploadTable(reader.stringTable.Copy(), paramsPanel);
+        MeshData.instance.meshUploaded = MeshData.instance.backButton = false;
+        
+        uploadedTable = new MeshUploadTable(MeshData.instance.stringTable.Copy(), paramsPanel);
         viewPort = new ViewPort(uploadedTable, contentPanel);
         uploadedTable.viewPort = viewPort;
 
@@ -175,6 +175,8 @@ public class MeshUploader : MonoBehaviour
 
             mesh.stringTable = uploadedTable.uploadTable;
             mesh.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
+            mesh.rowCount = mesh.stringTable.Rows.Count;
+            mesh.columnCount = mesh.stringTable.Columns.Count;
             mesh.meshUploaded = true;
             SceneManager.LoadScene("StartMenu");
         }

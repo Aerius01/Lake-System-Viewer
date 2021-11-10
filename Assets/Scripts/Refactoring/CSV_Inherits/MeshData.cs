@@ -7,9 +7,30 @@ public class MeshData : NewCSVReader
     public bool meshUploaded = false, backButton = false;
     public float waterLevel;
 
+    private static MeshData _instance;
+    [HideInInspector]
+    public static MeshData instance {get { return _instance; } set {_instance = value;}}
+
+    private void Awake()
+    {
+        // Destroy duplicates instances
+        if (_instance != null && _instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            _instance = this;
+        }
+    }
+
     protected override IEnumerator CallDialog()
 	{	
         yield return StartCoroutine(base.CallDialog());
-        scriptObject.GetComponent<NavigationScript>().GoToMesh();
+        
+        if (!failedUpload)
+        {
+            scriptObject.GetComponent<NavigationScript>().GoToMesh();
+        }
 	}
 }
