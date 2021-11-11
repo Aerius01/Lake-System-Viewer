@@ -12,7 +12,7 @@ public class Fish
     public DateTime earliestTime, latestTime;
     public GameObject fishObject = null, canvasObject = null, depthLineObject = null, trailObject = null;
     public DataPointClass[] dataPoints;
-    public int totalReadings, id;
+    public int totalReadings, id, lastReading;
 }
 
 public class FishGenerator : MonoBehaviour
