@@ -7,7 +7,7 @@ using System.Linq;
 
 public class PositionUploadTable: UploadTable
 {
-    private DateTime earliestTS, latestTS;
+    public DateTime earliestTS, latestTS;
     private MeshData meshData;
     static public DateTime startCutoff, endCutoff;
     static volatile public bool checkOpComplete;
@@ -50,6 +50,9 @@ public class PositionUploadTable: UploadTable
         }
 
         // Apply date and null filters
+        earliestTS = DateTime.MaxValue;
+        latestTS = DateTime.MinValue;
+
         Thread filtersThread = new Thread(() => {
             for (int r = uploadTable.Rows.Count - 1; r > 0; r--)
             {
@@ -60,10 +63,11 @@ public class PositionUploadTable: UploadTable
                 else
                 {
                     bool rowDeleted = false;
+                    DateTime currentRowTime = DateTime.Parse(uploadTable.Rows[r]["Time"].ToString());
 
                     if (applyDateFilter) // filter time values
                     {
-                        if (DateTime.Compare(DateTime.Parse(uploadTable.Rows[r]["Time"].ToString()), dateFilter[0]) < 0 || DateTime.Compare(dateFilter[1], DateTime.Parse(uploadTable.Rows[r]["Time"].ToString())) > 0)
+                        if (DateTime.Compare(currentRowTime, dateFilter[0]) < 0 || DateTime.Compare(dateFilter[1], currentRowTime) > 0)
                         {
                             uploadTable.Rows[r].Delete();
                             rowDeleted = true;
@@ -74,6 +78,16 @@ public class PositionUploadTable: UploadTable
                     {
                         uploadTable.Rows[r]["x"] = (convertStringLongValue(uploadTable.Rows[r]["x"].ToString())).ToString();
                         uploadTable.Rows[r]["y"] = (convertStringLatValue(uploadTable.Rows[r]["y"].ToString())).ToString();
+                    }
+
+                    // Set the extreme dates
+                    if (DateTime.Compare(earliestTS, currentRowTime) > 0)
+                    {
+                        earliestTS = currentRowTime;
+                    }
+                    else if (DateTime.Compare(latestTS, currentRowTime) < 0)
+                    {
+                        latestTS = currentRowTime;
                     }
                 }
             }

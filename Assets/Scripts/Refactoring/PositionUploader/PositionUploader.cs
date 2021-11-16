@@ -330,6 +330,8 @@ public class PositionUploader : MonoBehaviour
         positionData.stringTable = uploadedTable.uploadTable;
         positionData.usingFilterDates = PositionUploadTable.applyDateFilter;
         positionData.usingGIS = PositionUploadTable.applyGISConversion;
+        positionData.earliestDate = uploadedTable.earliestTS;
+        positionData.latestDate = uploadedTable.latestTS;
 
         if (positionData.usingFilterDates)
         {

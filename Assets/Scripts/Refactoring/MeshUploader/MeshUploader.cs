@@ -177,6 +177,7 @@ public class MeshUploader : MonoBehaviour
             mesh.waterLevel = float.Parse(paramsPanel.transform.Find("ParametersFrame").transform.Find("WaterLevelFrame").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>().text);
             mesh.rowCount = mesh.stringTable.Rows.Count;
             mesh.columnCount = mesh.stringTable.Columns.Count;
+            mesh.maxDepth = uploadedTable.maxDepth;
             mesh.meshUploaded = true;
             SceneManager.LoadScene("StartMenu");
         }

@@ -14,7 +14,7 @@ public class SunController : MonoBehaviour
     public void AdjustSunPosition()
     {
         // TODO: have axisTilt stabilize the intensity. Too severe a tilt keeps dusk lighting for the entire day
-        DateTime currentTime = TimeManager.dateTimer;
+        DateTime currentTime = TimeManager.instance.currentTime;
         float sunAngle = (float)currentTime.TimeOfDay.TotalSeconds / 86400;
 
         // The sun rises at 6h, and sets at 18h

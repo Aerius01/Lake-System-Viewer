@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class UploadUtils : MonoBehaviour
 {
@@ -106,6 +107,14 @@ public class UploadUtils : MonoBehaviour
                 ColorBlock cb = uploadButton.colors;
                 cb.normalColor = new Color(1, 0, 0, 1);
                 uploadButton.colors = cb;
+            }
+        }
+
+        if (positionExists && meshExists)
+        {
+            if (positionData.positionsUploaded && meshData.meshUploaded)
+            {
+                SceneManager.LoadScene("Main");
             }
         }
     }

@@ -5,7 +5,7 @@ public class MeshData : NewCSVReader
 {
     [HideInInspector]
     public bool meshUploaded = false, backButton = false;
-    public float waterLevel;
+    public float waterLevel, maxDepth;
 
     private static MeshData _instance;
     [HideInInspector]

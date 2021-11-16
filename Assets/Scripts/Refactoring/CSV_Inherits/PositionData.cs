@@ -10,6 +10,7 @@ public class PositionData : NewCSVReader
     public bool usingFilterDates = false, usingGIS = false;
     public DateTime[] filterDates;
     public Dictionary<string, float> GISCoords;
+    public DateTime earliestDate, latestDate;
 
     private static PositionData _instance;
     [HideInInspector]

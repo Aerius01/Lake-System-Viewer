@@ -74,6 +74,7 @@ GameObject:
   - component: {fileID: 4401290132395854}
   - component: {fileID: 95358032290358910}
   - component: {fileID: 6757737976170740740}
+  - component: {fileID: 249498450965361554}
   m_Layer: 0
   m_Name: roach
   m_TagString: Untagged
@@ -133,6 +134,21 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.08741497, y: 0.22636667, z: 0.49362817}
   m_Center: {x: 0.0019443184, y: 0.0021698892, z: -0.007491994}
+--- !u!114 &249498450965361554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1456522639038900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4fa7fb006c4fa6499064268981aa1b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  canvas: {fileID: 7698299844126744654}
+  depthLine: {fileID: 3927455054470484904}
+  trail: {fileID: 7322253264749759828}
 --- !u!1 &1472999894096598
 GameObject:
   m_ObjectHideFlags: 0
@@ -696,7 +712,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6943728631983974260
 Transform:
   m_ObjectHideFlags: 0
@@ -901,7 +917,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3134821270837614932
 Transform:
   m_ObjectHideFlags: 0
@@ -1042,7 +1058,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &3645996508416473629
 RectTransform:
   m_ObjectHideFlags: 0
