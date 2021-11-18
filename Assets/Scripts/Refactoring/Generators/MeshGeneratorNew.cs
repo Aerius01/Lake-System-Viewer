@@ -13,8 +13,9 @@ public class MeshGeneratorNew : MonoBehaviour
     public Gradient gradient;
 
     // Start is called before the first frame update
-    void Start()
+    public void SetUpMesh()
     {   
+        Debug.Log("starting mesh");
         mesh = new Mesh();
         this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
@@ -22,6 +23,7 @@ public class MeshGeneratorNew : MonoBehaviour
         CreateShape();
         UpdateMesh();
         PlaceWater();
+        Debug.Log("mesh done");
     }
 
     void CreateShape()
@@ -34,7 +36,7 @@ public class MeshGeneratorNew : MonoBehaviour
 
         for (int r = 0; r < numberOfRows; r++)
         {
-            for (int c = 0; r < numberOfCols; c++)
+            for (int c = 0; c < numberOfCols; c++)
             {
                 // Create list as though reading from bottom left to right and then up (invert it)
                 vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), c);
@@ -105,7 +107,7 @@ public class MeshGeneratorNew : MonoBehaviour
     {
         float waterLevel = MeshData.instance.waterLevel;
         waterObject.SetActive(true);
-        waterObject.transform.position = new Vector3((MeshData.instance.columnCount) / 2, waterLevel, (MeshData.instance.rowCount) / 2);
+        waterObject.transform.position = new Vector3((MeshData.instance.rowCount) / 2, waterLevel, (MeshData.instance.columnCount) / 2);
 
         Vector3 scale = transform.localScale;
         scale.Set((MeshData.instance.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (MeshData.instance.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);

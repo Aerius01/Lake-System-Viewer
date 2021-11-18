@@ -1,23 +1,15 @@
 using UnityEngine;
+using System.Collections.Generic;
 using System;
 using TMPro;
 using System.Globalization;
 using UnityEngine.UI;
 
-public class UserSettings : MonoBehaviour
+public class UserSettings
 {
-    public GameObject settingsMenu;
-    public static bool showFishTags, showFishDepthLines, showFishTrails;
+    public static bool showFishTags {get {return showFishTags;} set {showFishTags = value; FishGeneratorNew.ActivateAll(0, value);}}
+    public static bool showFishDepthLines {get {return showFishDepthLines;} set {showFishDepthLines = value; FishGeneratorNew.ActivateAll(1, value);}}
+    public static bool showFishTrails {get {return showFishTrails;} set {showFishTrails = value; FishGeneratorNew.ActivateAll(2, value);}}
+
     public static float verticalScalingFactor;
-
-    private void Awake()
-    {
-        // find gameobjects & set values
-    }
-
-    void Update()
-    {
-        // register onchange of those objects
-    }
-
 }

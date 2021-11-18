@@ -99,22 +99,13 @@ public class UploadTable
 
     public virtual void SetTable(List<int> currentClickList)
     {
-        // Trim non-data rows/columns
-        // rowsToRemove = 0;
-        // columnsToRemove = 0;
-        // foreach (int idNumber in currentClickList)
-        // {
-        //     rowsToRemove = Mathf.Max((int)Math.Floor((double)idNumber/(double)viewPort.Columns), rowsToRemove);
-        //     columnsToRemove = Mathf.Max(idNumber - (int)Math.Floor((double)idNumber/(double)viewPort.Rows) * viewPort.Rows, columnsToRemove);
-        // }
-
-        for (int r = rowsToRemove; r > 0; r--)
+        for (int r = rowsToRemove - 1; r >= 0; r--)
         {
             uploadTable.Rows[r].Delete();
         }
         uploadTable.AcceptChanges();
 
-        for (int c = columnsToRemove; c > 0; c--)
+        for (int c = columnsToRemove - 1; c >= 0; c--)
         {
             uploadTable.Columns.RemoveAt(c);
         }

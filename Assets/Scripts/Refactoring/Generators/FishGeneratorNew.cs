@@ -21,6 +21,7 @@ public class Fisch
     public Fisch (int id, DataPointClass[] dataPoints)
     {
         this.id = id;
+        this.dataPoints = dataPoints;
         totalReadings = dataPoints.Length;
         startPos = new Vector3(dataPoints[0].x, dataPoints[0].z * UserSettings.verticalScalingFactor, dataPoints[0].y);
         startOrient = Quaternion.Euler(0f, 0f, 0f);
@@ -37,13 +38,35 @@ public class Fisch
 
 public class FishGeneratorNew : MonoBehaviour
 {
-    private Dictionary<int, Fisch> fishDict;
+    private static Dictionary<int, Fisch> fishDict;
     public GameObject fishPrefab;
+
+    public static void ActivateAll(int handle, bool activationStatus)
+    {
+        // 0: Tag
+        // 1: Depth line
+        // 2: Trail
+        foreach (var key in fishDict.Keys)
+        {
+            if (handle == 0)
+            {
+                fishDict[key].utils.ActivateTag(activationStatus);
+            }
+            else if (handle == 1)
+            {
+                fishDict[key].utils.ActivateDepthLine(activationStatus);
+            }
+            else if (handle == 2)
+            {
+                fishDict[key].utils.ActivateTrail(activationStatus);
+            }
+        }
+    }
 
     public void SetUpFish()
     {
         // TODO: make sure data is sorted in parsed structure
-
+        Debug.Log("setting up fish");
         Dictionary<int, DataPointClass[]> parsedData = CreateDataStructure(PositionData.instance.stringTable);
         fishDict = new Dictionary<int, Fisch>();
 
@@ -61,6 +84,8 @@ public class FishGeneratorNew : MonoBehaviour
 
             fishDict.Add(key, fish);
         }
+
+        Debug.Log("done fish");
     }
 
     public void UpdateFish()
@@ -103,7 +128,7 @@ public class FishGeneratorNew : MonoBehaviour
 
     private void UpdateFishPosition(Fisch fish, bool timeJump)
     {
-        int currentIndex = 0;
+        int currentIndex = 1;
         if (timeJump)
         {
             currentIndex = Mathf.Abs(Array.BinarySearch(fish.timeVector, TimeManager.instance.currentTime));
@@ -223,30 +248,30 @@ public class FishGeneratorNew : MonoBehaviour
     // Utility functions for set-up
     Dictionary<int, DataPointClass[]> CreateDataStructure(DataTable stringGrid)
     {
-        string[] stringKeys = SliceCol(stringGrid, 0).Distinct().ToArray();
+        string[] stringKeys = SliceCol(stringGrid, "ID").Distinct().ToArray();
         Dictionary<int, DataPointClass[]> dataSet = new Dictionary<int, DataPointClass[]>();
 
         foreach (string key in stringKeys)
         {
-            DataPointClass[] positions = SliceMultipleColsByKey(stringGrid, 1, 4, key);
+            DataPointClass[] positions = SliceMultipleColsByKey(stringGrid, key);
             dataSet.Add(int.Parse(key.Trim()), positions);
         }
         
         return dataSet;
     }
 
-    string[] SliceCol(DataTable array, int column)
+    string[] SliceCol(DataTable array, string columnName)
     {
         string[] arraySlice = new string[array.Rows.Count];
         for (int y = 0; y < array.Rows.Count; y++)
         {
-            arraySlice[y] = array.Rows[y][column].ToString().Trim();
+            arraySlice[y] = array.Rows[y][columnName].ToString().Trim();
         }
 
         return arraySlice;
     }
 
-    DataPointClass[] SliceMultipleColsByKey(DataTable array, int from, int to, string key)
+    DataPointClass[] SliceMultipleColsByKey(DataTable array, string key)
     {
         int firstInstance = 0;
         while (array.Rows[firstInstance]["ID"].ToString() != key){
@@ -261,7 +286,7 @@ public class FishGeneratorNew : MonoBehaviour
         if (lastInstance != array.Rows.Count - 1){
             lastInstance -= 1; 
         }
-        
+
         int cutSize = lastInstance - firstInstance + 1;
         List<DataPointClass> slicedList = new List<DataPointClass>();
 

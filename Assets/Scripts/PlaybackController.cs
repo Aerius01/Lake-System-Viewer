@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public class PlaybackController : MonoBehaviour
 {
-    private string timeDisplayText;
+    private TextMeshProUGUI timeDisplayText;
     private Slider timeControlSlider;
     private Single totalTicks;
     private bool sliderSelected;
@@ -14,16 +14,16 @@ public class PlaybackController : MonoBehaviour
 
     private void Awake()
     {
-        timeDisplayText = GameObject.Find("TimeDisplayText").GetComponent<TextMeshProUGUI>().text;
+        timeDisplayText = GameObject.Find("TimeDisplayText").GetComponent<TextMeshProUGUI>();
         timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
     }
 
     void Start()
     {
-        timeDisplayText = PositionData.instance.earliestDate.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+        timeDisplayText.text = PositionData.instance.earliestDate.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
 
         sliderSelected = false;
-        totalTicks = (PositionData.instance.latestDate - PositionData.instance.earliestDate).Ticks;
+        totalTicks = PositionData.instance.latestDate.Ticks - PositionData.instance.earliestDate.Ticks;
     }
 
     void FixedUpdate()
@@ -31,12 +31,12 @@ public class PlaybackController : MonoBehaviour
         if (!TimeManager.instance.paused)
         {
             // Update time display
-            timeDisplayText = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+            timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
 
             // Adjust the slider value automatically if not touching it
             if (!sliderSelected)
             {
-                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime - PositionData.instance.earliestDate).Ticks / (double)totalTicks);
+                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - PositionData.instance.earliestDate.Ticks) / (double)totalTicks);
             }
         }
     }
@@ -47,7 +47,8 @@ public class PlaybackController : MonoBehaviour
         if (sliderSelected)
         {
             sliderHasChanged = true;
-            TimeManager.instance.AddTicksToTime((long)(timeControlSlider.normalizedValue * totalTicks));
+            long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - PositionData.instance.latestDate.Ticks);
+            TimeManager.instance.AddTicksToTime(differential);
         }
     }
 

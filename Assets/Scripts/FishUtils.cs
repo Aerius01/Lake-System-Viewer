@@ -6,6 +6,34 @@ public class FishUtils : MonoBehaviour
     [SerializeField]
     private GameObject canvas, depthLine, trail;
 
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            RaycastHit hit;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+             
+            if (Physics.Raycast(ray, out hit))
+            {
+                ToggleTag();
+            }
+        }
+    }
+
+    public void ActivateTag(bool activationStatus)
+    {
+        canvas.SetActive(activationStatus);
+    }
+
+    public void ActivateDepthLine(bool activationStatus)
+    {
+        depthLine.SetActive(activationStatus);
+    }
+    public void ActivateTrail(bool activationStatus)
+    {
+        trail.SetActive(activationStatus);
+    }
+
     public void ToggleTag()
     {
         canvas.SetActive(!canvas.activeSelf);

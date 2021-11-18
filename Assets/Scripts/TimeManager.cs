@@ -1,11 +1,13 @@
 using UnityEngine;
 using System;
+using TMPro;
 
 public class TimeManager : MonoBehaviour
 {
     public DateTime currentTime {get; private set;}
     public bool paused {get; private set;}
     public float speedUpCoefficient = 10f;
+
     private static TimeManager _instance;
     [HideInInspector]
     public static TimeManager instance {get { return _instance; } set {_instance = value; }}

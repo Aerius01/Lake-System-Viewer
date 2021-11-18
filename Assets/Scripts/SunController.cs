@@ -28,8 +28,5 @@ public class SunController : MonoBehaviour
         sun.intensity = intensity;
 
         sun.color = sunColor.Evaluate(intensity);
-
     }
-
-
 }
