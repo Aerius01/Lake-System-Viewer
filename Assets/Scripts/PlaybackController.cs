@@ -44,21 +44,8 @@ public class PlaybackController : MonoBehaviour
     // Slider controls
     public void SliderChanged()
     {
-        if (sliderSelected)
-        {
-            sliderHasChanged = true;
-            long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - PositionData.instance.latestDate.Ticks);
-            TimeManager.instance.AddTicksToTime(differential);
-        }
-    }
-
-    public void SliderSelected()
-    {
-        sliderSelected = true;
-    }
-
-    public void SliderDeselected()
-    {
-        sliderSelected = false;
+        sliderHasChanged = true;
+        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - PositionData.instance.earliestDate.Ticks);
+        TimeManager.instance.AddTicksToTime(differential);
     }
 }

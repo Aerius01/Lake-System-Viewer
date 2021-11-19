@@ -3,7 +3,8 @@ using System.Threading;
 using System;
 using System.Data;
 using UnityEngine;
-using System.Linq;
+using System.Text;
+using System.IO;
 
 public class PositionUploadTable: UploadTable
 {
@@ -54,7 +55,7 @@ public class PositionUploadTable: UploadTable
         latestTS = DateTime.MinValue;
 
         Thread filtersThread = new Thread(() => {
-            for (int r = uploadTable.Rows.Count - 1; r > 0; r--)
+            for (int r = uploadTable.Rows.Count - 1; r >= 0; r--)
             {
                 if (nullRows.Contains(r)) // null or NaN values
                 {
@@ -64,6 +65,14 @@ public class PositionUploadTable: UploadTable
                 {
                     bool rowDeleted = false;
                     DateTime currentRowTime = DateTime.Parse(uploadTable.Rows[r]["Time"].ToString());
+
+                    // if (uploadTable.Rows[r]["ID"].ToString() != "59800" &&
+                    // uploadTable.Rows[r]["ID"].ToString() != "67700" &&
+                    // uploadTable.Rows[r]["ID"].ToString() != "61400")
+                    // {
+                    //     uploadTable.Rows[r].Delete();
+                    //     rowDeleted = true;
+                    // }
 
                     if (applyDateFilter) // filter time values
                     {
@@ -93,6 +102,16 @@ public class PositionUploadTable: UploadTable
             }
 
             uploadTable.AcceptChanges();
+
+            // StringBuilder sb = new StringBuilder();
+            // foreach (DataRow row in uploadTable.Rows)
+            // {
+            //     IEnumerable<object> fields = row.ItemArray;
+            //     sb.AppendLine(string.Join(",", fields));
+            // }
+
+            // File.WriteAllText(@"C:\Users\james\Desktop\02_3D_Viz\Carp Data Sets\adjustedPos.csv", sb.ToString());
+
             setTableComplete = true;
         });
 

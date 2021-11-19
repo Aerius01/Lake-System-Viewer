@@ -6,57 +6,59 @@ public class FishUtils : MonoBehaviour
     [SerializeField]
     private GameObject canvas, depthLine, trail;
 
-    void Update()
+    private void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+            BoxCollider collider = this.GetComponent<BoxCollider>();
              
-            if (Physics.Raycast(ray, out hit))
+            if (collider.Raycast(ray, out hit, 999999f))
             {
-                ToggleTag();
+                this.ToggleTag();
             }
         }
     }
 
     public void ActivateTag(bool activationStatus)
     {
-        canvas.SetActive(activationStatus);
+        this.canvas.SetActive(activationStatus);
     }
 
     public void ActivateDepthLine(bool activationStatus)
     {
-        depthLine.SetActive(activationStatus);
+        this.depthLine.SetActive(activationStatus);
     }
     public void ActivateTrail(bool activationStatus)
     {
-        trail.SetActive(activationStatus);
+        this.trail.SetActive(activationStatus);
     }
 
     public void ToggleTag()
     {
-        canvas.SetActive(!canvas.activeSelf);
+        this.canvas.SetActive(!canvas.activeSelf);
     }
 
     public void ToggleDepthLine()
     {
-        depthLine.SetActive(!depthLine.activeSelf);
+        this.depthLine.SetActive(!depthLine.activeSelf);
     }
 
     public void ToggleTrail()
     {
-        trail.SetActive(!trail.activeSelf);
+        this.trail.SetActive(!trail.activeSelf);
     }
 
     public void ClearTrail()
     {
-        trail.GetComponent<TrailRenderer>().Clear();
+        this.trail.GetComponent<TrailRenderer>().Clear();
     }
 
     public void UpdateCanvasText(string updateText)
     {
-        canvas.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
+        this.canvas.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
             GetComponent<TextMeshProUGUI>().text = updateText;
     }
 
@@ -67,7 +69,7 @@ public class FishUtils : MonoBehaviour
         LineRenderer line = depthLine.GetComponent<LineRenderer>();
         GameObject waterblock = GameObject.Find("WaterBlock");
         
-        LinePoint.y = - Mathf.Abs(MeshData.instance.maxDepth) * UserSettings.verticalScalingFactor;
+        LinePoint.y = - Mathf.Abs(MeshData.instance.minDepth) * UserSettings.verticalScalingFactor;
         line.SetPosition(0, LinePoint);
 
         LinePoint.y = waterblock.transform.position.y;

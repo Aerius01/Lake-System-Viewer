@@ -15,7 +15,8 @@ public class Fisch
     public GameObject fishObject = null;
     public DataPointClass[] dataPoints;
     public FishUtils utils;
-    public int totalReadings, id, lastRung = 1;
+    public int totalReadings, id;
+    public int? lastRung;
     public DateTime[] timeVector;
 
     public Fisch (int id, DataPointClass[] dataPoints)
@@ -66,7 +67,6 @@ public class FishGeneratorNew : MonoBehaviour
     public void SetUpFish()
     {
         // TODO: make sure data is sorted in parsed structure
-        Debug.Log("setting up fish");
         Dictionary<int, DataPointClass[]> parsedData = CreateDataStructure(PositionData.instance.stringTable);
         fishDict = new Dictionary<int, Fisch>();
 
@@ -84,8 +84,6 @@ public class FishGeneratorNew : MonoBehaviour
 
             fishDict.Add(key, fish);
         }
-
-        Debug.Log("done fish");
     }
 
     public void UpdateFish()
@@ -98,12 +96,14 @@ public class FishGeneratorNew : MonoBehaviour
 
         foreach (var key in fishDict.Keys)
         {
-            // if before first time step or after last, check if despawned
-            if (TimeManager.instance.currentTime < fishDict[key].earliestTime 
-                || TimeManager.instance.currentTime > fishDict[key].latestTime
-                && fishDict[key].fishObject.activeSelf)
+            // if before first time step or after last and fish exists, despawn it
+            if (DateTime.Compare(TimeManager.instance.currentTime, fishDict[key].earliestTime) < 0 
+                || DateTime.Compare(TimeManager.instance.currentTime, fishDict[key].latestTime) > 0)
             {
-                fishDict[key].fishObject.SetActive(false);
+                if (fishDict[key].fishObject.activeSelf)
+                {
+                    fishDict[key].fishObject.SetActive(false);
+                }       
             }
             else
             {
@@ -128,120 +128,127 @@ public class FishGeneratorNew : MonoBehaviour
 
     private void UpdateFishPosition(Fisch fish, bool timeJump)
     {
-        int currentIndex = 1;
-        if (timeJump)
+        int currentIndex = fish.lastRung == null ? 1 : (int)fish.lastRung;
+        if (timeJump || fish.lastRung == null)
         {
-            currentIndex = Mathf.Abs(Array.BinarySearch(fish.timeVector, TimeManager.instance.currentTime));
+            // Search with no prior information
+            currentIndex = Array.BinarySearch(fish.timeVector, TimeManager.instance.currentTime);
         }
-        else
+        else if (fish.lastRung != null)
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, fish.timeVector[fish.lastRung]) > 0)
+            if (DateTime.Compare(TimeManager.instance.currentTime, fish.timeVector[(int)fish.lastRung]) > 0)
             {
-                // we don't know how many time steps ahead we are (shouldn't assume only one)
-                currentIndex = Mathf.Abs(Array.BinarySearch(fish.timeVector, TimeManager.instance.currentTime));
-            }
-            else
-            {
-                currentIndex = fish.lastRung;
+                // We've moved forward a time step, but have prior information
+                int remainingVectorLength = fish.timeVector.Length - ((int)fish.lastRung - 1);
+                currentIndex = Array.BinarySearch(fish.timeVector, (int)fish.lastRung - 1, remainingVectorLength, TimeManager.instance.currentTime);
             }
         }
 
-        // find new bounding values if we've entered a new timestep range
-        if (currentIndex != fish.lastRung)
+        if (currentIndex != 0)
         {
-            fish.startPos = new Vector3(fish.dataPoints[currentIndex - 1].x, 
-                fish.dataPoints[currentIndex - 1].z * UserSettings.verticalScalingFactor, 
-                fish.dataPoints[currentIndex - 1].y);
+            // Only operate if we have timestep bounds
 
-            fish.endPos = new Vector3(fish.dataPoints[currentIndex].x,
-                fish.dataPoints[currentIndex].z * UserSettings.verticalScalingFactor,
-                fish.dataPoints[currentIndex].y);
-
-            fish.startOrient = fish.fishObject.transform.rotation;
-
-            if (fish.endPos - fish.startPos == new Vector3(0f, 0f, 0f))
+            if (currentIndex < 0)
             {
-                fish.endOrient = Quaternion.Euler(20f, 0f, 0f);
-            }
-            else
-            {
-                fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
+                currentIndex = Mathf.Abs(currentIndex) - 1;
             }
 
-            fish.lastRung = currentIndex;
-        }
-
-        float ratio = Convert.ToSingle((double)(TimeManager.instance.currentTime - fish.dataPoints[currentIndex - 1].obsTime).Ticks 
-            / (double)(fish.dataPoints[currentIndex].obsTime - fish.dataPoints[currentIndex - 1].obsTime).Ticks);
-        
-        bool levelFish = false;
-
-        // Section to enhance fish rotation believability
-        if (Vector3.Magnitude(fish.endPos - fish.startPos) > 5f)
-        {
-            // longer distance, keep extreme angle but level off in final 20% of movement
-            if ((fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f) && ratio >= 0.8)
+            // find new bounding values if we've entered a new timestep range
+            if (currentIndex != fish.lastRung)
             {
-                levelFish = true;
+                fish.startPos = new Vector3(fish.dataPoints[currentIndex - 1].x, 
+                    fish.dataPoints[currentIndex - 1].z * UserSettings.verticalScalingFactor, 
+                    fish.dataPoints[currentIndex - 1].y);
 
-                Vector3 currentAngles = fish.endOrient.eulerAngles;
+                fish.endPos = new Vector3(fish.dataPoints[currentIndex].x,
+                    fish.dataPoints[currentIndex].z * UserSettings.verticalScalingFactor,
+                    fish.dataPoints[currentIndex].y);
+
                 fish.startOrient = fish.fishObject.transform.rotation;
 
-                if (fish.endOrient.eulerAngles.x > 25f)
+                if (fish.endPos - fish.startPos == new Vector3(0f, 0f, 0f))
                 {
-                    currentAngles.x = 25f;
+                    fish.endOrient = Quaternion.Euler(20f, 0f, 0f);
                 }
                 else
                 {
-                    currentAngles.x = -25f;
+                    fish.endOrient = Quaternion.LookRotation(fish.endPos - fish.startPos, Vector3.up);
                 }
 
-                fish.endOrient = Quaternion.Euler(currentAngles);
+                fish.lastRung = currentIndex;
             }
-        }
-        else
-        {
-            // shorter distance, remove extreme angles
-            if (fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f)
+
+            float ratio = Convert.ToSingle((double)(TimeManager.instance.currentTime - fish.dataPoints[currentIndex - 1].obsTime).Ticks 
+                / (double)(fish.dataPoints[currentIndex].obsTime - fish.dataPoints[currentIndex - 1].obsTime).Ticks);
+            
+            bool levelFish = false;
+
+            // Section to enhance fish rotation believability
+            if (Vector3.Magnitude(fish.endPos - fish.startPos) > 5f)
             {
-                Vector3 currentAngles = fish.endOrient.eulerAngles;
-                fish.startOrient = fish.fishObject.transform.rotation;
-
-                if (fish.endOrient.eulerAngles.x > 25f)
+                // longer distance, keep extreme angle but level off in final 20% of movement
+                if ((fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f) && ratio >= 0.8)
                 {
-                    currentAngles.x = 25f;
-                }
-                else
-                {
-                    currentAngles.x = -25f;
-                }
+                    levelFish = true;
 
-                fish.endOrient = Quaternion.Euler(currentAngles);
+                    Vector3 currentAngles = fish.endOrient.eulerAngles;
+                    fish.startOrient = fish.fishObject.transform.rotation;
+
+                    if (fish.endOrient.eulerAngles.x > 25f)
+                    {
+                        currentAngles.x = 25f;
+                    }
+                    else
+                    {
+                        currentAngles.x = -25f;
+                    }
+
+                    fish.endOrient = Quaternion.Euler(currentAngles);
+                }
             }
+            else
+            {
+                // shorter distance, remove extreme angles
+                if (fish.endOrient.eulerAngles.x > 25f || fish.endOrient.eulerAngles.x < -25f)
+                {
+                    Vector3 currentAngles = fish.endOrient.eulerAngles;
+                    fish.startOrient = fish.fishObject.transform.rotation;
+
+                    if (fish.endOrient.eulerAngles.x > 25f)
+                    {
+                        currentAngles.x = 25f;
+                    }
+                    else
+                    {
+                        currentAngles.x = -25f;
+                    }
+
+                    fish.endOrient = Quaternion.Euler(currentAngles);
+                }
+            }
+
+            // SLERP according to required method
+            if (levelFish)
+            {
+                // map the final range [0.8, 1] to the range [0, 1]
+                fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(5 * (ratio - 0.8)));
+            }
+            else
+            {
+                // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
+                fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio))));
+            }
+
+            // Update info text
+            fish.utils.UpdateCanvasText(string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
+                fish.id, fish.fishObject.transform.position.y / UserSettings.verticalScalingFactor));
+
+            Vector3 LinePoint = fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
+
+            // Update depth indicator line
+            fish.utils.UpdateDepthIndicatorLine(LinePoint);
         }
-
-        // SLERP according to required method
-        if (levelFish)
-        {
-            // map the final range [0.8, 1] to the range [0, 1]
-            fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(5 * (ratio - 0.8)));
-        }
-        else
-        {
-            // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
-            fish.fishObject.transform.rotation = Quaternion.Slerp(fish.startOrient, fish.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio))));
-        }
-
-        // Update info text
-        fish.utils.UpdateCanvasText(string.Format("Fish ID: {0}\nDepth: {1:##0.00}", 
-            fish.id, fish.fishObject.transform.position.y / UserSettings.verticalScalingFactor));
-
-        Vector3 LinePoint = fish.fishObject.transform.position = Vector3.Lerp(fish.startPos, fish.endPos, ratio);
-
-        // Update depth indicator line
-        fish.utils.UpdateDepthIndicatorLine(LinePoint);
     }
-
 
 
 

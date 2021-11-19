@@ -178,6 +178,7 @@ public class MeshUploader : MonoBehaviour
             mesh.rowCount = mesh.stringTable.Rows.Count;
             mesh.columnCount = mesh.stringTable.Columns.Count;
             mesh.maxDepth = uploadedTable.maxDepth;
+            mesh.minDepth = uploadedTable.minDepth;
             mesh.meshUploaded = true;
             SceneManager.LoadScene("StartMenu");
         }

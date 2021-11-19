@@ -39,7 +39,8 @@ public class MeshGeneratorNew : MonoBehaviour
             for (int c = 0; c < numberOfCols; c++)
             {
                 // Create list as though reading from bottom left to right and then up (invert it)
-                vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), c);
+                // vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), c);
+                vertices[(r * numberOfCols) + c] = new Vector3(c, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), r);
             }
         }
 
@@ -107,7 +108,7 @@ public class MeshGeneratorNew : MonoBehaviour
     {
         float waterLevel = MeshData.instance.waterLevel;
         waterObject.SetActive(true);
-        waterObject.transform.position = new Vector3((MeshData.instance.rowCount) / 2, waterLevel, (MeshData.instance.columnCount) / 2);
+        waterObject.transform.position = new Vector3((MeshData.instance.columnCount) / 2, waterLevel, (MeshData.instance.rowCount) / 2);
 
         Vector3 scale = transform.localScale;
         scale.Set((MeshData.instance.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (MeshData.instance.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
