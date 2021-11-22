@@ -608,6 +608,7 @@ GameObject:
   m_Component:
   - component: {fileID: 195170351}
   - component: {fileID: 195170352}
+  - component: {fileID: 195170353}
   m_Layer: 5
   m_Name: ContentPanels
   m_TagString: Untagged
@@ -645,6 +646,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 195170350}
   m_CullTransparentMesh: 1
+--- !u!225 &195170353
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 195170350}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &195175543
 GameObject:
   m_ObjectHideFlags: 0
@@ -869,7 +882,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 217860083}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ebfeae666768d3a49b4eb065e383bb96, type: 3}
+  m_Script: {fileID: 11500000, guid: 07d6233517d911c47af9fa4a1490a6ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!225 &217860086
@@ -2087,7 +2100,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1881467810}
+      - m_Target: {fileID: 1881467812}
         m_TargetAssemblyTypeName: NavigationScript, Assembly-CSharp
         m_MethodName: ToggleConfirmQuit
         m_Mode: 1
@@ -2800,19 +2813,7 @@ MonoBehaviour:
   m_CharacterLimit: 0
   m_OnEndEdit:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: 
-        m_MethodName: 
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   m_OnSubmit:
     m_PersistentCalls:
       m_Calls: []
@@ -6398,7 +6399,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1084133385}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 114983fd95069554db10474058a4f60a, type: 3}
+  m_Script: {fileID: 11500000, guid: c1d282f31f778804aa85d596294bd27c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   mouse_over: 0
@@ -8160,7 +8161,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1881467810}
+      - m_Target: {fileID: 1881467812}
         m_TargetAssemblyTypeName: NavigationScript, Assembly-CSharp
         m_MethodName: QuitApplication
         m_Mode: 1
@@ -9993,6 +9994,7 @@ GameObject:
   - component: {fileID: 1881467811}
   - component: {fileID: 1881467810}
   - component: {fileID: 1881467809}
+  - component: {fileID: 1881467812}
   m_Layer: 0
   m_Name: ScriptObject
   m_TagString: Untagged
@@ -10025,11 +10027,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1881467808}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4eaa409d3f6676418c9fdc9176a94e5, type: 3}
+  m_Script: {fileID: 11500000, guid: 07d6233517d911c47af9fa4a1490a6ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  confirmQuitObject: {fileID: 539597559}
-  fadingMenu: {fileID: 0}
 --- !u!4 &1881467811
 Transform:
   m_ObjectHideFlags: 0
@@ -10044,6 +10044,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1881467812
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881467808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e87b4d2dcf62e99429993b8a6bc801df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  confirmQuitObject: {fileID: 539597559}
+  fadingMenu: {fileID: 195170350}
 --- !u!1 &1898178248
 GameObject:
   m_ObjectHideFlags: 0

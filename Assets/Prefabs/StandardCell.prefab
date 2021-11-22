@@ -86,10 +86,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 36494870428970452}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 114983fd95069554db10474058a4f60a, type: 3}
+  m_Script: {fileID: 11500000, guid: c1d282f31f778804aa85d596294bd27c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   mouse_over: 0
+  clicked: 0
 --- !u!1 &9158874628928078407
 GameObject:
   m_ObjectHideFlags: 0

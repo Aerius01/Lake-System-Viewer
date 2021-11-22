@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657826, g: 0.49641263, b: 0.57481676, a: 1}
+  m_IndirectSpecularColor: {r: 0.37311918, g: 0.3807398, b: 0.35872716, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -2777,7 +2777,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 798062837}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ebfeae666768d3a49b4eb065e383bb96, type: 3}
+  m_Script: {fileID: 11500000, guid: 07d6233517d911c47af9fa4a1490a6ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &798062841
@@ -3281,7 +3281,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!108 &966015419
 Light:
   m_ObjectHideFlags: 0
@@ -3669,6 +3669,7 @@ GameObject:
   m_Component:
   - component: {fileID: 994122233}
   - component: {fileID: 994122235}
+  - component: {fileID: 994122234}
   m_Layer: 5
   m_Name: ContentPanels
   m_TagString: Untagged
@@ -3698,6 +3699,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &994122234
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 994122232}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!222 &994122235
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4470,7 +4483,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1168268060}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 114983fd95069554db10474058a4f60a, type: 3}
+  m_Script: {fileID: 11500000, guid: c1d282f31f778804aa85d596294bd27c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   mouse_over: 0
@@ -5070,7 +5083,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1337484030}
+      - m_Target: {fileID: 1337484033}
         m_TargetAssemblyTypeName: NavigationScript, Assembly-CSharp
         m_MethodName: QuitApplication
         m_Mode: 1
@@ -5300,6 +5313,7 @@ GameObject:
   - component: {fileID: 1337484031}
   - component: {fileID: 1337484030}
   - component: {fileID: 1337484032}
+  - component: {fileID: 1337484033}
   m_Layer: 0
   m_Name: ScriptObject
   m_TagString: Untagged
@@ -5316,11 +5330,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1337484029}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4eaa409d3f6676418c9fdc9176a94e5, type: 3}
+  m_Script: {fileID: 11500000, guid: 07d6233517d911c47af9fa4a1490a6ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  confirmQuitObject: {fileID: 873709468}
-  fadingMenu: {fileID: 0}
 --- !u!4 &1337484031
 Transform:
   m_ObjectHideFlags: 0
@@ -5350,6 +5362,20 @@ MonoBehaviour:
   cellPreFab: {fileID: 36494870428970452, guid: 92363aad710f14446b53dec388fadfd4, type: 3}
   contentPanel: {fileID: 595713434}
   paramsPanel: {fileID: 494290942}
+--- !u!114 &1337484033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1337484029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e87b4d2dcf62e99429993b8a6bc801df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  confirmQuitObject: {fileID: 873709468}
+  fadingMenu: {fileID: 994122232}
 --- !u!1 &1344655600
 GameObject:
   m_ObjectHideFlags: 0
@@ -7315,7 +7341,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1337484030}
+      - m_Target: {fileID: 1337484033}
         m_TargetAssemblyTypeName: NavigationScript, Assembly-CSharp
         m_MethodName: ToggleConfirmQuit
         m_Mode: 1
