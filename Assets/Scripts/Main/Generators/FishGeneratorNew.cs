@@ -64,6 +64,22 @@ public class FishGeneratorNew : MonoBehaviour
         }
     }
 
+    public static Dictionary<int, MetaData> GetFishMetaData()
+    {
+        Dictionary<int, MetaData> metaDict = new Dictionary<int, MetaData>();
+        foreach (var key in fishDict.Keys)
+        {
+            metaDict.Add(key, new MetaData(fishDict[key]));
+        }
+
+        return metaDict;
+    }
+
+    public static float CurrentFishDepth(int fishID)
+    {
+        return fishDict[fishID].fishObject.transform.position.y;   
+    }
+
     public void SetUpFish()
     {
         // TODO: make sure data is sorted in parsed structure

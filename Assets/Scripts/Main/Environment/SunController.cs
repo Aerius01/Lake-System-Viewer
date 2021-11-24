@@ -14,19 +14,7 @@ public class SunController : MonoBehaviour
     public void AdjustSunPosition()
     {
         CalculateNewSunPos();
-
-        // TODO: have axisTilt stabilize the intensity. Too severe a tilt keeps dusk lighting for the entire day
-        DateTime currentTime = TimeManager.instance.currentTime;
-
         skyTransform.transform.localRotation = Quaternion.Euler(new Vector3(90 - (float)currentZenithAngleDeg, (float)currentAzimuthAngleDeg, 0f));
-
-        // Control sun intensity
-        // Light sun = this.GetComponent<Light>();
-        // float intensity = Vector3.Dot(sun.transform.forward, Vector3.down);
-        // intensity = Mathf.Clamp01(intensity);
-
-        // sun.intensity = intensity;
-        // sun.color = sunColor.Evaluate(intensity);
     }
 
     private double degrees_to_radians(double degrees)
