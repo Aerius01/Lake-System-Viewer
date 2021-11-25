@@ -80,6 +80,11 @@ public class FishGeneratorNew : MonoBehaviour
         return fishDict[fishID].fishObject.transform.position.y;   
     }
 
+    public static GameObject GetFishObject(int fishID)
+    {
+        return fishDict[fishID].fishObject;   
+    }
+
     public void SetUpFish()
     {
         // TODO: make sure data is sorted in parsed structure

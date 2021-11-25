@@ -2,19 +2,11 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 
-public class SubMenuTriggers : ButtonTriggerAnimation
+public class SubMenuTriggers : ButtonTriggerAnimation 
 {
-    // Start is called before the first frame update
     public override void ToggleBool()
     {
         StartCoroutine(ToggleBoolCR());
-        
-
-        // Add or subtract 250 from the viewport height
-        // currentSize.y = !this.animator.GetBool(boolName) ? currentSize.y + 250 : currentSize.y - 250;
-        // contentObject.GetComponent<RectTransform>().sizeDelta = currentSize;
-
-        //LayoutRebuilder.ForceRebuildLayoutImmediate(contentObject.GetComponent<RectTransform>());
     }
 
     private IEnumerator ToggleBoolCR()
