@@ -75,6 +75,7 @@ GameObject:
   - component: {fileID: 95358032290358910}
   - component: {fileID: 6757737976170740740}
   - component: {fileID: 249498450965361554}
+  - component: {fileID: 1361268293280886137}
   m_Layer: 0
   m_Name: roach
   m_TagString: Untagged
@@ -149,6 +150,20 @@ MonoBehaviour:
   canvas: {fileID: 7698299844126744654}
   depthLine: {fileID: 3927455054470484904}
   trail: {fileID: 7322253264749759828}
+--- !u!114 &1361268293280886137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1456522639038900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bodyRenderer: {fileID: 137562815665822614}
+  finRenderer: {fileID: 137999563193517504}
 --- !u!1 &1472999894096598
 GameObject:
   m_ObjectHideFlags: 0

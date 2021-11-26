@@ -1,73 +1,197 @@
 fileFormatVersion: 2
 guid: f8320c964d3bf944a85f7065e13bfe27
-timeCreated: 1510139071
-licenseType: Store
 ModelImporter:
-  serializedVersion: 22
-  fileIDToRecycleName:
-    100000: Armature
-    100002: body
-    100004: fin_1.L
-    100006: fin_1.L_end
-    100008: fin_1.R
-    100010: fin_1.R_end
-    100012: fin_2.L
-    100014: fin_2.L_end
-    100016: fin_2.R
-    100018: fin_2.R_end
-    100020: fin_3.L
-    100022: fin_3.L_end
-    100024: fin_3.R
-    100026: fin_3.R_end
-    100028: general
-    100030: head
-    100032: mounth
-    100034: mounth_end
-    100036: neak
-    100038: //RootNode
-    100040: roach
-    100042: tail
-    100044: tail_1
-    100046: tail_2
-    100048: tail_end
-    100050: head_end
-    100052: roach_fin
-    100054: roach_f
-    400000: Armature
-    400002: body
-    400004: fin_1.L
-    400006: fin_1.L_end
-    400008: fin_1.R
-    400010: fin_1.R_end
-    400012: fin_2.L
-    400014: fin_2.L_end
-    400016: fin_2.R
-    400018: fin_2.R_end
-    400020: fin_3.L
-    400022: fin_3.L_end
-    400024: fin_3.R
-    400026: fin_3.R_end
-    400028: general
-    400030: head
-    400032: mounth
-    400034: mounth_end
-    400036: neak
-    400038: roach
-    400040: //RootNode
-    400042: tail
-    400044: tail_1
-    400046: tail_2
-    400048: tail_end
-    400050: head_end
-    400052: roach_fin
-    400054: roach_f
-    4300000: roach
-    4300002: roach_fin
-    4300004: roach_f
-    9500000: //RootNode
-    13700000: roach
-    13700002: roach_fin
-    13700004: roach_f
+  serializedVersion: 20200
+  internalIDToNameTable:
+  - first:
+      1: 100000
+    second: Armature
+  - first:
+      1: 100002
+    second: body
+  - first:
+      1: 100004
+    second: fin_1.L
+  - first:
+      1: 100006
+    second: fin_1.L_end
+  - first:
+      1: 100008
+    second: fin_1.R
+  - first:
+      1: 100010
+    second: fin_1.R_end
+  - first:
+      1: 100012
+    second: fin_2.L
+  - first:
+      1: 100014
+    second: fin_2.L_end
+  - first:
+      1: 100016
+    second: fin_2.R
+  - first:
+      1: 100018
+    second: fin_2.R_end
+  - first:
+      1: 100020
+    second: fin_3.L
+  - first:
+      1: 100022
+    second: fin_3.L_end
+  - first:
+      1: 100024
+    second: fin_3.R
+  - first:
+      1: 100026
+    second: fin_3.R_end
+  - first:
+      1: 100028
+    second: general
+  - first:
+      1: 100030
+    second: head
+  - first:
+      1: 100032
+    second: mounth
+  - first:
+      1: 100034
+    second: mounth_end
+  - first:
+      1: 100036
+    second: neak
+  - first:
+      1: 100038
+    second: //RootNode
+  - first:
+      1: 100040
+    second: roach
+  - first:
+      1: 100042
+    second: tail
+  - first:
+      1: 100044
+    second: tail_1
+  - first:
+      1: 100046
+    second: tail_2
+  - first:
+      1: 100048
+    second: tail_end
+  - first:
+      1: 100050
+    second: head_end
+  - first:
+      1: 100052
+    second: roach_fin
+  - first:
+      1: 100054
+    second: roach_f
+  - first:
+      4: 400000
+    second: Armature
+  - first:
+      4: 400002
+    second: body
+  - first:
+      4: 400004
+    second: fin_1.L
+  - first:
+      4: 400006
+    second: fin_1.L_end
+  - first:
+      4: 400008
+    second: fin_1.R
+  - first:
+      4: 400010
+    second: fin_1.R_end
+  - first:
+      4: 400012
+    second: fin_2.L
+  - first:
+      4: 400014
+    second: fin_2.L_end
+  - first:
+      4: 400016
+    second: fin_2.R
+  - first:
+      4: 400018
+    second: fin_2.R_end
+  - first:
+      4: 400020
+    second: fin_3.L
+  - first:
+      4: 400022
+    second: fin_3.L_end
+  - first:
+      4: 400024
+    second: fin_3.R
+  - first:
+      4: 400026
+    second: fin_3.R_end
+  - first:
+      4: 400028
+    second: general
+  - first:
+      4: 400030
+    second: head
+  - first:
+      4: 400032
+    second: mounth
+  - first:
+      4: 400034
+    second: mounth_end
+  - first:
+      4: 400036
+    second: neak
+  - first:
+      4: 400038
+    second: roach
+  - first:
+      4: 400040
+    second: //RootNode
+  - first:
+      4: 400042
+    second: tail
+  - first:
+      4: 400044
+    second: tail_1
+  - first:
+      4: 400046
+    second: tail_2
+  - first:
+      4: 400048
+    second: tail_end
+  - first:
+      4: 400050
+    second: head_end
+  - first:
+      4: 400052
+    second: roach_fin
+  - first:
+      4: 400054
+    second: roach_f
+  - first:
+      43: 4300000
+    second: roach
+  - first:
+      43: 4300002
+    second: roach_fin
+  - first:
+      43: 4300004
+    second: roach_f
+  - first:
+      95: 9500000
+    second: //RootNode
+  - first:
+      137: 13700000
+    second: roach
+  - first:
+      137: 13700002
+    second: roach_fin
+  - first:
+      137: 13700004
+    second: roach_f
   externalObjects:
   - first:
       type: UnityEngine:Material
@@ -80,7 +204,7 @@ ModelImporter:
       name: roach
     second: {fileID: 2100000, guid: ac7f649f1758fe947af9480f296029ef, type: 2}
   materials:
-    importMaterials: 1
+    materialImportMode: 1
     materialName: 1
     materialSearch: 1
     materialLocation: 0
@@ -97,6 +221,7 @@ ModelImporter:
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
     importAnimatedCustomProperties: 0
+    importConstraints: 0
     animationCompression: 1
     animationRotationError: 0.5
     animationPositionError: 0.5
@@ -111,19 +236,31 @@ ModelImporter:
     globalScale: 1
     meshCompression: 0
     addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
     importLights: 1
+    fileIdsGeneration: 1
     swapUVChannels: 0
     generateSecondaryUV: 0
     useFileUnits: 1
-    optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    meshOptimizationFlags: -1
+    indexFormat: 0
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 0
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
   tangentSpace:
@@ -131,10 +268,13 @@ ModelImporter:
     normalImportMode: 0
     tangentImportMode: 3
     normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 1
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
   importAnimation: 1
-  copyAvatar: 0
   humanDescription:
-    serializedVersion: 2
+    serializedVersion: 3
     human: []
     skeleton: []
     armTwist: 0.5
@@ -144,14 +284,17 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
+    globalScale: 1
     rootMotionBoneName: 
-    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
     hasTranslationDoF: 0
     hasExtraRoot: 0
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 2
   humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 0
   additionalBone: 0
   userData: 
   assetBundleName: 
