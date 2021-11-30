@@ -5,9 +5,25 @@ using TMPro;
 public class FishListColoringButton : MonoBehaviour
 {
     private GameObject fishObject;
+    private TextMeshProUGUI colorButtonText;
     private FishHighlighter highlighter;
-    private GameObject applyButton, removeButton;
+    private Image headerImage;
+    public GameObject colorButton;
     private int fishID;
+    private bool colorApplied = false;
+
+    private Color _color, standardHeaderColor;
+    public Color color
+    {
+        get {return _color;}
+        set 
+        {
+            _color = value;
+            highlighter.SetColor(value);
+            colorApplied = true;
+            colorButtonText.text = "Remove Color";
+        }
+    }
 
     private void Start()
     {
@@ -15,41 +31,34 @@ public class FishListColoringButton : MonoBehaviour
         fishObject = FishGeneratorNew.GetFishObject(fishID);
         highlighter = fishObject.GetComponent<FishHighlighter>();
 
-        applyButton = this.gameObject.transform.Find("Content").transform.Find("ColorApplyButton").gameObject;
-        removeButton = this.gameObject.transform.Find("Content").transform.Find("ColorRemoveButton").gameObject;
-        removeButton.SetActive(false);
+        colorButtonText = colorButton.transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
+
+        standardHeaderColor = new Color(28f/255f, 27f/255f, 55f/255f, 100f/255f);
+        headerImage = this.gameObject.transform.Find("Header").GetComponent<Image>();
     }
 
-    // each fish to have its own FCP to reduce complexity
+    public void ButtonPress()
+    {
+        if (!colorApplied)
+        {
+            // Open the FCP with details on the requester
+            FlexibleColorPickerUtils.instance.SetNewTarget(this);
+        }
+        else
+        {
+            // Remove the color
+            highlighter.ResetColor();
+            colorButtonText.text = "Apply Tracking Color";
+            colorApplied = false;
+            headerImage.color = standardHeaderColor;
+        }
+    }
 
-    // public void SetColor()
-    // {
-    //     FlexibleColorPickerUtils.instance.gameObject.SetActive(true);
-    //     FlexibleColorPickerUtils.instance.applyButton = applyButton;
-    //     FlexibleColorPickerUtils.instance.removeButton = removeButton;
+    public void SetNewColor(Color color)
+    {
+        this.color = color;
 
-    //     applyButton.GetComponent<Button>().interactable = false;
-    // }
-
-    // public void CloseFCP()
-    // {
-    //     FlexibleColorPickerUtils.instance.gameObject.SetActive(false);
-    //     applyButton.GetComponent<Button>().interactable = true;
-    // }
-
-    // public void ColorSelected()
-    // {
-    //     highlighter.SetColor(FlexibleColorPickerUtils.instance.gameObject.GetComponent<FlexibleColorPicker>().color);
-    //     FlexibleColorPickerUtils.instance.gameObject.SetActive(false);
-    //     applyButton.GetComponent<Button>().interactable = true;
-    //     applyButton.SetActive(false);
-    //     removeButton.SetActive(true);
-    // }
-
-    // public void RemoveColor()
-    // {
-    //     highlighter.ResetColor();
-    //     removeButton.SetActive(false);
-    //     applyButton.SetActive(true);
-    // }
+        color.a = 100f/255f;
+        headerImage.color = color;
+    }
 }

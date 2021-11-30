@@ -13,13 +13,25 @@ public class FishHighlighter : MonoBehaviour
 
     public void ResetColor()
     {
+        bodyRenderer.material.DisableKeyword("_EMISSION");
+        finRenderer.material.DisableKeyword("_EMISSION");
+
         bodyRenderer.material.color = stdBodyColor;
         finRenderer.material.color = stdFinColor;
+
+        bodyRenderer.material.SetColor("_EmissionColor", Color.black);
+        finRenderer.material.SetColor("_EmissionColor", Color.black);
     }
 
     public void SetColor(Color color)
     {
-        bodyRenderer.material.color = color;
-        finRenderer.material.color = color;
+        bodyRenderer.material.EnableKeyword("_EMISSION");
+        finRenderer.material.EnableKeyword("_EMISSION");   
+
+        bodyRenderer.material.SetColor("_EmissionColor", color);
+        finRenderer.material.SetColor("_EmissionColor", color); 
+
+        DynamicGI.SetEmissive(bodyRenderer, color);
+        DynamicGI.SetEmissive(finRenderer, color);
     }
 }
