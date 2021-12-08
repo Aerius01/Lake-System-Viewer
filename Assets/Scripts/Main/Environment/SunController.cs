@@ -9,6 +9,9 @@ public class SunController : MonoBehaviour
     [SerializeField] private GameObject skyTransform;
     [SerializeField] private Gradient sunColor;
 
+    public float latitude = 53, longitude = 13.58f;
+    int timeZone = 1;
+
     private double currentZenithAngleDeg, currentAzimuthAngleDeg;
 
     public void AdjustSunPosition()
@@ -34,9 +37,6 @@ public class SunController : MonoBehaviour
 
     private void CalculateNewSunPos()
     {
-        float latitude = 53;
-        float longitude = 13.58f;
-        int timeZone = 1;
         DateTime currentTime = TimeManager.instance.currentTime;
 
         double julianDay = ToJulianDate(currentTime) - timeZone / 24;
