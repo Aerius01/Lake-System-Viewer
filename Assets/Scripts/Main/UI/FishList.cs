@@ -14,7 +14,8 @@ public class FishList : MonoBehaviour
         foreach (var key in metaDict.Keys)
         {
             GameObject obj = (Instantiate (headerPrefab) as GameObject);
-            obj.transform.parent = this.gameObject.transform;
+            //obj.transform.parent = this.gameObject.transform;
+            obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
             obj.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text = key.ToString();
             obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
                 string.Format("Sex: M\nSpecies: Pike\nAge: 5\nSize: 1'\nDepth: {0:0.00}m", metaDict[key].depth);

@@ -28,7 +28,7 @@ public class TimeManager : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        currentTime = PositionData.instance.earliestDate;
+        currentTime = LocalPositionData.earliestDate;
         paused = true;
     }
 

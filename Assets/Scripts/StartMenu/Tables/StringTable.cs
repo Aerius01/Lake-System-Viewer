@@ -1,5 +1,3 @@
-using UnityEngine;
-using System;
 using System.Data;
 
 public class StringTable

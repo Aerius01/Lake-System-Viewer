@@ -1,24 +1,34 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections;
-using System.Threading.Tasks;
-using System.Linq;
-using TMPro;
 
 public class Main : MonoBehaviour
 {
-    FishGeneratorNew fishGeneratorNew;
-    MeshGeneratorNew meshGeneratorNew;
-    SunController sunController;
-    FishList fishList;
+    [SerializeField]
+    private FishGeneratorNew fishGeneratorNew;
+    [SerializeField]
+    private MeshGeneratorNew meshGeneratorNew;
+    [SerializeField]
+    private SunController sunController;
+    [SerializeField]
+    private FishList fishList;
+    private DataProcessor processor;
+    [SerializeField]
+    private TextAsset meshDataCSV, positionDataCSV, fishDataCSV, thermoclineDataCSV, weatherDataCSV, ysiDataCSV;
 
     private void Awake()
     {
-        fishGeneratorNew = GameObject.Find("FishManager").GetComponent<FishGeneratorNew>();
-        meshGeneratorNew = GameObject.Find("HeightMap").transform.Find("MeshGenerator").GetComponent<MeshGeneratorNew>();
-        sunController = GameObject.Find("SkyBox").transform.Find("Sun").GetComponent<SunController>();
-        fishList = GameObject.Find("Canvas").transform.Find("MainPanel").transform.Find("FishList").transform.Find("Scroll View").transform.Find("Viewport").transform.Find("Content").GetComponent<FishList>();
+        Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
+            {"meshData", meshDataCSV},
+            {"positionData", positionDataCSV},
+            {"fishData", fishDataCSV},
+            {"thermoclineData", thermoclineDataCSV},
+            {"weatherData", weatherDataCSV},
+            {"ysiData", ysiDataCSV}
+        };
+
+        processor = new DataProcessor(textAssetDict);
+        processor.ReadData();
     }
 
     private void Start()

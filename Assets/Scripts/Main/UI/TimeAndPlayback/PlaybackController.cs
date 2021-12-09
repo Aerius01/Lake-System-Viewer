@@ -20,10 +20,10 @@ public class PlaybackController : MonoBehaviour
 
     void Start()
     {
-        timeDisplayText.text = PositionData.instance.earliestDate.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+        timeDisplayText.text = LocalPositionData.earliestDate.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
 
         sliderSelected = false;
-        totalTicks = PositionData.instance.latestDate.Ticks - PositionData.instance.earliestDate.Ticks;
+        totalTicks = LocalPositionData.latestDate.Ticks - LocalPositionData.earliestDate.Ticks;
     }
 
     void FixedUpdate()
@@ -36,7 +36,7 @@ public class PlaybackController : MonoBehaviour
             // Adjust the slider value automatically if not touching it
             if (!sliderSelected)
             {
-                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - PositionData.instance.earliestDate.Ticks) / (double)totalTicks);
+                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks) / (double)totalTicks);
             }
         }
     }
@@ -45,7 +45,7 @@ public class PlaybackController : MonoBehaviour
     public void SliderChanged()
     {
         sliderHasChanged = true;
-        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - PositionData.instance.earliestDate.Ticks);
+        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
     }
 }

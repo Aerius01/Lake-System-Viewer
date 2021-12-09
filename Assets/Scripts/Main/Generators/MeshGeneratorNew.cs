@@ -15,7 +15,6 @@ public class MeshGeneratorNew : MonoBehaviour
     // Start is called before the first frame update
     public void SetUpMesh()
     {   
-        Debug.Log("starting mesh");
         mesh = new Mesh();
         this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
@@ -23,14 +22,13 @@ public class MeshGeneratorNew : MonoBehaviour
         CreateShape();
         UpdateMesh();
         PlaceWater();
-        Debug.Log("mesh done");
     }
 
     void CreateShape()
     {
-        int numberOfCols = MeshData.instance.columnCount;
-        int numberOfRows = MeshData.instance.rowCount; 
-        int totalEntries = MeshData.instance.columnCount * MeshData.instance.columnCount;
+        int numberOfCols = LocalMeshData.columnCount;
+        int numberOfRows = LocalMeshData.rowCount; 
+        int totalEntries = LocalMeshData.columnCount * LocalMeshData.columnCount;
 
         vertices = new Vector3[totalEntries];
 
@@ -39,8 +37,8 @@ public class MeshGeneratorNew : MonoBehaviour
             for (int c = 0; c < numberOfCols; c++)
             {
                 // Create list as though reading from bottom left to right and then up (invert it)
-                vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), c);
-                // vertices[(r * numberOfCols) + c] = new Vector3(c, float.Parse(MeshData.instance.stringTable.Rows[r][c].ToString()), r);
+                vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(LocalMeshData.stringTable.Rows[r][c].ToString()), c);
+                // vertices[(r * numberOfCols) + c] = new Vector3(c, float.Parse(LocalMeshData.stringTable.Rows[r][c].ToString()), r);
             }
         }
 
@@ -106,12 +104,12 @@ public class MeshGeneratorNew : MonoBehaviour
 
     void PlaceWater()
     {
-        float waterLevel = MeshData.instance.waterLevel;
+        float waterLevel = LocalMeshData.waterLevel;
         waterObject.SetActive(true);
-        waterObject.transform.position = new Vector3((MeshData.instance.rowCount) / 2, waterLevel, (MeshData.instance.columnCount / 2));
+        waterObject.transform.position = new Vector3((LocalMeshData.rowCount) / 2, waterLevel, (LocalMeshData.columnCount / 2));
 
         Vector3 scale = transform.localScale;
-        scale.Set((MeshData.instance.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (MeshData.instance.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
+        scale.Set((LocalMeshData.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1, (LocalMeshData.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
         transform.localScale = scale;
 
         // Set the text in the settings menu

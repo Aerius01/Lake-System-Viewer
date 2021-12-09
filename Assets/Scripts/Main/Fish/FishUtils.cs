@@ -69,7 +69,7 @@ public class FishUtils : MonoBehaviour
         LineRenderer line = depthLine.GetComponent<LineRenderer>();
         GameObject waterblock = GameObject.Find("WaterBlock");
         
-        LinePoint.y = - Mathf.Abs(MeshData.instance.minDepth) * UserSettings.verticalScalingFactor;
+        LinePoint.y = - Mathf.Abs(LocalMeshData.minDepth) * UserSettings.verticalScalingFactor;
         line.SetPosition(0, LinePoint);
 
         LinePoint.y = waterblock.transform.position.y;

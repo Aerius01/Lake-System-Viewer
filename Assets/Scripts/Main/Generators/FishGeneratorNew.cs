@@ -88,7 +88,7 @@ public class FishGeneratorNew : MonoBehaviour
     public void SetUpFish()
     {
         // TODO: make sure data is sorted in parsed structure
-        Dictionary<int, DataPointClass[]> parsedData = CreateDataStructure(PositionData.instance.stringTable);
+        Dictionary<int, DataPointClass[]> parsedData = CreateDataStructure(LocalPositionData.stringTable);
         fishDict = new Dictionary<int, Fisch>();
 
         foreach (var key in parsedData.Keys)
@@ -321,7 +321,6 @@ public class FishGeneratorNew : MonoBehaviour
         for (int y = 0; y < cutSize; y++)
         {
             DataPointClass record = new DataPointClass();
-
             record.x = float.Parse(array.Rows[y + firstInstance]["x"].ToString());
             record.y = float.Parse(array.Rows[y + firstInstance]["y"].ToString());
             record.z = - float.Parse(array.Rows[y + firstInstance]["D"].ToString());
