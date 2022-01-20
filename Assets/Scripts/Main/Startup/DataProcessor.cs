@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Data;
 using System.Collections.Generic;
+using System.Linq;
 using System;
 
 public class DataProcessor
@@ -65,7 +66,7 @@ public class LocalMeshData
 
 public class LocalPositionData
 {
-    private Dictionary<string, float> GISCoords;
+    private Dictionary<string, double> GISCoords;
     public static DateTime earliestDate, latestDate;
     public static DataTable stringTable;
     public static int rowCount, columnCount;
@@ -85,11 +86,11 @@ public class LocalPositionData
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
 
-        GISCoords = new Dictionary<string, float>() {
-            {"MinLong", (float) 3404493.13224369},
-            {"MaxLong", (float) 3405269.13224369},
-            {"MinLat", (float) 5872333.13262316},
-            {"MaxLat", (float) 5872869.13262316}
+        GISCoords = new Dictionary<string, double>() {
+            {"MinLong", (double) 3404493.13224369},
+            {"MaxLong", (double) 3405269.13224369},
+            {"MinLat", (double) 5872333.13262316},
+            {"MaxLat", (double) 5872869.13262316}
         };
 
         earliestDate = DateTime.MaxValue;
@@ -176,11 +177,6 @@ public class LocalFishData
         }
 
         table.AcceptChanges();
-
-        foreach (var item in table.Rows[5].ItemArray)
-        {
-            Debug.Log(item.ToString());
-        }
     }
 }
 
@@ -188,6 +184,8 @@ public class LocalThermoclineData
 {
     public static DataTable stringTable;
     public static int rowCount, columnCount;
+    public static Dictionary<DateTime, DataRow[]> thermoDict;
+    public static DateTime[] uniqueTimeStamps;
 
     public LocalThermoclineData(DataTable table)
     {
@@ -205,6 +203,40 @@ public class LocalThermoclineData
         }
 
         table.AcceptChanges();
+
+        // Assemble unique timestamps
+        List<string> uniqueStrTimeStamps = new List<string>();
+        foreach (DataRow row in stringTable.Rows)
+        {
+            if (!uniqueStrTimeStamps.Contains(row["time"]))
+            {
+                uniqueStrTimeStamps.Add(row["time"].ToString());
+            }
+        }
+
+        // Assemble a dictionary keyed by, and a sorted array of, those unique timestamps
+        thermoDict = new Dictionary<DateTime, DataRow[]>();
+        uniqueTimeStamps = new DateTime[uniqueStrTimeStamps.Count];
+
+        for (int i = 0; i < uniqueStrTimeStamps.Count; i++)
+        {
+            string item = uniqueStrTimeStamps[i];
+            string searchExp = string.Format("time = '{0}'", item);
+            DataRow[] foundRows = stringTable.Select(searchExp);
+
+            try
+            {
+                DateTime timeStamp = DateTime.Parse(item);
+                uniqueTimeStamps[i] = timeStamp;
+                thermoDict.Add(timeStamp, foundRows);
+            }
+            catch
+            {
+                Debug.Log("Unsuccessful parsing of thermocline data");
+            }
+        }
+
+        Array.Sort(uniqueTimeStamps);
     }
 }
 
