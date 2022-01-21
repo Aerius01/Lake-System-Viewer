@@ -4,6 +4,7 @@ using System;
 public class ThermoclineDOMain : MonoBehaviour
 {
     public ColorBar TempCB, DOCB;
+    private int lastIndex;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -24,24 +25,31 @@ public class ThermoclineDOMain : MonoBehaviour
 
     public void UpdateBars()
     {
-        // jumps in time not necessary as there is no interpolation over time (for now)
+        bool jumpingInTime = false;
+        if (PlaybackController.sliderHasChanged)
+        {
+            jumpingInTime = true;
+        }
 
         // Find most recent timestamp for which there is data
         int currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
         if (currentIndex < 0)
         {
-            if (currentIndex == - LocalThermoclineData.uniqueTimeStamps.Length)
-            {
-                // Beyond the scope of our timestamps
-            }
-            else
-            {
-                currentIndex = Mathf.Abs(currentIndex) - 1;
-            }
+            currentIndex = Mathf.Abs(currentIndex) - 1;
         }
 
-        // TODO: if no change in TS, don't update, lot's of efficiency here
-        TempCB.UpdateCells(currentIndex, "temp");
-        // DOCB.UpdateCells(currentIndex, "oxygen");
+        // Only update the bars if something is different
+        if (jumpingInTime || currentIndex != lastIndex)
+        {
+            TempCB.UpdateCells(currentIndex, "temp");
+            DOCB.UpdateCells(currentIndex, "oxygen");
+        }
+
+        if (jumpingInTime)
+        {
+            PlaybackController.sliderHasChanged = false;
+        }
+
+        lastIndex = currentIndex;
     }
 }
