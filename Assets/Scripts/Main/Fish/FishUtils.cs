@@ -4,7 +4,7 @@ using TMPro;
 public class FishUtils : MonoBehaviour
 {
     [SerializeField]
-    private GameObject canvas, depthLine, trail;
+    private GameObject canvas, depthLine, trail, thermoInd;
 
     private void Update()
     {
@@ -65,7 +65,6 @@ public class FishUtils : MonoBehaviour
     public void UpdateDepthIndicatorLine(Vector3 LinePoint)
     {
         // TODO: find the lake depth at the position of the fish
-        
         LineRenderer line = depthLine.GetComponent<LineRenderer>();
         GameObject waterblock = GameObject.Find("WaterBlock");
         
@@ -74,5 +73,17 @@ public class FishUtils : MonoBehaviour
 
         LinePoint.y = waterblock.transform.position.y;
         line.SetPosition(1, LinePoint);
+
+        if (ThermoclineDOMain.instance.thermoclinePlane.currentDepth != null)
+        {
+            thermoInd.SetActive(true);
+
+            LinePoint.y = (float)-ThermoclineDOMain.instance.thermoclinePlane.currentDepth * UserSettings.verticalScalingFactor;
+            thermoInd.transform.position = LinePoint;
+        }
+        else
+        {
+            thermoInd.SetActive(false);
+        }
     }
 }

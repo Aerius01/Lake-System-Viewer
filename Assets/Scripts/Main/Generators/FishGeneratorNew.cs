@@ -1,10 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
 using System.Linq;
 using System.Data;
-using TMPro;
 
 public class Fisch
 {   
@@ -168,10 +166,9 @@ public class FishGeneratorNew : MonoBehaviour
         if (currentIndex != 0)
         {
             // Only operate if we have timestep bounds
-
             if (currentIndex < 0)
             {
-                currentIndex = Mathf.Abs(currentIndex) - 2;
+                currentIndex = Mathf.Abs(currentIndex) - 1;
             }
 
             // find new bounding values if we've entered a new timestep range
@@ -322,7 +319,7 @@ public class FishGeneratorNew : MonoBehaviour
         {
             DataPointClass record = new DataPointClass();
             record.x = float.Parse(array.Rows[y + firstInstance]["x"].ToString());
-            record.y = float.Parse(array.Rows[y + firstInstance]["y"].ToString());
+            record.y = LocalMeshData.rowCount - float.Parse(array.Rows[y + firstInstance]["y"].ToString());
             record.z = - float.Parse(array.Rows[y + firstInstance]["D"].ToString());
 
             DateTime parsedDate = DateTime.Parse(array.Rows[y + firstInstance]["Time"].ToString());

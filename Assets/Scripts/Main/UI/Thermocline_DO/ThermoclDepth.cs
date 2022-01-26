@@ -77,7 +77,7 @@ public class ThermoclDepth
         return inflectionPoints;
     }
 
-    public float? ThermoDepth()
+    public (float? depth, int? index) ThermoDepth()
     {
         // Suggested by Georgiy Kirillin
         // https://github.com/GLEON/rLakeAnalyzer/blob/ef6de8c3e86d24f1d4190dbb1370afeb4e3181cb/R/thermo.depth.R
@@ -88,21 +88,21 @@ public class ThermoclDepth
         if(maxTemp - minTemp < 1)
         {
             Debug.Log("Temperature range less than cut-off");
-            return(null);
+            return(null, null);
         }
   
         // We can't determine anything with less than 3 measurements
         if(profileEntries.Count < 3)
         {
             Debug.Log("Less than three tmeperature measurements");
-            return(null);
+            return(null, null);
         }
   
         // Ensure depth profile is unique
         if(profileEntries.Count != uniqueDepths.Count)
         {
             Debug.Log("Non-unique depths");
-            return(null);
+            return(null, null);
         }
          
         // Calculate the first derivative of density
@@ -206,7 +206,7 @@ public class ThermoclDepth
             SthermoInd = thermoInd;
         }
 
-        return (float?)thermoD;
+        return ((float?)thermoD, thermoInd);
         
         // #Ok, which output was requested. Index or value
         // # seasonal or non-seasonal

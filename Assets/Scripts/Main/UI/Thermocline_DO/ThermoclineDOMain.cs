@@ -4,7 +4,10 @@ using System;
 public class ThermoclineDOMain : MonoBehaviour
 {
     public ColorBar TempCB, DOCB;
+    public Material planeMaterial;
     private int lastIndex, currentIndex;
+    public ThermoclinePlane thermoclinePlane {get; private set;}
+    private float? oldScalingFactor = null;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -23,6 +26,12 @@ public class ThermoclineDOMain : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        thermoclinePlane = new ThermoclinePlane();
+        thermoclinePlane.CreatePlane(planeMaterial);
+    }
+
     public void UpdateBars()
     {
         bool jumpingInTime = false;
@@ -39,14 +48,17 @@ public class ThermoclineDOMain : MonoBehaviour
             currentIndex = Mathf.Abs(currentIndex) - 2;
         }
 
-        // Only update the bars if something is different
+        // Only update the bars if something is different or the scaling factor has changed
         if (jumpingInTime || currentIndex != lastIndex)
         {
             TempCB.UpdateCells(currentIndex, "temp");
             DOCB.UpdateCells(currentIndex, "oxygen");
 
-            ThermoclDepth tester = new ThermoclDepth();
-            Debug.Log(tester.ThermoDepth());
+            thermoclinePlane.RecalculatePlane();
+        }
+        else if (oldScalingFactor != UserSettings.verticalScalingFactor)
+        {
+            thermoclinePlane.RecalculatePlane();
         }
 
         if (jumpingInTime)
@@ -55,6 +67,7 @@ public class ThermoclineDOMain : MonoBehaviour
         }
 
         lastIndex = currentIndex;
+        oldScalingFactor = UserSettings.verticalScalingFactor;
     }
 
     public int CurrentIndex()
