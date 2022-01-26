@@ -4,7 +4,7 @@ using System;
 public class ThermoclineDOMain : MonoBehaviour
 {
     public ColorBar TempCB, DOCB;
-    private int lastIndex;
+    private int lastIndex, currentIndex;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -32,10 +32,11 @@ public class ThermoclineDOMain : MonoBehaviour
         }
 
         // Find most recent timestamp for which there is data
-        int currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
+        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
+        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
         if (currentIndex < 0)
         {
-            currentIndex = Mathf.Abs(currentIndex) - 1;
+            currentIndex = Mathf.Abs(currentIndex) - 2;
         }
 
         // Only update the bars if something is different
@@ -43,6 +44,9 @@ public class ThermoclineDOMain : MonoBehaviour
         {
             TempCB.UpdateCells(currentIndex, "temp");
             DOCB.UpdateCells(currentIndex, "oxygen");
+
+            ThermoclDepth tester = new ThermoclDepth();
+            Debug.Log(tester.ThermoDepth());
         }
 
         if (jumpingInTime)
@@ -52,4 +56,11 @@ public class ThermoclineDOMain : MonoBehaviour
 
         lastIndex = currentIndex;
     }
+
+    public int CurrentIndex()
+    {
+        return currentIndex;
+    }
 }
+
+
