@@ -171,7 +171,7 @@ public class FishGeneratorNew : MonoBehaviour
 
             if (currentIndex < 0)
             {
-                currentIndex = Mathf.Abs(currentIndex) - 1;
+                currentIndex = Mathf.Abs(currentIndex) - 2;
             }
 
             // find new bounding values if we've entered a new timestep range

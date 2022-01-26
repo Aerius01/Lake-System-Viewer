@@ -32,8 +32,8 @@ public class ThermoclineDOMain : MonoBehaviour
         }
 
         // Find most recent timestamp for which there is data
-        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
-        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
+        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
+        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
         if (currentIndex < 0)
         {
             currentIndex = Mathf.Abs(currentIndex) - 2;
