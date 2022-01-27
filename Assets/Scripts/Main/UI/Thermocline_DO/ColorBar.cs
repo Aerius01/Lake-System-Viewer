@@ -29,7 +29,7 @@ public class ColorBar : MonoBehaviour
         tempGradient = new Gradient();
 
         GradientColorKey[] colorKeyTemp = new GradientColorKey[2];
-        colorKeyTemp[0].color = Color.blue;
+        colorKeyTemp[0].color = Color.clear;
         colorKeyTemp[0].time = 0.0f;
         colorKeyTemp[1].color = Color.red;
         colorKeyTemp[1].time = 1.0f;
@@ -48,7 +48,7 @@ public class ColorBar : MonoBehaviour
         GradientColorKey[] colorKeyOxy = new GradientColorKey[2];
         colorKeyOxy[0].color = Color.clear;
         colorKeyOxy[0].time = 0.0f;
-        colorKeyOxy[1].color = Color.green;
+        colorKeyOxy[1].color = Color.blue;
         colorKeyOxy[1].time = 1.0f;
 
         GradientAlphaKey[] alphaKeyOxy = new GradientAlphaKey[2];
@@ -72,7 +72,6 @@ public class ColorBar : MonoBehaviour
             currentCell.SetDepth(float.Parse(currentData[i]["d"].ToString()));
             
             string stringValue = currentData[i][colName].ToString().Trim();
-
             if (string.IsNullOrEmpty(stringValue))
             {
                 currentCell.SetColor(Color.black);

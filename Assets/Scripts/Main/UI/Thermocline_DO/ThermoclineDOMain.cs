@@ -1,13 +1,19 @@
 using UnityEngine;
 using System;
+using TMPro;
 
 public class ThermoclineDOMain : MonoBehaviour
 {
     public ColorBar TempCB, DOCB;
     public Material planeMaterial;
+    public TextMeshProUGUI thermoText;
+    public GameObject thermoDepth;
     private int lastIndex, currentIndex;
     public ThermoclinePlane thermoclinePlane {get; private set;}
     private float? oldScalingFactor = null;
+
+    private float incrementalHeight;
+    private Vector3 originPosition;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -30,6 +36,10 @@ public class ThermoclineDOMain : MonoBehaviour
     {
         thermoclinePlane = new ThermoclinePlane();
         thermoclinePlane.CreatePlane(planeMaterial);
+
+        float height = TempCB.GetComponent<RectTransform>().rect.height;
+        incrementalHeight = height / 10f;
+        originPosition = thermoDepth.GetComponent<RectTransform>().position;
     }
 
     public void UpdateBars()
@@ -41,8 +51,8 @@ public class ThermoclineDOMain : MonoBehaviour
         }
 
         // Find most recent timestamp for which there is data
-        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
-        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
+        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
+        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
         if (currentIndex < 0)
         {
             currentIndex = Mathf.Abs(currentIndex) - 2;
@@ -51,14 +61,16 @@ public class ThermoclineDOMain : MonoBehaviour
         // Only update the bars if something is different or the scaling factor has changed
         if (jumpingInTime || currentIndex != lastIndex)
         {
+            thermoclinePlane.RecalculatePlane();
+            UpdateThermoclineUI();
+
             TempCB.UpdateCells(currentIndex, "temp");
             DOCB.UpdateCells(currentIndex, "oxygen");
-
-            thermoclinePlane.RecalculatePlane();
         }
         else if (oldScalingFactor != UserSettings.verticalScalingFactor)
         {
             thermoclinePlane.RecalculatePlane();
+            UpdateThermoclineUI();
         }
 
         if (jumpingInTime)
@@ -73,6 +85,23 @@ public class ThermoclineDOMain : MonoBehaviour
     public int CurrentIndex()
     {
         return currentIndex;
+    }
+
+    private void UpdateThermoclineUI()
+    {
+        if (thermoclinePlane.currentDepth != null)
+        {
+            thermoText.text = string.Format("Thermocline Depth:\n{0:0.00}m", thermoclinePlane.currentDepth);
+            
+            Vector3 newPosition = originPosition;
+            float yPos = - incrementalHeight * (float)thermoclinePlane.currentDepth;
+            newPosition.y += yPos;
+            thermoDepth.GetComponent<RectTransform>().position = newPosition;
+        }
+        else
+        {
+            thermoText.text = "Thermocline Depth:\n-";
+        }
     }
 }
 
