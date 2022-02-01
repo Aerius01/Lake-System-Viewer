@@ -48,7 +48,7 @@ public class ThermoclinePlane
 
         if (depth != null)
         {
-            if (planeObject.activeSelf)
+            if (!planeObject.activeSelf && UserSettings.showThermocline)
             {
                 planeObject.SetActive(true);
             }

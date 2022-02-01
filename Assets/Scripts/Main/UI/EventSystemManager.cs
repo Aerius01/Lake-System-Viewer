@@ -7,7 +7,7 @@ using TMPro;
 public class EventSystemManager : MonoBehaviour
 {
     public GameObject settingsMenu, heightMapObject;
-    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle;
+    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle;
     private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput;
 
     private void Awake()
@@ -15,6 +15,7 @@ public class EventSystemManager : MonoBehaviour
         tagToggle = settingsMenu.transform.Find("Toggles").transform.Find("TagToggle").GetComponent<Toggle>();
         depthLineToggle = settingsMenu.transform.Find("Toggles").transform.Find("DepthLineToggle").GetComponent<Toggle>();
         trailToggle = settingsMenu.transform.Find("Toggles").transform.Find("TrailToggle").GetComponent<Toggle>();
+        thermoToggle = settingsMenu.transform.Find("Toggles").transform.Find("ThermoclineToggle").GetComponent<Toggle>();
 
         scalingFactorInput = settingsMenu.transform.Find("Inputs").transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
         speedUpInput = settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
@@ -62,6 +63,18 @@ public class EventSystemManager : MonoBehaviour
         else
         {
             UserSettings.showFishTrails = false;
+        }
+    }
+
+    public void ThermoToggle()
+    {
+        if (thermoToggle.isOn)
+        {
+            UserSettings.showThermocline = true;
+        }
+        else
+        {
+            UserSettings.showThermocline = false;
         }
     }
 

@@ -13,7 +13,7 @@ public class ThermoclineDOMain : MonoBehaviour
     private float? oldScalingFactor = null;
 
     private float incrementalHeight;
-    private Vector3 originPosition;
+    private Vector3 originPositionBar, originContainer;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -39,7 +39,10 @@ public class ThermoclineDOMain : MonoBehaviour
 
         float height = TempCB.GetComponent<RectTransform>().rect.height;
         incrementalHeight = height / 10f;
-        originPosition = thermoDepth.GetComponent<RectTransform>().position;
+        originPositionBar = thermoDepth.GetComponent<RectTransform>().position;
+        originContainer = instance.transform.parent.GetComponent<RectTransform>().position;
+
+        ToggleThermocline();
     }
 
     public void UpdateBars()
@@ -93,7 +96,7 @@ public class ThermoclineDOMain : MonoBehaviour
         {
             thermoText.text = string.Format("Thermocline Depth:\n{0:0.00}m", thermoclinePlane.currentDepth);
             
-            Vector3 newPosition = originPosition;
+            Vector3 newPosition = originPositionBar;
             float yPos = - incrementalHeight * (float)thermoclinePlane.currentDepth;
             newPosition.y += yPos;
             thermoDepth.GetComponent<RectTransform>().position = newPosition;
@@ -101,6 +104,20 @@ public class ThermoclineDOMain : MonoBehaviour
         else
         {
             thermoText.text = "Thermocline Depth:\n-";
+        }
+    }
+
+    public void ToggleThermocline()
+    {
+        thermoclinePlane.TogglePlane();
+        if (UserSettings.showThermocline)
+        {
+            instance.transform.parent.GetComponent<CanvasGroup>().alpha = 1;
+        }
+        else
+        {
+            instance.transform.parent.GetComponent<CanvasGroup>().alpha = 0;
+            instance.transform.parent.GetComponent<RectTransform>().position = originContainer;
         }
     }
 }
