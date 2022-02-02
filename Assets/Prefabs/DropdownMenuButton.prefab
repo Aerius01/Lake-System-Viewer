@@ -388,11 +388,11 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Sex: M
 
-    Species: Pike
+    Species: Perch
 
-    Age: 5
+    Age: ?
 
-    Size: 1''
+    Size: 360mm
 
     Depth: 2.3m'
   m_isRightToLeft: 0

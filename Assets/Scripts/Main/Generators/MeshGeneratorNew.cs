@@ -26,68 +26,55 @@ public class MeshGeneratorNew : MonoBehaviour
 
     void CreateShape()
     {
-        int numberOfCols = LocalMeshData.columnCount;
-        int numberOfRows = LocalMeshData.rowCount; 
-        int totalEntries = LocalMeshData.columnCount * LocalMeshData.columnCount;
+        int vertexCols = LocalMeshData.columnCount;
+        int vertexRows = LocalMeshData.rowCount; 
+        int totalVertices = vertexCols * vertexRows;
+        int totalQuads = (vertexRows - 1) * (vertexCols - 1);
 
-        vertices = new Vector3[totalEntries];
+        vertices = new Vector3[totalVertices];
+        float maxDepth = float.MaxValue;
+        float minDepth = float.MinValue;
 
-        for (int r = 0; r < numberOfRows; r++)
+        for (int r = 0; r < vertexRows; r++)
         {
-            for (int c = 0; c < numberOfCols; c++)
+            for (int c = 0; c < vertexCols; c++)
             {
                 // Create list as though reading from bottom left to right and then up (invert it)
-                vertices[(numberOfRows - r) * numberOfCols + c] = new Vector3(r, float.Parse(LocalMeshData.stringTable.Rows[r][c].ToString()), c);
+                float depthVal = float.Parse(LocalMeshData.stringTable.Rows[r][c].ToString());
+                vertices[(vertexRows - 1 - r) * vertexCols + c] = new Vector3(r, depthVal, c);
                 // vertices[(r * numberOfCols) + c] = new Vector3(c, float.Parse(LocalMeshData.stringTable.Rows[r][c].ToString()), r);
+
+                // Depth entries are negative values
+                if (depthVal < maxDepth) maxDepth = depthVal;
+                if (depthVal > minDepth) minDepth = depthVal;
             }
         }
 
-        colors = new Color[totalEntries];
-        triangles = new int [numberOfCols * numberOfRows * 6];
+        // Set the UVs & colors
+        uv = new Vector2[totalVertices];
+        colors = new Color[totalVertices];
 
-        // Set the UVs
-        uv = new Vector2[totalEntries];
-		for (int i = 0, y = 0; y < numberOfRows; y++) {
-			for (int x = 0; x < numberOfCols; x++, i++) {
-				uv[i] = new Vector2((float)x / numberOfCols, (float)y / numberOfRows);
+		for (int i = 0, y = 0; y < vertexRows; y++) {
+			for (int x = 0; x < vertexCols; x++, i++) {
+				uv[i] = new Vector2((float)x / vertexCols, (float)y / vertexRows);
+                colors[i] = gradient.Evaluate(Mathf.InverseLerp(minDepth, maxDepth, vertices[i].y));
 			}
 		}
 
-        float maxTerrainHeight = 0;
-        float minTerrainHeight = 0;
-        for (int vert = 0, tris = 0, z = 0; z < numberOfRows; z++)
+        triangles = new int [totalQuads * 6];
+        for (int vert = 0, tris = 0, z = 0; z < vertexRows - 1; z++)
         {
-            for (int x = 0; x < numberOfCols; x++)
+            for (int x = 0; x < vertexCols - 1; x++)
             {
-                if (z < numberOfRows - 1 && x < numberOfCols - 1)
-                {
-                    // 6 vertices per quad
-                    triangles[tris + 0] = vert;
-                    triangles[tris + 1] = vert + numberOfCols;
-                    triangles[tris + 2] = vert + 1;
-                    triangles[tris + 3] = vert + 1;
-                    triangles[tris + 4] = vert + numberOfCols;
-                    triangles[tris + 5] = vert + numberOfCols + 1;
+                triangles[tris + 0] = vert + vertexCols - 1;
+                triangles[tris + 1] = vert + vertexCols;
+                triangles[tris + 2] = vert;
+                triangles[tris + 3] = vert;
+                triangles[tris + 4] = vert + vertexCols;
+                triangles[tris + 5] = vert + 1;
 
-                    vert++;
-                    tris+=6;
-                }
- 
-                if (maxTerrainHeight > vertices[(z * numberOfCols) + x].y)
-                {
-                    maxTerrainHeight = vertices[(z * numberOfCols) + x].y;
-                }
-
-                if (minTerrainHeight < vertices[(z * numberOfCols) + x].y)
-                {
-                    minTerrainHeight = vertices[(z * numberOfCols) + x].y;
-                }
-
-                colors[(z * numberOfCols) + x] = gradient.Evaluate(Mathf.InverseLerp(minTerrainHeight, maxTerrainHeight, vertices[(z * numberOfCols) + x].y));
-            }
-            
-            if (z < numberOfRows - 1){
                 vert++;
+                tris+=6;
             }
         }
     }
