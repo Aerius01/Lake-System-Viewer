@@ -39,7 +39,7 @@ public class ThermoclineDOMain : MonoBehaviour
 
         float height = TempCB.GetComponent<RectTransform>().rect.height;
         incrementalHeight = height / 10f;
-        originPositionBar = thermoDepth.GetComponent<RectTransform>().position;
+        originPositionBar = thermoDepth.GetComponent<RectTransform>().anchoredPosition;
         originContainer = instance.transform.parent.GetComponent<RectTransform>().position;
 
         ToggleThermocline();
@@ -54,8 +54,8 @@ public class ThermoclineDOMain : MonoBehaviour
         }
 
         // Find most recent timestamp for which there is data
-        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
-        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
+        currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
+        // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
         if (currentIndex < 0)
         {
             currentIndex = Mathf.Abs(currentIndex) - 2;
@@ -99,7 +99,7 @@ public class ThermoclineDOMain : MonoBehaviour
             Vector3 newPosition = originPositionBar;
             float yPos = - incrementalHeight * (float)thermoclinePlane.currentDepth;
             newPosition.y += yPos;
-            thermoDepth.GetComponent<RectTransform>().position = newPosition;
+            thermoDepth.GetComponent<RectTransform>().anchoredPosition = newPosition;
         }
         else
         {

@@ -17,8 +17,28 @@ public class FishList : MonoBehaviour
             //obj.transform.parent = this.gameObject.transform;
             obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
             obj.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text = key.ToString();
-            obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
-                string.Format("Sex: M\nSpecies: Perch\nAge: ?\nSize: 360mm\nDepth: {0:0.00}m", metaDict[key].depth);
+
+            if (key.ToString() == "2041")
+            {
+                obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: M\nSpecies: Roach\nWeight: 738g\nSize: 377mm\nDepth: {0:0.00}m", metaDict[key].depth);
+            }
+            else if (key.ToString() == "2046")
+            {
+                obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: ?\nSpecies: Roach\nWeight: 578g\nSize: 351mm\nDepth: {0:0.00}m", metaDict[key].depth);
+            }
+            else if (key.ToString() == "2049")
+            {
+                obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: ?\nSpecies: Roach\nWeight: 819g\nSize: 392mm\nDepth: {0:0.00}m", metaDict[key].depth);
+            }
+            else
+            {
+                obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: M\nSpecies: Roach\nAge: ?\nSize: 360mm\nDepth: {0:0.00}m", metaDict[key].depth);
+            }
+            
         }
 
         // Set the initial content box size
@@ -31,9 +51,33 @@ public class FishList : MonoBehaviour
     {
         foreach (Transform child in this.gameObject.transform)
         {
-            child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
-                string.Format("Sex: M\nSpecies: Perch\nAge: ?\nSize: 360mm\nDepth: {0:0.00}m",
-                FishGeneratorNew.CurrentFishDepth(int.Parse(child.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text)));
+            string id = child.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text;
+
+            if (id == "2041")
+            {
+                child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: M\nSpecies: Roach\nWeight: 738g\nSize: 377mm\nDepth: {0:0.00}m", FishGeneratorNew.CurrentFishDepth(int.Parse(id)));
+            }
+            else if (id == "2046")
+            {
+                child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: ?\nSpecies: Roach\nWeight: 578g\nSize: 351mm\nDepth: {0:0.00}m", FishGeneratorNew.CurrentFishDepth(int.Parse(id)));
+            }
+            else if (id == "2049")
+            {
+                child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: ?\nSpecies: Roach\nWeight: 819g\nSize: 392mm\nDepth: {0:0.00}m", FishGeneratorNew.CurrentFishDepth(int.Parse(id)));
+            }
+            else
+            {
+                child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+                    string.Format("Sex: M\nSpecies: Roach\nAge: ?\nSize: 360mm\nDepth: {0:0.00}m", 
+                    FishGeneratorNew.CurrentFishDepth(int.Parse(id)));
+            }
+
+            // child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
+            //     string.Format("Sex: M\nSpecies: Perch\nAge: ?\nSize: 360mm\nDepth: {0:0.00}m",
+            //     FishGeneratorNew.CurrentFishDepth(int.Parse(child.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text)));
         }
     }
 }

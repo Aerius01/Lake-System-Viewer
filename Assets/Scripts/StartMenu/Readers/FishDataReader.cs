@@ -4,14 +4,6 @@ using UnityEngine;
 using System.Linq;
 using System;
 
-public class DataPointClass
-{
-    public float x { get; set; }
-    public float y { get; set; }
-    public float z { get; set; }
-    public DateTime obsTime { get; set; }
-}
-
 public class FishDataReader : CSVReader
 {
     // TODO: have this be part of the UI
@@ -98,14 +90,13 @@ public class FishDataReader : CSVReader
 
         for (int y = 0; y < cutSize; y++)
         {
-            DataPointClass record = new DataPointClass();
+            DataPointClass record = new DataPointClass(
+                convertStringLongValue(array[1, y + firstInstance]),
+                convertStringLatValue(array[2, y + firstInstance]),
+                - float.Parse(array[3, y + firstInstance].Trim()),
+                DateTime.Parse(array[4, y + firstInstance].Trim())
+            );
 
-            record.x = convertStringLongValue(array[1, y + firstInstance]);
-            record.y = convertStringLatValue(array[2, y + firstInstance]);
-            record.z = - float.Parse(array[3, y + firstInstance].Trim());
-
-            DateTime parsedDate = DateTime.Parse(array[4, y + firstInstance].Trim());
-            record.obsTime = parsedDate;
             slicedList.Add(record);
         }
 

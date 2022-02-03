@@ -1,43 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-using System.Linq;
-using System.Data;
-
-public class Fisch
-{   
-    // Utility class representing each fish
-    public Vector3 startPos, endPos;
-    public Quaternion startOrient, endOrient;
-    public DateTime earliestTime, latestTime;
-    public GameObject fishObject = null;
-    public DataPointClass[] dataPoints;
-    public FishUtils utils;
-    public int totalReadings, id;
-    public int? lastRung;
-    public DateTime[] timeVector;
-
-    public Fisch (int id, DataPointClass[] dataPoints)
-    {
-        this.id = id;
-        this.dataPoints = dataPoints;
-        totalReadings = dataPoints.Length;
-        startPos = new Vector3(dataPoints[0].x, dataPoints[0].z * UserSettings.verticalScalingFactor, dataPoints[0].y);
-        startOrient = Quaternion.Euler(0f, 0f, 0f);
-        earliestTime = dataPoints[0].obsTime;
-        latestTime = dataPoints[totalReadings - 1].obsTime;
-
-        timeVector = new DateTime[dataPoints.Length];
-        for (int i = 0; i < dataPoints.Length; i++)
-        {
-            timeVector[i] = dataPoints[i].obsTime;
-        }
-    }
-}
 
 public class FishGeneratorNew : MonoBehaviour
 {
-    private static Dictionary<int, Fisch> fishDict;
+    public static Dictionary<int, Fish> fishDict {get; private set;}
     public GameObject fishPrefab;
 
     public static void ActivateAll(int handle, bool activationStatus)
@@ -85,22 +52,19 @@ public class FishGeneratorNew : MonoBehaviour
 
     public void SetUpFish()
     {
-        // TODO: make sure data is sorted in parsed structure
-        Dictionary<int, DataPointClass[]> parsedData = CreateDataStructure(LocalPositionData.stringTable);
-        fishDict = new Dictionary<int, Fisch>();
-
-        foreach (var key in parsedData.Keys)
+        fishDict = new Dictionary<int, Fish>();
+        foreach (int key in LocalPositionData.positionDict.Keys)
         {
-            Fisch fish = new Fisch(key, parsedData[key]);
+            Fish fish = new Fish(key);
             
             GameObject obj = (Instantiate (fishPrefab, fish.startPos, fish.startOrient) as GameObject);
-            fish.utils = obj.GetComponent<FishUtils>();
             obj.transform.parent = this.gameObject.transform;
             obj.name = string.Format("{0}", fish.id);
 
-            fish.fishObject = obj;
-            obj.SetActive(false);
+            fish.SetFishUtils(obj.GetComponent<FishUtils>());
+            fish.SetFishGameObject(obj);
 
+            obj.SetActive(false);
             fishDict.Add(key, fish);
         }
     }
@@ -115,27 +79,20 @@ public class FishGeneratorNew : MonoBehaviour
 
         foreach (var key in fishDict.Keys)
         {
+            Fish currentFish = fishDict[key];
+            
             // if before first time step or after last and fish exists, despawn it
-            if (DateTime.Compare(TimeManager.instance.currentTime, fishDict[key].earliestTime) < 0 
-                || DateTime.Compare(TimeManager.instance.currentTime, fishDict[key].latestTime) > 0)
+            if (currentFish.fishShouldExist)
             {
-                if (fishDict[key].fishObject.activeSelf)
-                {
-                    fishDict[key].fishObject.SetActive(false);
-                }       
+                if (currentFish.FishIsActive()) currentFish.Deactivate();
             }
             else
             {
                 // spawn the fish if it isn't already
-                if (!fishDict[key].fishObject.activeSelf)
-                {
-                    fishDict[key].fishObject.SetActive(true);
-                }
+                if (!currentFish.FishIsActive()) currentFish.Activate();
+
                 // Update position if already spawned
-                else
-                {
-                    UpdateFishPosition(fishDict[key], jumpingInTime);
-                }
+                else UpdateFishPosition(currentFish, jumpingInTime);
             }
         }
 
@@ -145,7 +102,7 @@ public class FishGeneratorNew : MonoBehaviour
         }
     }
 
-    private void UpdateFishPosition(Fisch fish, bool timeJump)
+    private void UpdateFishPosition(Fish fish, bool timeJump)
     {
         int currentIndex = fish.lastRung == null ? 1 : (int)fish.lastRung;
         if (timeJump || fish.lastRung == null)
@@ -266,68 +223,5 @@ public class FishGeneratorNew : MonoBehaviour
             // Update depth indicator line
             fish.utils.UpdateDepthIndicatorLine(LinePoint);
         }
-    }
-
-
-
-    // Utility functions for set-up
-    Dictionary<int, DataPointClass[]> CreateDataStructure(DataTable stringGrid)
-    {
-        string[] stringKeys = SliceCol(stringGrid, "ID").Distinct().ToArray();
-        Dictionary<int, DataPointClass[]> dataSet = new Dictionary<int, DataPointClass[]>();
-
-        foreach (string key in stringKeys)
-        {
-            DataPointClass[] positions = SliceMultipleColsByKey(stringGrid, key);
-            dataSet.Add(int.Parse(key.Trim()), positions);
-        }
-        
-        return dataSet;
-    }
-
-    string[] SliceCol(DataTable array, string columnName)
-    {
-        string[] arraySlice = new string[array.Rows.Count];
-        for (int y = 0; y < array.Rows.Count; y++)
-        {
-            arraySlice[y] = array.Rows[y][columnName].ToString().Trim();
-        }
-
-        return arraySlice;
-    }
-
-    DataPointClass[] SliceMultipleColsByKey(DataTable array, string key)
-    {
-        int firstInstance = 0;
-        while (array.Rows[firstInstance]["ID"].ToString() != key){
-            firstInstance++;
-        }
-
-        int lastInstance = firstInstance;
-        while (array.Rows[lastInstance]["ID"].ToString() == key && lastInstance != array.Rows.Count - 1){
-            lastInstance++;
-        }
-
-        if (lastInstance != array.Rows.Count - 1){
-            lastInstance -= 1; 
-        }
-
-        int cutSize = lastInstance - firstInstance + 1;
-        List<DataPointClass> slicedList = new List<DataPointClass>();
-
-        for (int y = 0; y < cutSize; y++)
-        {
-            DataPointClass record = new DataPointClass();
-            record.x = float.Parse(array.Rows[y + firstInstance]["x"].ToString());
-            record.y = LocalMeshData.rowCount - float.Parse(array.Rows[y + firstInstance]["y"].ToString());
-            record.z = - float.Parse(array.Rows[y + firstInstance]["D"].ToString());
-
-            DateTime parsedDate = DateTime.Parse(array.Rows[y + firstInstance]["Time"].ToString());
-            record.obsTime = parsedDate;
-            slicedList.Add(record);
-        }
-
-        DataPointClass[] sorted = slicedList.OrderBy(f => f.obsTime).ToArray();
-        return sorted;
     }
 }

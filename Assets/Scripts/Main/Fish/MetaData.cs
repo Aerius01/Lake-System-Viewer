@@ -12,7 +12,7 @@ public class MetaData
     public int age;
     public float depth, size;
 
-    public MetaData(Fisch fish)
+    public MetaData(Fish fish)
     {
         this.depth = fish.fishObject.transform.position.y;
     }

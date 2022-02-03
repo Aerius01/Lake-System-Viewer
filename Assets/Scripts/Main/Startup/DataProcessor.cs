@@ -66,11 +66,15 @@ public class LocalMeshData
 
 public class LocalPositionData
 {
-    private Dictionary<string, double> GISCoords;
-    public static DateTime earliestDate, latestDate;
-    public static DataTable stringTable;
-    public static int rowCount, columnCount;
+    public static int rowCount {get; private set;}
+    public static int columnCount {get; private set;}
+    public static Dictionary<int, DataPointClass[]> positionDict {get; private set;}
+    public static int[] uniquefishIDs {get; private set;}
+    public static DateTime earliestDate {get; private set;}
+    public static DateTime latestDate {get; private set;}
 
+    private Dictionary<string, double> GISCoords;
+    
     public LocalPositionData(DataTable table)
     {
         table.Rows[0].Delete();
@@ -82,7 +86,6 @@ public class LocalPositionData
             table.Columns[c].ColumnName = columnNames[c];
         }
 
-        stringTable = table;
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
 
@@ -96,6 +99,7 @@ public class LocalPositionData
         earliestDate = DateTime.MaxValue;
         latestDate = DateTime.MinValue;
         
+        List<string> uniqueStrIDs = new List<string>();
         foreach (DataRow row in table.Rows)
         {
             row["x"] = convertStringLongValue("3" + row["x"].ToString());
@@ -109,12 +113,72 @@ public class LocalPositionData
             {
                 latestDate = DateTime.Parse(row["Time"].ToString());
             }
+
+            // Assemble unique fish IDs
+            if (!uniqueStrIDs.Contains(row["id"]))
+            {
+                uniqueStrIDs.Add(row["id"].ToString());
+            }
         }
 
         table.AcceptChanges();
+
+        // Assemble a dictionary keyed by, and a sorted array of, those unique IDs
+        positionDict = new Dictionary<int, DataPointClass[]>();
+        uniquefishIDs = new int[uniqueStrIDs.Count];
+
+        for (int i = 0; i < uniqueStrIDs.Count; i++)
+        {
+            // Find the relevant rows
+            string item = uniqueStrIDs[i];
+            string searchExp = string.Format("id = '{0}'", item);
+            DataRow[] foundRows = table.Select(searchExp);
+
+            // Create a DataTable from the results sorted by timestamp
+            DataTable sortingSubset = new DataTable();
+            foreach (string name in columnNames)
+            {
+                sortingSubset.Columns.Add(name, typeof(String)); 
+            }
+
+            foreach (DataRow row in foundRows)
+            {
+                sortingSubset.ImportRow(row); 
+            }
+
+            sortingSubset.DefaultView.Sort = "time";
+            sortingSubset = sortingSubset.DefaultView.ToTable();
+
+            // Parse into the DataPointClass array
+            DataPointClass[] points = new DataPointClass[sortingSubset.Rows.Count];
+            for (int j = 0; j < sortingSubset.Rows.Count; j++)
+            {
+                try
+                {
+                    DataPointClass record = new DataPointClass(
+                        float.Parse(sortingSubset.Rows[j]["x"].ToString()),
+                        LocalMeshData.rowCount - float.Parse(sortingSubset.Rows[j]["y"].ToString()),
+                        - float.Parse(sortingSubset.Rows[j]["D"].ToString()),
+                        DateTime.Parse(sortingSubset.Rows[j]["Time"].ToString())
+                    );
+
+                    points[j] = record;
+                }
+                catch
+                {
+                    Debug.Log("Unsuccessful parsing of position data");
+                }
+            }
+
+            int id = int.Parse(item);
+            uniquefishIDs[i] = id;
+            positionDict.Add(id, points);
+        }
+
+        Array.Sort(uniquefishIDs);
     }
 
-    public float convertStringLatValue(string stringLat)
+    private float convertStringLatValue(string stringLat)
     {
         double doubleLat = double.Parse(stringLat.Replace("\"", "").Trim());
 
@@ -126,7 +190,7 @@ public class LocalPositionData
         return (float)((LocalMeshData.rowCount) * ((doubleLat - GISCoords["MinLat"]) / (GISCoords["MaxLat"] - GISCoords["MinLat"])));
     }
 
-    public float convertStringLongValue(string stringLong)
+    private float convertStringLongValue(string stringLong)
     {
         double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
 
@@ -141,15 +205,16 @@ public class LocalPositionData
 
 public class LocalFishData
 {
-    public static DataTable stringTable;
-    public static int rowCount, columnCount;
+    public static int rowCount {get; private set;}
+    public static int columnCount {get; private set;}
+    public static Dictionary<int, DataRow> fishDict {get; private set;}
+    public static int[] uniquefishIDs {get; private set;}
 
     public LocalFishData(DataTable table)
     {
         table.Rows[0].Delete();
         table.AcceptChanges();
 
-        stringTable = table;
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
 
@@ -177,22 +242,56 @@ public class LocalFishData
         }
 
         table.AcceptChanges();
+
+        // Assemble unique fish IDs
+        List<string> uniqueStrIDs = new List<string>();
+        foreach (DataRow row in table.Rows)
+        {
+            if (!uniqueStrIDs.Contains(row["id"]))
+            {
+                uniqueStrIDs.Add(row["id"].ToString());
+            }
+        }
+
+        // Assemble a dictionary keyed by, and a sorted array of, those unique IDs
+        fishDict = new Dictionary<int, DataRow>();
+        uniquefishIDs = new int[uniqueStrIDs.Count];
+
+        for (int i = 0; i < uniqueStrIDs.Count; i++)
+        {
+            string item = uniqueStrIDs[i];
+            string searchExp = string.Format("id = '{0}'", item);
+            DataRow[] foundRows = table.Select(searchExp);
+
+            try
+            {
+                int id = int.Parse(item);
+                uniquefishIDs[i] = id;
+                // Choose the first entry, which should be the only one
+                fishDict.Add(id, foundRows[0]);
+            }
+            catch
+            {
+                Debug.Log("Unsuccessful parsing of fish data");
+            }
+        }
+
+        Array.Sort(uniquefishIDs);
     }
 }
 
 public class LocalThermoclineData
 {
-    public static DataTable stringTable;
-    public static int rowCount, columnCount;
-    public static Dictionary<DateTime, DataRow[]> thermoDict;
-    public static DateTime[] uniqueTimeStamps;
+    public static int rowCount {get; private set;}
+    public static int columnCount {get; private set;}
+    public static Dictionary<DateTime, DataRow[]> thermoDict {get; private set;}
+    public static DateTime[] uniqueTimeStamps {get; private set;}
 
     public LocalThermoclineData(DataTable table)
     {
         table.Rows[0].Delete();
         table.AcceptChanges();
 
-        stringTable = table;
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
 
@@ -206,7 +305,7 @@ public class LocalThermoclineData
 
         // Assemble unique timestamps
         List<string> uniqueStrTimeStamps = new List<string>();
-        foreach (DataRow row in stringTable.Rows)
+        foreach (DataRow row in table.Rows)
         {
             if (!uniqueStrTimeStamps.Contains(row["time"]))
             {
@@ -222,7 +321,7 @@ public class LocalThermoclineData
         {
             string item = uniqueStrTimeStamps[i];
             string searchExp = string.Format("time = '{0}'", item);
-            DataRow[] foundRows = stringTable.Select(searchExp);
+            DataRow[] foundRows = table.Select(searchExp);
 
             try
             {
