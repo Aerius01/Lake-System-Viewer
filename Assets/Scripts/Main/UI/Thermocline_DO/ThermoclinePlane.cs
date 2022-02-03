@@ -76,6 +76,7 @@ public class ThermoclinePlane
 
     public void TogglePlane()
     {
-        planeObject.SetActive(!planeObject.activeSelf);
+        if (UserSettings.showThermocline && this.currentDepth != null) planeObject.SetActive(true);
+        else planeObject.SetActive(false);
     }
 }

@@ -1,10 +1,30 @@
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
 public class FishUtils : MonoBehaviour
 {
-    [SerializeField]
-    private GameObject canvas, depthLine, trail, thermoInd;
+    public GameObject canvas, depthLine, trail, thermoInd;
+
+    private Dictionary<string, GameObject> classifier;
+    public string newCanvasText {
+        set
+        {
+            this.canvas.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
+            GetComponent<TextMeshProUGUI>().text = value;
+        }
+    }
+
+    private void Start()
+    {
+        classifier = new Dictionary<string, GameObject>()
+        {
+            {"tag", canvas},
+            {"line", depthLine},
+            {"trail", trail},
+            {"thermo", thermoInd}
+        };
+    }
 
     private void Update()
     {
@@ -17,49 +37,26 @@ public class FishUtils : MonoBehaviour
              
             if (collider.Raycast(ray, out hit, 999999f))
             {
-                this.ToggleTag();
+                this.ToggleUtil("tag");
             }
         }
     }
 
-    public void ActivateTag(bool activationStatus)
+    public void ActivateUtil(string util, bool activationStatus)
     {
-        this.canvas.SetActive(activationStatus);
+        GameObject obj = classifier[util];
+        obj.SetActive(activationStatus);
     }
 
-    public void ActivateDepthLine(bool activationStatus)
+    public void ToggleUtil(string util)
     {
-        this.depthLine.SetActive(activationStatus);
-    }
-    public void ActivateTrail(bool activationStatus)
-    {
-        this.trail.SetActive(activationStatus);
-    }
-
-    public void ToggleTag()
-    {
-        this.canvas.SetActive(!canvas.activeSelf);
-    }
-
-    public void ToggleDepthLine()
-    {
-        this.depthLine.SetActive(!depthLine.activeSelf);
-    }
-
-    public void ToggleTrail()
-    {
-        this.trail.SetActive(!trail.activeSelf);
+        GameObject obj = classifier[util];
+        obj.SetActive(!obj.activeSelf);
     }
 
     public void ClearTrail()
     {
         this.trail.GetComponent<TrailRenderer>().Clear();
-    }
-
-    public void UpdateCanvasText(string updateText)
-    {
-        this.canvas.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
-            GetComponent<TextMeshProUGUI>().text = updateText;
     }
 
     public void UpdateDepthIndicatorLine(Vector3 LinePoint)

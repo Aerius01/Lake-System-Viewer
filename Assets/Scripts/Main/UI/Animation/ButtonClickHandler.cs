@@ -41,12 +41,13 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
         Camera mainCamera = Camera.main;
         Vector3 startCamPos = mainCamera.transform.position;
 
-        GameObject fishObject = FishGeneratorNew.GetFishObject(int.Parse(this.gameObject.transform.Find("FishID").GetComponent<TextMeshProUGUI>().text));
-        Vector3 endCamPos = fishObject.transform.position;
+        int fishID = int.Parse(this.gameObject.transform.Find("FishID").GetComponent<TextMeshProUGUI>().text);
+
+        Vector3 endCamPos = FishManager.GetFishPosition(fishID);
 
         // The vector along which the camera will travel
         Vector3 travelVector = endCamPos - startCamPos;
-        mainCamera.transform.LookAt(fishObject.transform);
+        FishManager.LookAtFish(fishID);
 
         // Loop until the vector between the camera and fish has a length of <= 30
         for (float ratio = 0; travelVector.magnitude > 30; ratio = ratio + 0.01f)

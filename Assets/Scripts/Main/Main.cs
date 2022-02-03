@@ -5,9 +5,9 @@ using System.Collections;
 public class Main : MonoBehaviour
 {
     [SerializeField]
-    private FishGeneratorNew fishGeneratorNew;
+    private FishManager fishManager;
     [SerializeField]
-    private MeshGeneratorNew meshGeneratorNew;
+    private MeshManager meshManager;
     [SerializeField]
     private SunController sunController;
     [SerializeField]
@@ -38,15 +38,15 @@ public class Main : MonoBehaviour
 
     private void FixedUpdate()
     {
-        fishGeneratorNew.UpdateFish();
+        fishManager.UpdateFish();
         sunController.AdjustSunPosition();
         ThermoclineDOMain.instance.UpdateBars();
     }
 
     private IEnumerator SetupWorld()
     {
-        fishGeneratorNew.SetUpFish();
-        meshGeneratorNew.SetUpMesh();
+        fishManager.SetUpFish();
+        meshManager.SetUpMesh();
         fishList.PopulateList();
         yield return new WaitForSeconds(0.1f);
         TimeManager.instance.PlayButton();

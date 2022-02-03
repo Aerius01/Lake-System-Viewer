@@ -110,7 +110,7 @@ public class ThermoclineDOMain : MonoBehaviour
     public void ToggleThermocline()
     {
         thermoclinePlane.TogglePlane();
-        if (UserSettings.showThermocline)
+        if (UserSettings.showThermocline && thermoclinePlane.currentDepth != null)
         {
             instance.transform.parent.GetComponent<CanvasGroup>().alpha = 1;
         }
