@@ -4,13 +4,12 @@ using UnityEngine;
 public class FishManager : MonoBehaviour
 {
     private static Dictionary<int, Fish> fishDict {get; set;}
-    public GameObject fishPrefab;
 
     public static void ActivateAll(string util, bool activationStatus)
     {
         foreach (var key in fishDict.Keys)
         {
-            fishDict[key].ActivateUtil(util, activationStatus);
+            if (fishDict[key].fishShouldExist) fishDict[key].ActivateUtil(util, activationStatus);
         }
     }
 
@@ -46,9 +45,20 @@ public class FishManager : MonoBehaviour
         {
             Fish fish = new Fish(key);
             
-            GameObject obj = (Instantiate (fishPrefab, fish.startPos, fish.startOrient) as GameObject);
+            GameObject prefab = Species.prefabDict.ContainsKey(fish.speciesName) ? Species.prefabDict[fish.speciesName] : Species.prefabDict["roach"];
+            GameObject obj = (Instantiate (prefab, fish.startPos, fish.startOrient) as GameObject);
             obj.transform.parent = this.gameObject.transform;
             obj.name = string.Format("{0}", fish.id);
+
+            if (fish.length != null)
+            {
+                GameObject scaleDummy = obj.transform.Find("ScaleDummy").gameObject;
+
+                float localSize = (float)fish.length / 1000 * Species.conversionFactor;
+                float requiredScale = (scaleDummy.transform.localScale.z / scaleDummy.GetComponent<BoxCollider>().bounds.size.z * localSize) * 20;
+                Vector3 newScale = new Vector3(requiredScale, requiredScale, requiredScale);
+                scaleDummy.transform.localScale = newScale;
+            }
 
             fish.SetFishUtils(obj.GetComponent<FishUtils>());
             fish.SetFishHighlighter(obj.GetComponent<FishHighlighter>());
@@ -72,7 +82,7 @@ public class FishManager : MonoBehaviour
             Fish currentFish = fishDict[key];
             
             // if before first time step or after last and fish exists, despawn it
-            if (currentFish.fishShouldExist)
+            if (!currentFish.fishShouldExist)
             {
                 if (currentFish.FishIsActive()) currentFish.Deactivate();
             }

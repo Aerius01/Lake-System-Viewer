@@ -12,6 +12,13 @@ public class MeshManager : MonoBehaviour
     public GameObject waterObject;
     public Gradient gradient;
 
+    public Vector3 meshSize {
+        get
+        {
+            return this.gameObject.GetComponent<MeshRenderer>().bounds.size;
+        }
+    }
+
     // Start is called before the first frame update
     public void SetUpMesh()
     {   

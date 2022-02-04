@@ -17,8 +17,8 @@ public class Fish
         {
             if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestTime) < 0 
                 || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0)
-                return true;
-            else return false;
+                return false;
+            else return true;
         }
     }
 

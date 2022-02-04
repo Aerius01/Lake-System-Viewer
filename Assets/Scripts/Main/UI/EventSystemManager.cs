@@ -95,7 +95,7 @@ public class EventSystemManager : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(scalingFactorInput.text) || !string.IsNullOrWhiteSpace(scalingFactorInput.text))
         {
-            GameObject meshObject = heightMapObject.transform.Find("MeshGenerator").gameObject;
+            GameObject meshObject = heightMapObject.transform.Find("MeshMap").gameObject;
             float scaleValue = float.Parse(scalingFactorInput.text);
 
             if (scaleValue <= 0)

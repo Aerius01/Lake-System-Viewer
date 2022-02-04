@@ -5,7 +5,6 @@ using System.Collections.Generic;
 public class FishUtils : MonoBehaviour
 {
     public GameObject canvas, depthLine, trail, thermoInd;
-
     private Dictionary<string, GameObject> classifier;
     public string newCanvasText {
         set
@@ -24,6 +23,11 @@ public class FishUtils : MonoBehaviour
             {"trail", trail},
             {"thermo", thermoInd}
         };
+
+        if (UserSettings.showFishTags) ActivateUtil("tag", true);
+        if (UserSettings.showFishDepthLines) ActivateUtil("line", true);
+        if (UserSettings.showFishTrails) ActivateUtil("trail", true);
+        if (UserSettings.showThermocline) ActivateUtil("thermoInd", true);
     }
 
     private void Update()
@@ -33,7 +37,7 @@ public class FishUtils : MonoBehaviour
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-            BoxCollider collider = this.GetComponent<BoxCollider>();
+            BoxCollider collider = this.transform.Find("ScaleDummy").GetComponent<BoxCollider>();
              
             if (collider.Raycast(ray, out hit, 999999f))
             {
