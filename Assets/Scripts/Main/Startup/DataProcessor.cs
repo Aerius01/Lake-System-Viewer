@@ -304,38 +304,46 @@ public class LocalThermoclineData
         table.AcceptChanges();
 
         // Assemble unique timestamps
-        List<string> uniqueStrTimeStamps = new List<string>();
+        List<DateTime> uniqueTSList = new List<DateTime>();
         foreach (DataRow row in table.Rows)
         {
-            if (!uniqueStrTimeStamps.Contains(row["time"]))
+            try
             {
-                uniqueStrTimeStamps.Add(row["time"].ToString());
+                if (!uniqueTSList.Contains(DateTime.Parse(row["time"].ToString())))
+                {
+                    uniqueTSList.Add(DateTime.Parse(row["time"].ToString()));
+                }
             }
+            catch (FormatException) {Debug.Log("Issue parsing thermocline data");}
         }
+
+        uniqueTSList.Sort();
+
+        // Restrict active list to limits of position data
+        DateTime[] uniqueTSArray = uniqueTSList.ToArray();
+
+        int lowerIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.earliestDate);
+        lowerIndex = lowerIndex < 0 ? Math.Abs(lowerIndex) - 2 : lowerIndex;
+
+        int upperIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.latestDate);
+        upperIndex = upperIndex < 0 ? Math.Abs(upperIndex) - 1 : upperIndex;
+
+        List<DateTime> uniqueTSListReduced = new List<DateTime>();
+        for (int i = lowerIndex; i <= upperIndex; i++) uniqueTSListReduced.Add(uniqueTSArray[i]);
+
+        uniqueTimeStamps = uniqueTSListReduced.ToArray();
 
         // Assemble a dictionary keyed by, and a sorted array of, those unique timestamps
         thermoDict = new Dictionary<DateTime, DataRow[]>();
-        uniqueTimeStamps = new DateTime[uniqueStrTimeStamps.Count];
-
-        for (int i = 0; i < uniqueStrTimeStamps.Count; i++)
+        
+        for (int i = 0; i < uniqueTimeStamps.Length; i++)
         {
-            string item = uniqueStrTimeStamps[i];
-            string searchExp = string.Format("time = '{0}'", item);
+            DateTime timeStamp = uniqueTimeStamps[i];
+
+            string searchExp = string.Format("time = '{0}'", timeStamp.ToString());
             DataRow[] foundRows = table.Select(searchExp);
-
-            try
-            {
-                DateTime timeStamp = DateTime.Parse(item);
-                uniqueTimeStamps[i] = timeStamp;
-                thermoDict.Add(timeStamp, foundRows);
-            }
-            catch
-            {
-                Debug.Log("Unsuccessful parsing of thermocline data");
-            }
+            thermoDict.Add(timeStamp, foundRows);
         }
-
-        Array.Sort(uniqueTimeStamps);
     }
 }
 
@@ -343,13 +351,13 @@ public class LocalWeatherData
 {
     public static DataTable stringTable;
     public static int rowCount, columnCount;
+    public static DateTime[] uniqueTimeStamps {get; private set;}
 
     public LocalWeatherData(DataTable table)
     {
         table.Rows[0].Delete();
         table.AcceptChanges();
 
-        stringTable = table;
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
 
@@ -360,6 +368,42 @@ public class LocalWeatherData
         }
 
         table.AcceptChanges();
+
+        stringTable = table.Clone();
+        stringTable.Columns["time"].DataType = typeof(DateTime);
+        List<DateTime> uniqueTSList = new List<DateTime>();
+        foreach (DataRow row in table.Rows)
+        {
+            try
+            {
+                stringTable.ImportRow(row);
+
+                // Assemble unique timestamps
+                if (!uniqueTSList.Contains(DateTime.Parse(row["time"].ToString())))
+                {
+                    uniqueTSList.Add(DateTime.Parse(row["time"].ToString()));
+                }
+            }
+            catch { continue; }
+        }
+
+        stringTable.AcceptChanges();
+        uniqueTSList.Sort();
+
+        // Restrict active list to limits of position data
+        DateTime[] uniqueTSArray = uniqueTSList.ToArray();
+
+        int lowerIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.earliestDate);
+        lowerIndex = lowerIndex < 0 ? Math.Abs(lowerIndex) - 2 : lowerIndex;
+
+        int upperIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.latestDate);
+        upperIndex = upperIndex < 0 ? Math.Abs(upperIndex) - 1 : upperIndex;
+
+        List<DateTime> arrayList = new List<DateTime>();
+        for (int i = lowerIndex; i <= upperIndex; i++) arrayList.Add(uniqueTSArray[i]);
+
+        // Assemble array from reduced selection
+        uniqueTimeStamps = arrayList.ToArray();
     }
 }
 

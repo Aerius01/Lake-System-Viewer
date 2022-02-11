@@ -42,7 +42,7 @@ GameObject:
   - component: {fileID: 4755688157232872}
   - component: {fileID: 137158945948256362}
   m_Layer: 0
-  m_Name: pice_f
+  m_Name: pike_f
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -496,7 +496,7 @@ GameObject:
   - component: {fileID: 4463771751715488}
   - component: {fileID: 137410809332018172}
   m_Layer: 0
-  m_Name: pice
+  m_Name: pike
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

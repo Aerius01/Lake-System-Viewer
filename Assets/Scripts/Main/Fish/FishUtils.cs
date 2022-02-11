@@ -27,7 +27,7 @@ public class FishUtils : MonoBehaviour
         if (UserSettings.showFishTags) ActivateUtil("tag", true);
         if (UserSettings.showFishDepthLines) ActivateUtil("line", true);
         if (UserSettings.showFishTrails) ActivateUtil("trail", true);
-        if (UserSettings.showThermocline) ActivateUtil("thermoInd", true);
+        if (UserSettings.showThermocline) ActivateUtil("thermo", true);
     }
 
     private void Update()

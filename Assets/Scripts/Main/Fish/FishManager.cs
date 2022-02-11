@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class FishManager : MonoBehaviour
 {
@@ -44,8 +45,9 @@ public class FishManager : MonoBehaviour
         foreach (int key in LocalPositionData.positionDict.Keys)
         {
             Fish fish = new Fish(key);
-            
-            GameObject prefab = Species.prefabDict.ContainsKey(fish.speciesName) ? Species.prefabDict[fish.speciesName] : Species.prefabDict["roach"];
+            this.gameObject.GetComponent<Species>().CreateDict();
+
+            GameObject prefab = Species.prefabDict.ContainsKey(fish.speciesName) ? Species.prefabDict[fish.speciesName] : Species.prefabDict["Roach"];
             GameObject obj = (Instantiate (prefab, fish.startPos, fish.startOrient) as GameObject);
             obj.transform.parent = this.gameObject.transform;
             obj.name = string.Format("{0}", fish.id);
@@ -53,11 +55,18 @@ public class FishManager : MonoBehaviour
             if (fish.length != null)
             {
                 GameObject scaleDummy = obj.transform.Find("ScaleDummy").gameObject;
+                BoxCollider collider = scaleDummy.GetComponent<BoxCollider>();
 
+                // Set fish size
                 float localSize = (float)fish.length / 1000 * Species.conversionFactor;
-                float requiredScale = (scaleDummy.transform.localScale.z / scaleDummy.GetComponent<BoxCollider>().bounds.size.z * localSize) * 20;
+                float requiredScale = requiredScale = (scaleDummy.transform.localScale.z / collider.bounds.size.z * localSize) * 20;
                 Vector3 newScale = new Vector3(requiredScale, requiredScale, requiredScale);
                 scaleDummy.transform.localScale = newScale;
+                
+                // Adjust collider size
+                string name = Species.prefabDict.ContainsKey(fish.speciesName) ? fish.speciesName.ToLower() : "roach";
+                SkinnedMeshRenderer mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>();
+                collider.size = mesh.localBounds.size * 1.2f;
             }
 
             fish.SetFishUtils(obj.GetComponent<FishUtils>());

@@ -1391,7 +1391,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3027280140636524048}
-  - component: {fileID: 8997956356842710647}
+  - component: {fileID: 1511784551527240146}
   m_Layer: 0
   m_Name: ScaleDummy
   m_TagString: Untagged
@@ -1416,7 +1416,7 @@ Transform:
   m_Father: {fileID: 4932559405189108}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &8997956356842710647
+--- !u!65 &1511784551527240146
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

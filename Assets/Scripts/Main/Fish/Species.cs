@@ -8,7 +8,7 @@ public class Species : MonoBehaviour
     [SerializeField]
     private GameObject perch, roach, pike, tench;
 
-    private void Start()
+    public void CreateDict()
     {
         float lakeLength = 800;
         float lakeWidth = 500;
@@ -22,6 +22,4 @@ public class Species : MonoBehaviour
             {"Tench", tench}
         };
     }
-
-
 }
