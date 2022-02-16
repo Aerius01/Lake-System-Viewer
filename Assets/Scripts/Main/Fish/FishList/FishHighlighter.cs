@@ -2,36 +2,35 @@ using UnityEngine;
 
 public class FishHighlighter : MonoBehaviour
 {
-    public Renderer bodyRenderer, finRenderer;
-    private Color stdBodyColor, stdFinColor;
+    public Renderer[] renderers;
+    private Color[] stdColors;
 
     private void Start()
     {
-        stdBodyColor = bodyRenderer.material.color;
-        stdFinColor = finRenderer.material.color;
+        Color[] stdColors = new Color[renderers.Length];
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            stdColors[i] = renderers[i].material.color;
+        }        
     }
 
     public void ResetColor()
     {
-        bodyRenderer.material.DisableKeyword("_EMISSION");
-        finRenderer.material.DisableKeyword("_EMISSION");
-
-        bodyRenderer.material.color = stdBodyColor;
-        finRenderer.material.color = stdFinColor;
-
-        bodyRenderer.material.SetColor("_EmissionColor", Color.black);
-        finRenderer.material.SetColor("_EmissionColor", Color.black);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            renderers[i].material.DisableKeyword("_EMISSION");
+            renderers[i].material.color = stdColors[i];
+            renderers[i].material.SetColor("_EmissionColor", Color.black);
+        }
     }
 
     public void SetColor(Color color)
     {
-        bodyRenderer.material.EnableKeyword("_EMISSION");
-        finRenderer.material.EnableKeyword("_EMISSION");   
-
-        bodyRenderer.material.SetColor("_EmissionColor", color);
-        finRenderer.material.SetColor("_EmissionColor", color); 
-
-        DynamicGI.SetEmissive(bodyRenderer, color);
-        DynamicGI.SetEmissive(finRenderer, color);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            renderers[i].material.EnableKeyword("_EMISSION");
+            renderers[i].material.SetColor("_EmissionColor", color);
+            DynamicGI.SetEmissive(renderers[i], color);
+        }
     }
 }

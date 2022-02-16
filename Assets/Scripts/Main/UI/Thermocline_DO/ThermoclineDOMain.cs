@@ -12,6 +12,8 @@ public class ThermoclineDOMain : MonoBehaviour
     public ThermoclinePlane thermoclinePlane {get; private set;}
     private float? oldScalingFactor = null;
 
+    public bool jumpingInTime = false;
+
     private float incrementalHeight;
     private Vector3 originPositionBar, originContainer;
 
@@ -47,12 +49,6 @@ public class ThermoclineDOMain : MonoBehaviour
 
     public void UpdateBars()
     {
-        bool jumpingInTime = false;
-        if (PlaybackController.sliderHasChanged)
-        {
-            jumpingInTime = true;
-        }
-
         // Find most recent timestamp for which there is data
         currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, TimeManager.instance.currentTime);
         // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
@@ -76,10 +72,7 @@ public class ThermoclineDOMain : MonoBehaviour
             UpdateThermoclineUI();
         }
 
-        if (jumpingInTime)
-        {
-            PlaybackController.sliderHasChanged = false;
-        }
+        if (jumpingInTime) jumpingInTime = false;
 
         lastIndex = currentIndex;
         oldScalingFactor = UserSettings.verticalScalingFactor;

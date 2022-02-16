@@ -10,7 +10,18 @@ public class PlaybackController : MonoBehaviour
     private Slider timeControlSlider;
     private Single totalTicks;
     private bool sliderSelected;
-    public static bool sliderHasChanged = false;
+
+    public static bool sliderHasChanged {
+        set {
+            if (value)
+            {
+                ThermoclineDOMain.instance.jumpingInTime = true;
+                // WindMain.instance.jumpingInTime = true;
+                FishManager.jumpingInTime = true;
+            }
+        }
+    
+    }
 
     private void Awake()
     {

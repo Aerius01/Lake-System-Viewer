@@ -161,8 +161,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bodyRenderer: {fileID: 137562815665822614}
-  finRenderer: {fileID: 137999563193517504}
+  renderers:
+  - {fileID: 137562815665822614}
+  - {fileID: 137999563193517504}
 --- !u!1 &1472999894096598
 GameObject:
   m_ObjectHideFlags: 0

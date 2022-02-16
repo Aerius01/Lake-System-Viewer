@@ -302,21 +302,27 @@ public class LocalThermoclineData
         }
 
         table.AcceptChanges();
-
+        
         // Assemble unique timestamps
+        DataTable stringTable = table.Clone();
+        stringTable.Columns["time"].DataType = typeof(DateTime);
         List<DateTime> uniqueTSList = new List<DateTime>();
         foreach (DataRow row in table.Rows)
         {
             try
             {
+                stringTable.ImportRow(row);
+
+                // Assemble unique timestamps
                 if (!uniqueTSList.Contains(DateTime.Parse(row["time"].ToString())))
                 {
                     uniqueTSList.Add(DateTime.Parse(row["time"].ToString()));
                 }
             }
-            catch (FormatException) {Debug.Log("Issue parsing thermocline data");}
+            catch { continue; }
         }
 
+        stringTable.AcceptChanges();
         uniqueTSList.Sort();
 
         // Restrict active list to limits of position data
@@ -340,8 +346,8 @@ public class LocalThermoclineData
         {
             DateTime timeStamp = uniqueTimeStamps[i];
 
-            string searchExp = string.Format("time = '{0}'", timeStamp.ToString());
-            DataRow[] foundRows = table.Select(searchExp);
+            string searchExp = string.Format("time = #{0}#", timeStamp);
+            DataRow[] foundRows = stringTable.Select(searchExp);
             thermoDict.Add(timeStamp, foundRows);
         }
     }

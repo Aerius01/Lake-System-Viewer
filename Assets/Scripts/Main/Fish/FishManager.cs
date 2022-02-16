@@ -5,6 +5,7 @@ using System;
 public class FishManager : MonoBehaviour
 {
     private static Dictionary<int, Fish> fishDict {get; set;}
+    public static bool jumpingInTime = false;
 
     public static void ActivateAll(string util, bool activationStatus)
     {
@@ -59,13 +60,23 @@ public class FishManager : MonoBehaviour
 
                 // Set fish size
                 float localSize = (float)fish.length / 1000 * Species.conversionFactor;
-                float requiredScale = requiredScale = (scaleDummy.transform.localScale.z / collider.bounds.size.z * localSize) * 20;
+                // float requiredScale = (scaleDummy.transform.localScale.z / collider.bounds.size.z * localSize) * 20;
+                float requiredScale =  localSize * 3f;
                 Vector3 newScale = new Vector3(requiredScale, requiredScale, requiredScale);
                 scaleDummy.transform.localScale = newScale;
                 
                 // Adjust collider size
                 string name = Species.prefabDict.ContainsKey(fish.speciesName) ? fish.speciesName.ToLower() : "roach";
-                SkinnedMeshRenderer mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>();
+                SkinnedMeshRenderer mesh = null;
+                if (fish.speciesName == "Mirror carp" || fish.speciesName == "Scaled carp")
+                {
+                    mesh = scaleDummy.transform.Find("carp").GetComponent<SkinnedMeshRenderer>();
+                }
+                else
+                {
+                    mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>();
+                }
+
                 collider.size = mesh.localBounds.size * 1.2f;
             }
 
@@ -80,12 +91,6 @@ public class FishManager : MonoBehaviour
 
     public void UpdateFish()
     {
-        bool jumpingInTime = false;
-        if (PlaybackController.sliderHasChanged)
-        {
-            jumpingInTime = true;
-        }
-
         foreach (var key in fishDict.Keys)
         {
             Fish currentFish = fishDict[key];
@@ -105,9 +110,6 @@ public class FishManager : MonoBehaviour
             }
         }
 
-        if (jumpingInTime)
-        {
-            PlaybackController.sliderHasChanged = false;
-        }
+        if (jumpingInTime) jumpingInTime = false;
     }
 }

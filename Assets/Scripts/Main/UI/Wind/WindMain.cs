@@ -21,6 +21,8 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private int lastIndex = -1, currentIndex;
     private bool dataisNull;
+    public bool jumpingInTime = false;
+
     
     private void Awake()
     {
@@ -37,12 +39,6 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void UpdateWind()
     {
-        bool jumpingInTime = false;
-        if (PlaybackController.sliderHasChanged)
-        {
-            jumpingInTime = true;
-        }
-
         // Find most recent timestamp for which there is data
         currentIndex = Array.BinarySearch(LocalWeatherData.uniqueTimeStamps, TimeManager.instance.currentTime);
         // currentIndex = Array.BinarySearch(LocalThermoclineData.uniqueTimeStamps, DateTime.Parse("2015-05-10 00:00:00"));
@@ -60,11 +56,8 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
 
         // End-of-update attributions
+        if (jumpingInTime) jumpingInTime = false;
         lastIndex = currentIndex;
-        if (jumpingInTime)
-        {
-            PlaybackController.sliderHasChanged = false;
-        }
     }
 
     private void PerformUpdate()

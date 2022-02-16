@@ -6,7 +6,7 @@ public class Species : MonoBehaviour
     public static float conversionFactor {get; private set;}
     public static Dictionary<string, GameObject> prefabDict {get; private set;}
     [SerializeField]
-    private GameObject perch, roach, pike, tench;
+    private GameObject perch, roach, pike, tench, carp, walleye;
 
     public void CreateDict()
     {
@@ -19,6 +19,9 @@ public class Species : MonoBehaviour
             {"Perch", perch},
             {"Roach", roach},
             {"Pike", pike},
+            {"Mirror carp", carp},
+            {"Catfish", walleye},
+            {"Scaled carp", carp},
             {"Tench", tench}
         };
     }
