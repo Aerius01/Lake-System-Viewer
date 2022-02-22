@@ -20,11 +20,17 @@ public class UserSettings
         get {return _showThermocline;} 
         set {_showThermocline = value; ThermoclineDOMain.instance.ToggleThermocline();}
     }
+    public static bool showWind 
+    {
+        get {return _showWind;} 
+        set {_showWind = value; WindMain.instance.ToggleWind();}
+    }
 
     private static bool _showFishTags;
     private static bool _showFishDepthLines;
     private static bool _showFishTrails;
     private static bool _showThermocline;
+    private static bool _showWind;
 
     public static float verticalScalingFactor;
 }

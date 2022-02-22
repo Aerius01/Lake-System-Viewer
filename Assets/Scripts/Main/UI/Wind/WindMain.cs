@@ -21,7 +21,27 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private int lastIndex = -1, currentIndex;
     private bool dataisNull;
+    [HideInInspector]
     public bool jumpingInTime = false;
+
+    private Vector3 boxStartPos;
+
+    private float? windDirection = null, windSpeed = null;
+
+    // For the particle controller
+    public bool isNull { get { return dataisNull; } }
+    public (float?, float?) windData { get { return (windDirection, windSpeed); } }
+    private bool _newData = false;
+    public bool newData
+    {
+        get
+        {   
+            bool temp = _newData;
+            _newData = false;
+            return temp;
+        }
+        private set { _newData = value;}
+    }
 
     
     private void Awake()
@@ -35,6 +55,12 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         {
             _instance = this;
         }
+    }
+
+    private void Start()
+    {
+        boxStartPos = instance.transform.parent.GetComponent<RectTransform>().position;
+        ToggleWind();
     }
 
     public void UpdateWind()
@@ -66,8 +92,7 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         string searchExp = string.Format("time = #{0}#", LocalWeatherData.uniqueTimeStamps[currentIndex]);
         DataRow[] foundRows = LocalWeatherData.stringTable.Select(searchExp);
 
-        float? windDirection = null;
-        float? windSpeed = null;
+        windDirection = windSpeed = null;
         try
         {
             windSpeed = float.Parse(foundRows[0]["windSpeed"].ToString());
@@ -93,6 +118,8 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             windSpeedText.text = string.Format("Wind Speed: {0:#0.00} m/s", windSpeed);
             toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = string.Format("{0:###}°", windDirection);
         }
+
+        newData = true;
     }
 
     private void ApplyNullSettings()
@@ -109,6 +136,18 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public void OnPointerExit(PointerEventData eventData)
     {
         toolTip.GetComponent<CanvasGroup>().alpha = 0f;
+    }
 
+    public void ToggleWind()
+    {
+        if (UserSettings.showWind)
+        {
+            instance.gameObject.GetComponent<CanvasGroup>().alpha = 1;
+        }
+        else
+        {
+            instance.gameObject.GetComponent<CanvasGroup>().alpha = 0;
+            instance.gameObject.GetComponent<RectTransform>().position = boxStartPos;
+        }
     }
 }

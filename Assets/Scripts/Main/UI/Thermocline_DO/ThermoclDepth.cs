@@ -87,8 +87,8 @@ public class ThermoclDepth
         // Ensure adequate temperature differential
         if(maxTemp - minTemp < 1)
         {
-            Debug.Log(string.Format("max: {0}, min: {1}", maxTemp, minTemp));
-            Debug.Log("Temperature range less than cut-off");
+            // Debug.Log(string.Format("max: {0}, min: {1}", maxTemp, minTemp));
+            // Debug.Log("Temperature range less than cut-off");
             return(null, null);
         }
   

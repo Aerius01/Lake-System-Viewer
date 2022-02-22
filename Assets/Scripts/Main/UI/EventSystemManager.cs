@@ -7,19 +7,23 @@ using TMPro;
 public class EventSystemManager : MonoBehaviour
 {
     public GameObject settingsMenu, heightMapObject;
-    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle;
+    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle, windToggle;
     private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput;
 
     private void Awake()
     { 
-        tagToggle = settingsMenu.transform.Find("Toggles").transform.Find("TagToggle").GetComponent<Toggle>();
-        depthLineToggle = settingsMenu.transform.Find("Toggles").transform.Find("DepthLineToggle").GetComponent<Toggle>();
-        trailToggle = settingsMenu.transform.Find("Toggles").transform.Find("TrailToggle").GetComponent<Toggle>();
-        thermoToggle = settingsMenu.transform.Find("Toggles").transform.Find("ThermoclineToggle").GetComponent<Toggle>();
+        Transform baseToggles = settingsMenu.transform.Find("Toggles");
+        Transform baseInputs = settingsMenu.transform.Find("Inputs");
 
-        scalingFactorInput = settingsMenu.transform.Find("Inputs").transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
-        speedUpInput = settingsMenu.transform.Find("Inputs").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
-        waterLevelInput = settingsMenu.transform.Find("Inputs").transform.Find("WaterLevel").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>();
+        tagToggle = baseToggles.transform.Find("TagToggle").GetComponent<Toggle>();
+        depthLineToggle = baseToggles.transform.Find("DepthLineToggle").GetComponent<Toggle>();
+        trailToggle = baseToggles.transform.Find("TrailToggle").GetComponent<Toggle>();
+        thermoToggle = baseToggles.transform.Find("ThermoclineToggle").GetComponent<Toggle>();
+        windToggle = baseToggles.transform.Find("WindToggle").GetComponent<Toggle>();
+
+        scalingFactorInput = baseInputs.transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
+        speedUpInput = baseInputs.transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
+        waterLevelInput = baseInputs.transform.Find("WaterLevel").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>();
     }
 
     private void Start()
@@ -75,6 +79,18 @@ public class EventSystemManager : MonoBehaviour
         else
         {
             UserSettings.showThermocline = false;
+        }
+    }
+
+    public void WindToggle()
+    {
+        if (windToggle.isOn)
+        {
+            UserSettings.showWind = true;
+        }
+        else
+        {
+            UserSettings.showWind = false;
         }
     }
 
