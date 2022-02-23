@@ -4,29 +4,30 @@ using TMPro;
 using System;
 using System.Data;
 
-public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
+    // Required game objects
     [SerializeField]
     private TextMeshProUGUI windSpeedText;
-
     [SerializeField]
-    private GameObject compassDial, compassArrow, toolTip;
-
+    private GameObject particleObject, compassDial, compassArrow, toolTip, weatherText;
     [SerializeField]
     private CanvasGroup canvasGroup;
 
-    private static WindMain _instance;
+    // Singleton
+    private static WindWeatherMain _instance;
     [HideInInspector]
-    public static WindMain instance {get { return _instance; } set {_instance = value; }}
+    public static WindWeatherMain instance {get { return _instance; } set {_instance = value; }}
 
+    // Update decision-making
     private int lastIndex = -1, currentIndex;
     private bool dataisNull;
     [HideInInspector]
     public bool jumpingInTime = false;
 
-    private Vector3 boxStartPos;
-
-    private float? windDirection = null, windSpeed = null;
+    // Other
+    private Vector3 windStartPos, weatherStartPos;
+    private float? windDirection, windSpeed, temp = null, airPressure = null, humidity = null, precip = null;
 
     // For the particle controller
     public bool isNull { get { return dataisNull; } }
@@ -43,7 +44,6 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         private set { _newData = value;}
     }
 
-    
     private void Awake()
     {
         // Destroy duplicates instances
@@ -59,11 +59,12 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private void Start()
     {
-        boxStartPos = instance.transform.parent.GetComponent<RectTransform>().position;
+        windStartPos = instance.transform.Find("Wind").GetComponent<RectTransform>().position;
+        weatherStartPos = instance.transform.Find("General").GetComponent<RectTransform>().position;
         ToggleWind();
     }
 
-    public void UpdateWind()
+    public void UpdateWindWeather()
     {
         // Find most recent timestamp for which there is data
         currentIndex = Array.BinarySearch(LocalWeatherData.uniqueTimeStamps, TimeManager.instance.currentTime);
@@ -79,6 +80,7 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (jumpingInTime || currentIndex != lastIndex)
         {
             PerformUpdate();
+            // particles will update via the newData property
         }
 
         // End-of-update attributions
@@ -88,10 +90,11 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private void PerformUpdate()
     {
-        // Retrieve the relevant data
+        // Retrieve the relevant wind data
         string searchExp = string.Format("time = #{0}#", LocalWeatherData.uniqueTimeStamps[currentIndex]);
         DataRow[] foundRows = LocalWeatherData.stringTable.Select(searchExp);
 
+        // Get wind data
         windDirection = windSpeed = null;
         try
         {
@@ -120,6 +123,26 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
 
         newData = true;
+
+        // Get other weather data
+        try { temp = float.Parse(foundRows[0]["temp"].ToString()); }
+        catch (FormatException) { temp = null; }
+
+        try { humidity = float.Parse(foundRows[0]["humidity"].ToString()); }
+        catch (FormatException) { humidity = null; }
+
+        try { airPressure = float.Parse(foundRows[0]["airPress"].ToString()); }
+        catch (FormatException) { airPressure = null; }
+
+        try { precip = float.Parse(foundRows[0]["precip"].ToString()); }
+        catch (FormatException) { precip = null; }
+
+        string strTemp = temp == null ? " - \n" : string.Format("{0:#0.0} °C\n", temp);
+        string strHumidity = humidity == null ? " - \n" : string.Format("{0:#0.0} %\n", humidity);
+        string strAirPressure = airPressure == null ? " - \n" : string.Format("{0:###0.0} hPa\n", airPressure);
+        string strPrecip = precip == null ? " - \n" : string.Format("{0:#0.0} mm/h", precip);
+
+        weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
     }
 
     private void ApplyNullSettings()
@@ -140,14 +163,17 @@ public class WindMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void ToggleWind()
     {
-        if (UserSettings.showWind)
+        if (UserSettings.showWindWeather)
         {
             instance.gameObject.GetComponent<CanvasGroup>().alpha = 1;
+            particleObject.SetActive(true);
         }
         else
         {
             instance.gameObject.GetComponent<CanvasGroup>().alpha = 0;
-            instance.gameObject.GetComponent<RectTransform>().position = boxStartPos;
+            instance.transform.Find("Wind").GetComponent<RectTransform>().position = windStartPos;
+            instance.transform.Find("General").GetComponent<RectTransform>().position = weatherStartPos;
+            particleObject.SetActive(false);
         }
     }
 }

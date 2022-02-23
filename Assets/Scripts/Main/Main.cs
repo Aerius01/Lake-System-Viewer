@@ -41,7 +41,7 @@ public class Main : MonoBehaviour
         fishManager.UpdateFish();
         sunController.AdjustSunPosition();
         ThermoclineDOMain.instance.UpdateBars();
-        WindMain.instance.UpdateWind();
+        WindWeatherMain.instance.UpdateWindWeather();
     }
 
     private IEnumerator SetupWorld()

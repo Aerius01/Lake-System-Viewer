@@ -7,7 +7,7 @@ using TMPro;
 public class EventSystemManager : MonoBehaviour
 {
     public GameObject settingsMenu, heightMapObject;
-    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle, windToggle;
+    private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle, windWeatherToggle;
     private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput;
 
     private void Awake()
@@ -19,7 +19,7 @@ public class EventSystemManager : MonoBehaviour
         depthLineToggle = baseToggles.transform.Find("DepthLineToggle").GetComponent<Toggle>();
         trailToggle = baseToggles.transform.Find("TrailToggle").GetComponent<Toggle>();
         thermoToggle = baseToggles.transform.Find("ThermoclineToggle").GetComponent<Toggle>();
-        windToggle = baseToggles.transform.Find("WindToggle").GetComponent<Toggle>();
+        windWeatherToggle = baseToggles.transform.Find("WindWeatherToggle").GetComponent<Toggle>();
 
         scalingFactorInput = baseInputs.transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
         speedUpInput = baseInputs.transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
@@ -82,15 +82,15 @@ public class EventSystemManager : MonoBehaviour
         }
     }
 
-    public void WindToggle()
+    public void WindWeatherToggle()
     {
-        if (windToggle.isOn)
+        if (windWeatherToggle.isOn)
         {
-            UserSettings.showWind = true;
+            UserSettings.showWindWeather = true;
         }
         else
         {
-            UserSettings.showWind = false;
+            UserSettings.showWindWeather = false;
         }
     }
 
