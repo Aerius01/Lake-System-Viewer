@@ -1,12 +1,13 @@
 using UnityEngine;
 using System;
-using TMPro;
 
 public class TimeManager : MonoBehaviour
 {
     public DateTime currentTime {get; private set;}
     public bool paused {get; private set;}
     public float speedUpCoefficient = 10f;
+    
+    private double percentJump;
 
     private static TimeManager _instance;
     [HideInInspector]
@@ -30,6 +31,7 @@ public class TimeManager : MonoBehaviour
     {
         currentTime = LocalPositionData.earliestDate;
         paused = true;
+        percentJump = LocalPositionData.latestDate.Subtract(LocalPositionData.earliestDate).TotalHours * 0.005;
     }
 
     // Update is called once per frame
@@ -50,6 +52,16 @@ public class TimeManager : MonoBehaviour
     public void PauseButton()
     {
         paused = true;
+    }
+
+    public void SkipAhead()
+    {
+        currentTime = currentTime.AddHours(percentJump);
+    }
+
+    public void SkipBack()
+    {
+        currentTime = currentTime.AddHours(-percentJump);
     }
 
     // All changes to time are done centrally through the time manager
