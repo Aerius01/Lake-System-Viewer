@@ -1,22 +1,26 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 using TMPro;
-
 public class ThermoclineDOMain : MonoBehaviour
 {
+    // Gameobject-exposed
     public ColorBar TempCB, DOCB;
     public Material planeMaterial;
     public TextMeshProUGUI thermoText;
     public GameObject thermoDepth;
+    [SerializeField]
+    private Toggle thermoToggle;
+
     private int lastIndex, currentIndex;
     public ThermoclinePlane thermoclinePlane {get; private set;}
     private float? oldScalingFactor = null;
-
+    [HideInInspector]
     public bool jumpingInTime = false;
-
     private float incrementalHeight;
     private Vector3 originPositionBar, originContainer;
 
+    // Singleton variables
     private static ThermoclineDOMain _instance;
     [HideInInspector]
     public static ThermoclineDOMain instance {get { return _instance; } set {_instance = value; }}
@@ -87,6 +91,7 @@ public class ThermoclineDOMain : MonoBehaviour
     {
         if (thermoclinePlane.currentDepth != null)
         {
+            thermoToggle.interactable = true;
             thermoText.text = string.Format("Thermocline Depth:\n{0:0.00}m", thermoclinePlane.currentDepth);
             
             Vector3 newPosition = originPositionBar;
@@ -96,6 +101,7 @@ public class ThermoclineDOMain : MonoBehaviour
         }
         else
         {
+            thermoToggle.interactable = false;
             thermoText.text = "Thermocline Depth:\n-";
         }
     }

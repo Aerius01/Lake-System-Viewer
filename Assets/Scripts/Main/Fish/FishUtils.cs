@@ -5,13 +5,20 @@ using System.Collections.Generic;
 public class FishUtils : MonoBehaviour
 {
     public GameObject canvas, depthLine, trail, thermoInd;
+    private TextMeshProUGUI textElement;
+
     private Dictionary<string, GameObject> classifier;
     public string newCanvasText {
         set
         {
-            this.canvas.transform.Find("Panel").transform.Find("Background").transform.Find("InfoText").
-            GetComponent<TextMeshProUGUI>().text = value;
+            textElement.text = value;
         }
+    }
+
+    private void Awake()
+    {
+        textElement = this.canvas.transform.Find("Panel").transform.Find("Outline").transform.Find("Background").transform.Find("InfoText").
+            GetComponent<TextMeshProUGUI>();
     }
 
     private void Start()

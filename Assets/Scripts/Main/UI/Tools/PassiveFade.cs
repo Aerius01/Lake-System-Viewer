@@ -20,7 +20,7 @@ public class PassiveFade : MonoBehaviour
 
     private void Update()
     {
-        if (Input.mousePosition != lastMousePosition)
+        if (Input.mousePosition != lastMousePosition || Input.GetMouseButtonDown(0))
         {
             // Bring the UI object back to full opacity
             timer = 0f;

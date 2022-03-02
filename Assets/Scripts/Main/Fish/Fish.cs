@@ -40,6 +40,7 @@ public class Fish
     public bool? male {get; private set;}
     public DateTime earliestTime {get; private set;}
     public DateTime latestTime {get; private set;}
+    private string canvasTextPart1, canvasTextPart2;
 
     public (bool?, string, int?, int?, float) stats
     {
@@ -90,6 +91,9 @@ public class Fish
         else {this.male = null;}
 
         this.speciesName = fishInfo["speciesName"].ToString();
+
+        this.canvasTextPart1 = string.Format("Fish ID: {0}\nDepth: ", this.id);
+        this.canvasTextPart2 = string.Format("\nSpecies: {0}\nSex: {1}", this.speciesName, this.male == null ? " ? " : this.male == true ? "M" : "F");
     }
 
     public void SetFishUtils(FishUtils utils)
@@ -145,11 +149,12 @@ public class Fish
 
     public void UpdateCanvasText()
     {
-        this.utils.newCanvasText = string.Format(
-            "Fish ID: {0}\nDepth: {1:##0.00}", 
-            this.id,
-            this.fishObject.transform.position.y / UserSettings.verticalScalingFactor
-        );
+        string fullText =
+            this.canvasTextPart1 +
+            string.Format("{0:##0.00}", this.fishObject.transform.position.y / UserSettings.verticalScalingFactor) +
+            this.canvasTextPart2;
+
+        this.utils.newCanvasText = fullText;
     }
 
     public void UpdateDepthIndicatorLine(float ratio)
