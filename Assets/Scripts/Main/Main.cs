@@ -11,6 +11,8 @@ public class Main : MonoBehaviour
     [SerializeField]
     private SunController sunController;
     [SerializeField]
+    private MoonController moonController;
+    [SerializeField]
     private FishList fishList;
     private DataProcessor processor;
     [SerializeField]
@@ -40,6 +42,7 @@ public class Main : MonoBehaviour
     {
         fishManager.UpdateFish();
         sunController.AdjustSunPosition();
+        moonController.AdjustMoonPosition();
         ThermoclineDOMain.instance.UpdateBars();
         WindWeatherMain.instance.UpdateWindWeather();
     }
