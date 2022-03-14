@@ -12,10 +12,16 @@ public class SunController : MonoBehaviour
 
     private double currentZenithAngleDeg, currentAzimuthAngleDeg;
 
+    private void Start()
+    {
+        skyTransform.transform.position = LocalMeshData.meshCenter;
+    }
+
     public void AdjustSunPosition()
     {
         CalculateNewSunPos();
-        skyTransform.transform.localRotation = Quaternion.Euler(new Vector3(90 - (float)currentZenithAngleDeg, (float)currentAzimuthAngleDeg, 0f));
+        this.gameObject.transform.LookAt(LocalMeshData.meshCenter);
+        skyTransform.transform.rotation = Quaternion.Euler(new Vector3(-(90 - (float)currentZenithAngleDeg), (float)currentAzimuthAngleDeg - 90f, 0f));
     }
 
     private double degrees_to_radians(double degrees)

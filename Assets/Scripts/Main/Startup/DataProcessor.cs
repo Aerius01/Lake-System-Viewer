@@ -38,6 +38,7 @@ public class LocalMeshData
     public static float waterLevel = -0.3f, maxDepth, minDepth;
     public static DataTable stringTable;
     public static int rowCount, columnCount;
+    public static Vector3 meshCenter;
 
     public LocalMeshData(DataTable table)
     {
@@ -61,6 +62,7 @@ public class LocalMeshData
 
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
+        meshCenter = new Vector3(rowCount / 2, 0f, columnCount / 2);
     }
 }
 

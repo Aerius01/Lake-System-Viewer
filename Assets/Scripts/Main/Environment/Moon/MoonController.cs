@@ -9,7 +9,7 @@ public class MoonController : MonoBehaviour
 
     // Method variables
     private double[,] periodicLatArray, periodicLongArray;
-    private GameObject moonObject;
+    private GameObject moonObject, moonLight;
     private Material moonMaterial;
 
     // Outputs
@@ -20,17 +20,15 @@ public class MoonController : MonoBehaviour
     {
         // Base moon position is in the north (positive-X) position
         moonObject = this.transform.Find("Moon").gameObject;
+        moonLight = this.transform.Find("MoonLight").gameObject;
         moonMaterial = moonObject.GetComponent<MeshRenderer>().material;
         
         // Re-center moon's skybox
-        Vector3 positionCenter = this.transform.position;
-        positionCenter.x = LocalMeshData.rowCount / 2;
-        positionCenter.z = LocalMeshData.columnCount / 2;
-        this.transform.position = positionCenter;
+        this.transform.position = LocalMeshData.meshCenter;
 
         // Base moon rotation is UTC-0
         Vector3 moonRotation = moonObject.transform.localEulerAngles;
-        moonRotation.y = 90f;
+        moonRotation.y = moonRotation.y + 90f;
         moonObject.transform.localEulerAngles = moonRotation;
 
         periodicLatArray = new double[60, 7]
@@ -167,7 +165,25 @@ public class MoonController : MonoBehaviour
         CalculateNewMoonPos();
         MoonPhase();
         moonMaterial.SetFloat("Vector1_0bdb1e1f24484093bf09898602915822", moonPhase);
-        this.transform.localRotation = Quaternion.Euler(new Vector3(-(float)altitude, (float)azimuth - 90f, 0f));
+        this.transform.localRotation = Quaternion.Euler(new Vector3(-(float)altitude, -((float)azimuth + 90f), 0f));
+
+        // Have the moon look at the camera
+        moonObject.transform.LookAt(Camera.main.transform.position, this.transform.up);
+        Vector3 rotationEuler = moonObject.transform.localEulerAngles;
+        rotationEuler.y = rotationEuler.y - 90f;
+        moonObject.transform.localEulerAngles = rotationEuler;
+
+        // Have the moonlight directed to the center of the mesh & manage intensity
+        moonLight.transform.LookAt(LocalMeshData.meshCenter, this.transform.up);
+        float intensity = 1 / (0.14f * Mathf.Sqrt(2 * Mathf.PI)) * Mathf.Pow((float)Math.E, - Mathf.Pow(moonPhase - 0.5f, 2) / (2 * Mathf.Pow(0.14f, 2)));
+        float maxVal = 1 / (0.14f * Mathf.Sqrt(2 * Mathf.PI));
+        moonLight.GetComponent<Light>().intensity = intensity / maxVal * 0.1f;
+
+        // Have moon fade when near & below horizon
+        if (altitude <= 15) moonMaterial.SetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7", (float)altitude / 15);
+        else if (moonMaterial.GetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7") != 1f) moonMaterial.SetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7", 1f);
+
+        // Have the moon fade if it is between the mesh and the camera
     }
 
     private double deg_to_rad(double degrees)
