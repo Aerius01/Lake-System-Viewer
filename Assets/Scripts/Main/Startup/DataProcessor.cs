@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +14,12 @@ public class DataProcessor
     private LocalWeatherData weatherData;
     private LocalYSIData ysiData;
     private Dictionary<string, TextAsset> textAssetDict;
+    private Texture2D NDVI;
 
-    public DataProcessor(Dictionary<string, TextAsset> textAssetDict)
+    public DataProcessor(Dictionary<string, TextAsset> textAssetDict, Texture2D NDVI)
     {
         this.textAssetDict = textAssetDict;
+        this.NDVI = NDVI;
     }
 
     public void ReadData()
@@ -24,7 +27,7 @@ public class DataProcessor
         StringTable reader = new StringTable();
 
         // Parse all data sets into static classes
-        meshData = new LocalMeshData(reader.parseTable(textAssetDict["meshData"].ToString()));
+        meshData = new LocalMeshData(reader.parseTable(textAssetDict["meshData"].ToString()), NDVI);
         positionData = new LocalPositionData(reader.parseTable(textAssetDict["positionData"].ToString()));
         fishData = new LocalFishData(reader.parseTable(textAssetDict["fishData"].ToString()));
         thermoclineData = new LocalThermoclineData(reader.parseTable(textAssetDict["thermoclineData"].ToString()));
@@ -35,12 +38,13 @@ public class DataProcessor
 
 public class LocalMeshData
 {
-    public static float waterLevel = -0.3f, maxDepth, minDepth;
+    public static float waterLevel = -0.3f, maxDepth, minDepth, maxDiff;
+    public static float minLat = 52.992119f, maxLat = 52.996946f, minLong = 13.577064f, maxLong = 13.588916f; // of the lake
     public static DataTable stringTable;
-    public static int rowCount, columnCount;
+    public static int rowCount, columnCount, lakeHeight = 538, lakeWidth = 778, resolution;
     public static Vector3 meshCenter;
 
-    public LocalMeshData(DataTable table)
+    public LocalMeshData(DataTable table, Texture2D NDVI)
     {
         table.Rows[0].Delete();
         table.Columns.RemoveAt(0);
@@ -63,6 +67,46 @@ public class LocalMeshData
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
         meshCenter = new Vector3(rowCount / 2, 0f, columnCount / 2);
+        maxDiff = Math.Abs(maxDepth - minDepth);
+
+        // Get the resolution
+        int maxDim = Mathf.Max(rowCount, columnCount);
+        for (int i = 0; i < 12; i++)
+        {
+            if (Mathf.Pow(2, i) >= maxDim)
+            {
+                resolution = Mathf.RoundToInt(Mathf.Pow(2, i)) + 1;
+                break;
+            }
+        }
+
+        // Determine overall bounds with lake at center
+        float latDiff = maxLat - minLat;
+        float longDiff = maxLong - minLong;
+
+        float totalLat = latDiff / rowCount * resolution;
+        float totalLong = longDiff / columnCount * resolution;
+
+        float actualMinLat = (minLat + maxLat) / 2 - totalLat / 2 - 0.00010f ;
+        float actualMaxLat = (minLat + maxLat) / 2 + totalLat / 2 - 0.00010f ;
+        float actualMinLong = (minLong + maxLong) / 2 - totalLong / 2 ;
+        float actualMaxLong = (minLong + maxLong) / 2 + totalLong / 2 ;
+
+        // Create NDVI table
+        Debug.Log(string.Format("Height: {0}; Width: {1}", NDVI.height, NDVI.width));
+        float max = float.MinValue, min = float.MaxValue;
+        for (int i = 0; i < NDVI.height; i++)
+        {
+            for (int j = 0; j < NDVI.width; j++)
+            {
+                Color temp = NDVI.GetPixel(i, j);
+                max = Math.Max(temp.r, max);
+                min = Math.Min(temp.r, min);
+            }
+        }
+
+        Debug.Log(string.Format("Min: {0}; Max: {1}", min, max));
+
     }
 }
 

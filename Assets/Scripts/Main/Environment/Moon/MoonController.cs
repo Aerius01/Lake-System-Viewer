@@ -16,6 +16,17 @@ public class MoonController : MonoBehaviour
     private double altitude, azimuth;
     private float moonPhase;
 
+    // Properties
+    public float phase
+    {
+        get {return moonPhase;}
+    }
+
+    public float moonAlpha
+    {
+        get {return moonMaterial.GetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7");}
+    }
+
     private void Start()
     {
         // Base moon position is in the north (positive-X) position

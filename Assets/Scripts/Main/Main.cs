@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public class Main : MonoBehaviour
 {
@@ -18,6 +19,9 @@ public class Main : MonoBehaviour
     [SerializeField]
     private TextAsset meshDataCSV, positionDataCSV, fishDataCSV, thermoclineDataCSV, weatherDataCSV, ysiDataCSV;
 
+    [SerializeField]
+    private Texture2D NDVI;
+
     private void Awake()
     {
         Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
@@ -29,7 +33,7 @@ public class Main : MonoBehaviour
             {"ysiData", ysiDataCSV}
         };
 
-        processor = new DataProcessor(textAssetDict);
+        processor = new DataProcessor(textAssetDict, NDVI);
         processor.ReadData();
     }
 
