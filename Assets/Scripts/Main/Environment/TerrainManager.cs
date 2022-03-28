@@ -6,12 +6,12 @@ public class TerrainManager : MonoBehaviour
     private int resolution = 1025;
     private TerrainData terrainData;
     [SerializeField]
-    private Texture2D[] terrainTextures;
+    private Texture2D ndvi;
     private float offset = 0.3f;
 
     private void Start()
     {
-        terrainData = new TerrainData();
+        terrainData = this.GetComponent<Terrain>().terrainData;
         Dictionary<string, int> cutoffs = new Dictionary<string, int>
         {
             {"minHeight", Mathf.FloorToInt((resolution - LocalMeshData.lakeHeight) / 2)},
@@ -58,18 +58,10 @@ public class TerrainManager : MonoBehaviour
 
         terrainData.size = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * 3, resolution);
         terrainData.SetHeights(0, 0, heightMap);
-        // terrainData.SyncHeightmap();
 
-        // // Create and implement splat maps
-        // terrainData.alphamapResolution = resolution;
-
-        // TerrainLayer[] terrainLayers = new TerrainLayer[terrainTextures.Length];
-        // for (int i = 0; i < terrainTextures.Length; i++)
-        // {
-        //     terrainLayers[i].diffuseTexture = terrainTextures[i];
-        // }
-        // terrainData.terrainLayers = terrainLayers;
-        // terrainData.SetAlphamaps(0, 0, CreateSplatMap());
+        // Create and implement splat maps
+        terrainData.alphamapResolution = resolution;
+        terrainData.SetAlphamaps(0, 0, CreateSplatMap());
 
 
         // Apply the terrain data to terrain object/collider
@@ -89,32 +81,70 @@ public class TerrainManager : MonoBehaviour
     
     private float[,,] CreateSplatMap()
     {
-        float[,,] map = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, 2];
+        float[,,] map = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, terrainData.terrainLayers.Length];
+        Debug.Log(terrainData.terrainLayers.Length);
 
-        
+        // with 6 textures, we have 6 tributary lengths for each of the 6 divisions
+        int divisions = (terrainData.terrainLayers.Length);
+        float dividerLength = 1f / (float)divisions;
+
+        float[] centerPoints = new float[divisions];
+        Dictionary<int, List<float>> texRanges = new Dictionary<int, List<float>>();
+        for (int s = 0; s < divisions; s++)
+        {
+            if (s == 0) { centerPoints[s] = dividerLength / 2; }
+            else { centerPoints[s] = centerPoints[s - 1] + dividerLength; }
+
+            // Assemble ranges dictionary
+            texRanges.Add(s, new List<float> {centerPoints[s] - dividerLength / 2, centerPoints[s],
+                centerPoints[s] + dividerLength / 2}) ;
+        }
 
         // For each point on the alphamap...
         for (int y = 0; y < terrainData.alphamapHeight; y++)
         {
             for (int x = 0; x < terrainData.alphamapWidth; x++)
             {
-                // Get the normalized terrain coordinate that
-                // corresponds to the the point.
-                float normX = x * 1.0f / (terrainData.alphamapWidth - 1);
-                float normY = y * 1.0f / (terrainData.alphamapHeight - 1);
+                for (int tex = 0; tex < terrainData.terrainLayers.Length; tex++)
+                {
+                    float ndviVal = GetGreyscaleFloat(x, y);
 
-                // Get the steepness value at the normalized coordinate.
-                var angle = terrainData.GetSteepness(normX, normY);
+                    if (ndviVal >= texRanges[tex][0] || ndviVal <= texRanges[tex][2])
+                    {
+                        if (tex == 0) { Debug.Log(ndviVal); }
+                        // map[x, y, tex] = (ndviVal - texRanges[tex][0]) / (texRanges[tex][2] - texRanges[tex][0]) ;
+                        map[x, y, tex] = 1f;
+                    }
+                    else { map[x, y, tex] = 0f; }
+                }
 
-                // Steepness is given as an angle, 0..90 degrees. Divide
-                // by 90 to get an alpha blending value in the range 0..1.
-                var frac = angle / 90.0;
-                map[x, y, 0] = (float)frac;
-                map[x, y, 1] = (float)(1 - frac);
+                // // Get the normalized terrain coordinate that
+                // // corresponds to the the point.
+                // float normX = x * 1.0f / (terrainData.alphamapWidth - 1);
+                // float normY = y * 1.0f / (terrainData.alphamapHeight - 1);
+
+                // // Get the steepness value at the normalized coordinate.
+                // var angle = terrainData.GetSteepness(normX, normY);
+
+                // // Steepness is given as an angle, 0..90 degrees. Divide
+                // // by 90 to get an alpha blending value in the range 0..1.
+                // var frac = angle / 90.0;
+                // map[x, y, 0] = (float)frac;
+                // map[x, y, 1] = (float)(1 - frac);
             }
         }
         
         return map;
     }
 
+    private float GetGreyscaleFloat(int x, int y)
+    {
+        if (ndvi.height + 1 != resolution)
+        {
+            x = Mathf.RoundToInt(x / (ndvi.width / (resolution - 1)));
+            y = Mathf.RoundToInt(y / (ndvi.height / (resolution - 1)));
+        }
+
+        return ndvi.GetPixel(x, y).r;
+    }
 }
