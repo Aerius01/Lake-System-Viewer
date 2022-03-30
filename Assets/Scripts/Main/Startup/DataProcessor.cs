@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,11 +37,12 @@ public class DataProcessor
 
 public class LocalMeshData
 {
-    public static float waterLevel = -0.3f, maxDepth, minDepth, maxDiff;
+    public static float waterLevel = -0.3f, maxDepth, minDepth, maxDiff, lakeDepthOffset = float.MinValue, ndviMax, ndviMin;
     public static float minLat = 52.992119f, maxLat = 52.996946f, minLong = 13.577064f, maxLong = 13.588916f; // of the lake
     public static DataTable stringTable;
     public static int rowCount, columnCount, lakeHeight = 538, lakeWidth = 778, resolution;
     public static Vector3 meshCenter;
+    public static Texture2D NDVI;
 
     public LocalMeshData(DataTable table, Texture2D NDVI)
     {
@@ -51,24 +51,37 @@ public class LocalMeshData
         table.AcceptChanges();
 
         stringTable = table;
+        LocalMeshData.NDVI = NDVI;
 
+        float prevVal = 0f;
         for (int row = 0; row < table.Rows.Count; row++)
         {
             for (int column = 0; column < table.Columns.Count; column++)
             {
-                string stringValue = table.Rows[row][column].ToString().Trim();
-
-                float value = float.Parse(stringValue);
+                float value = float.Parse(table.Rows[row][column].ToString().Trim());
                 minDepth = Math.Min(minDepth, value);
                 maxDepth = Math.Max(maxDepth, value);
+
+                // Check if we're at a lake/surroundings boundary (cross-pattern check), then record gap
+                // cliff-like feature between ground and lake on the boundary
+                if (value == 0f && prevVal != 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, prevVal); } // left
+                else if (value != 0f && prevVal == 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // right
+                else if (row != 0 && float.Parse(table.Rows[row - 1][column].ToString().Trim()) == 0f && value != 0f)
+                { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // above
+                else if (row != table.Rows.Count - 1 && float.Parse(table.Rows[row + 1][column].ToString().Trim()) != 0f && value == 0f)
+                { lakeDepthOffset = Math.Max(lakeDepthOffset, float.Parse(table.Rows[row + 1][column].ToString().Trim())); } // below
             }
         }
+        
+        // Adjust lake level
+        lakeDepthOffset = Math.Abs(lakeDepthOffset);
+        minDepth += lakeDepthOffset;
+        maxDiff = Math.Abs(maxDepth - minDepth);
 
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
         meshCenter = new Vector3(rowCount / 2, 0f, columnCount / 2);
-        maxDiff = Math.Abs(maxDepth - minDepth);
-
+        
         // Get the resolution
         int maxDim = Mathf.Max(rowCount, columnCount);
         for (int i = 0; i < 12; i++)
@@ -93,20 +106,17 @@ public class LocalMeshData
         float actualMaxLong = (minLong + maxLong) / 2 + totalLong / 2 ;
 
         // Create NDVI table
-        Debug.Log(string.Format("Height: {0}; Width: {1}", NDVI.height, NDVI.width));
-        float max = float.MinValue, min = float.MaxValue;
+        ndviMax = float.MinValue;
+        ndviMin = float.MaxValue;
         for (int i = 0; i < NDVI.height; i++)
         {
             for (int j = 0; j < NDVI.width; j++)
             {
                 Color temp = NDVI.GetPixel(i, j);
-                max = Math.Max(temp.r, max);
-                min = Math.Min(temp.r, min);
+                ndviMax = Math.Max(temp.r, ndviMax);
+                ndviMin = Math.Min(temp.r, ndviMin);
             }
         }
-
-        Debug.Log(string.Format("Min: {0}; Max: {1}", min, max));
-
     }
 }
 

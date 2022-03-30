@@ -5,9 +5,7 @@ public class TerrainManager : MonoBehaviour
 {
     private int resolution = 1025;
     private TerrainData terrainData;
-    [SerializeField]
-    private Texture2D ndvi;
-    private float offset = 0.3f;
+    private float offset = 0.3f, max = float.MinValue, min = float.MaxValue, nonOverlap = 0.5f;
 
     private void Start()
     {
@@ -41,7 +39,7 @@ public class TerrainManager : MonoBehaviour
                         if (entryVal != 0f)
                         {
                             // Remap to offset range
-                            heightMap[resolution - row - 1, column] = ((entryVal - LocalMeshData.maxDepth) / (LocalMeshData.maxDiff) * (1f - offset) + offset);
+                            heightMap[resolution - row - 1, column] = (((entryVal - LocalMeshData.lakeDepthOffset) - LocalMeshData.maxDepth) / (LocalMeshData.maxDiff) * (1f - offset) + offset);
                         }
                         else { heightMap[resolution - row - 1, column] = GetPerlinVal(row, column); }
                     }
@@ -82,40 +80,60 @@ public class TerrainManager : MonoBehaviour
     private float[,,] CreateSplatMap()
     {
         float[,,] map = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, terrainData.terrainLayers.Length];
-        Debug.Log(terrainData.terrainLayers.Length);
 
         // with 6 textures, we have 6 tributary lengths for each of the 6 divisions
-        int divisions = (terrainData.terrainLayers.Length);
-        float dividerLength = 1f / (float)divisions;
-
-        float[] centerPoints = new float[divisions];
-        Dictionary<int, List<float>> texRanges = new Dictionary<int, List<float>>();
-        for (int s = 0; s < divisions; s++)
+        Dictionary<int, List<float>> texRanges = new Dictionary<int, List<float>>()
         {
-            if (s == 0) { centerPoints[s] = dividerLength / 2; }
-            else { centerPoints[s] = centerPoints[s - 1] + dividerLength; }
-
-            // Assemble ranges dictionary
-            texRanges.Add(s, new List<float> {centerPoints[s] - dividerLength / 2, centerPoints[s],
-                centerPoints[s] + dividerLength / 2}) ;
-        }
+            {0, new List<float>() {0f, 0.065f, 0.12f}},
+            {1, new List<float>() {0.12f, 0.185f, 0.25f}},
+            {2, new List<float>() {0.25f, 0.45f, 0.65f}},
+            {3, new List<float>() {0.65f, 0.82f, 0.99f}},
+            {4, new List<float>() {0.99f, 0.995f, 1f}},
+        };
 
         // For each point on the alphamap...
         for (int y = 0; y < terrainData.alphamapHeight; y++)
         {
             for (int x = 0; x < terrainData.alphamapWidth; x++)
             {
+                float ndviVal = GetGreyscaleFloat(x, y);
                 for (int tex = 0; tex < terrainData.terrainLayers.Length; tex++)
                 {
-                    float ndviVal = GetGreyscaleFloat(x, y);
-
-                    if (ndviVal >= texRanges[tex][0] || ndviVal <= texRanges[tex][2])
-                    {
-                        if (tex == 0) { Debug.Log(ndviVal); }
-                        // map[x, y, tex] = (ndviVal - texRanges[tex][0]) / (texRanges[tex][2] - texRanges[tex][0]) ;
-                        map[x, y, tex] = 1f;
+                    if (ndviVal >= texRanges[tex][0] && ndviVal < texRanges[tex][2])
+                    { 
+                        if (ndviVal >= texRanges[tex][1] - (texRanges[tex][1] - texRanges[tex][0]) * nonOverlap 
+                            && ndviVal <= texRanges[tex][1] + (texRanges[tex][2] - texRanges[tex][1]) * nonOverlap)
+                        {
+                            map[y, x, tex] = 1f; 
+                            break; // the rest default to 0f
+                        }
+                        else if (ndviVal < texRanges[tex][1] - (texRanges[tex][1] - texRanges[tex][0]) * nonOverlap)
+                        {
+                            if (tex != 0)
+                            {
+                                float start = texRanges[tex - 1][1] + (texRanges[tex - 1][2] - texRanges[tex - 1][1]) * nonOverlap;
+                                float end = texRanges[tex][1] - (texRanges[tex][1] - texRanges[tex][0]) * nonOverlap;
+                                map[y, x, tex] = 1f / (end - start) * (ndviVal - start);
+                                map[y, x, tex - 1] = 1f - map[y, x, tex];
+                                break; // the rest default to 0f
+                            }
+                            else { map[y, x, tex] = 1f; break; } // the rest default to 0f
+                        }
+                        else if (ndviVal > texRanges[tex][1] + (texRanges[tex][2] - texRanges[tex][1]) * nonOverlap)
+                        {
+                            if (tex != terrainData.terrainLayers.Length - 1)
+                            {
+                                float start = texRanges[tex][1] + (texRanges[tex][2] - texRanges[tex][1]) * nonOverlap;
+                                float end = texRanges[tex + 1][1] - (texRanges[tex + 1][1] - texRanges[tex + 1][0]) * nonOverlap;
+                                map[y, x, tex] = 1f - (1f / (end - start) * (ndviVal - start));
+                                map[y, x, tex + 1] = 1f - map[y, x, tex];
+                                break; // the rest default to 0f
+                            }
+                            else { map[y, x, tex] = 1f; break; } // the rest default to 0f
+                        }
                     }
-                    else { map[x, y, tex] = 0f; }
+                    else if (tex == (terrainData.terrainLayers.Length - 1) && ndviVal == 1f) { map[y, x, tex] = 1f; } // Edge case 
+                    else { map[y, x, tex] = 0f;}
                 }
 
                 // // Get the normalized terrain coordinate that
@@ -133,18 +151,29 @@ public class TerrainManager : MonoBehaviour
                 // map[x, y, 1] = (float)(1 - frac);
             }
         }
-        
+
         return map;
     }
 
     private float GetGreyscaleFloat(int x, int y)
     {
-        if (ndvi.height + 1 != resolution)
+        Texture2D NDVI = LocalMeshData.NDVI;
+        if (NDVI.height + 1 > resolution)
         {
-            x = Mathf.RoundToInt(x / (ndvi.width / (resolution - 1)));
-            y = Mathf.RoundToInt(y / (ndvi.height / (resolution - 1)));
+            x = Mathf.RoundToInt(x * (NDVI.width / (resolution - 1)));
+            y = Mathf.RoundToInt(y * (NDVI.height / (resolution - 1)));
+        }
+        else if (NDVI.height + 1 < resolution)
+        {
+            x = Mathf.RoundToInt(x / (NDVI.width / (resolution - 1)));
+            y = Mathf.RoundToInt(y / (NDVI.height / (resolution - 1)));
         }
 
-        return ndvi.GetPixel(x, y).r;
+        float val = (NDVI.GetPixel(x, y).r - LocalMeshData.ndviMin) / (LocalMeshData.ndviMax - LocalMeshData.ndviMin);
+        max = Mathf.Max(max, val);
+        min = Mathf.Min(min, val);
+
+        // Return value is remapped to [0, 1]
+        return (NDVI.GetPixel(x, y).r - LocalMeshData.ndviMin) / (LocalMeshData.ndviMax - LocalMeshData.ndviMin);
     }
 }
