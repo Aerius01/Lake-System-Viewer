@@ -192,13 +192,13 @@ public class Fish
             // find new bounding values if we've entered a new timestep range
             if (currentIndex != this.lastRung)
             {
-                this.startPos = new Vector3(this.dataPoints[currentIndex - 1].y, 
+                this.startPos = new Vector3(this.dataPoints[currentIndex - 1].x + LocalMeshData.cutoffs["minWidth"], 
                     this.dataPoints[currentIndex - 1].z * UserSettings.verticalScalingFactor, 
-                    this.dataPoints[currentIndex - 1].x);
+                    LocalMeshData.cutoffs["maxHeight"] - this.dataPoints[currentIndex - 1].y);
 
-                this.endPos = new Vector3(this.dataPoints[currentIndex].y,
+                this.endPos = new Vector3(this.dataPoints[currentIndex].x + LocalMeshData.cutoffs["minWidth"],
                     this.dataPoints[currentIndex].z * UserSettings.verticalScalingFactor,
-                    this.dataPoints[currentIndex].x);
+                    LocalMeshData.cutoffs["maxHeight"] - this.dataPoints[currentIndex].y);
 
                 this.startOrient = this.fishObject.transform.rotation;
 

@@ -37,12 +37,12 @@ public class DataProcessor
 
 public class LocalMeshData
 {
-    public static float waterLevel = -0.3f, maxDepth, minDepth, maxDiff, lakeDepthOffset = float.MinValue, ndviMax, ndviMin;
-    public static float minLat = 52.992119f, maxLat = 52.996946f, minLong = 13.577064f, maxLong = 13.588916f; // of the lake
+    public static float maxDepth, minDepth, maxDiff, lakeDepthOffset = float.MinValue, ndviMax, ndviMin;
     public static DataTable stringTable;
-    public static int rowCount, columnCount, lakeHeight = 538, lakeWidth = 778, resolution;
+    public static int rowCount, columnCount, resolution;
     public static Vector3 meshCenter;
     public static Texture2D NDVI;
+    public static Dictionary<string, int> cutoffs;
 
     public LocalMeshData(DataTable table, Texture2D NDVI)
     {
@@ -73,15 +73,15 @@ public class LocalMeshData
             }
         }
         
-        // Adjust lake level
+        // Offset lake level based on minimum gap
         lakeDepthOffset = Math.Abs(lakeDepthOffset);
         minDepth += lakeDepthOffset;
         maxDiff = Math.Abs(maxDepth - minDepth);
 
+        // Determine lake location within larger mesh
         rowCount = table.Rows.Count;
         columnCount = table.Columns.Count;
-        meshCenter = new Vector3(rowCount / 2, 0f, columnCount / 2);
-        
+
         // Get the resolution
         int maxDim = Mathf.Max(rowCount, columnCount);
         for (int i = 0; i < 12; i++)
@@ -93,17 +93,15 @@ public class LocalMeshData
             }
         }
 
-        // Determine overall bounds with lake at center
-        float latDiff = maxLat - minLat;
-        float longDiff = maxLong - minLong;
+        cutoffs = new Dictionary<string, int>
+        {
+            {"minHeight", Mathf.FloorToInt((resolution - rowCount) / 2)},
+            {"maxHeight", Mathf.FloorToInt((resolution - rowCount) / 2 + rowCount)},
+            {"minWidth", Mathf.FloorToInt((resolution - columnCount) / 2)},
+            {"maxWidth", Mathf.FloorToInt((resolution - columnCount) / 2 + columnCount)},
+        };
 
-        float totalLat = latDiff / rowCount * resolution;
-        float totalLong = longDiff / columnCount * resolution;
-
-        float actualMinLat = (minLat + maxLat) / 2 - totalLat / 2 - 0.00010f ;
-        float actualMaxLat = (minLat + maxLat) / 2 + totalLat / 2 - 0.00010f ;
-        float actualMinLong = (minLong + maxLong) / 2 - totalLong / 2 ;
-        float actualMaxLong = (minLong + maxLong) / 2 + totalLong / 2 ;
+        meshCenter = new Vector3((cutoffs["minWidth"] + cutoffs["maxWidth"])/ 2, 0f, (cutoffs["minHeight"] + cutoffs["maxHeight"]) / 2);
 
         // Create NDVI table
         ndviMax = float.MinValue;

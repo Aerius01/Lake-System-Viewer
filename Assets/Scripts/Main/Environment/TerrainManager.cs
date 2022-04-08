@@ -4,7 +4,7 @@ using sc.terrain.vegetationspawner;
 
 public class TerrainManager : MonoBehaviour
 {
-    private int resolution = 1025;
+    private int resolution;
     private TerrainData terrainData;
     private float offset = 0.3f, nonOverlap = 0.5f;
     private float scale = 3f;
@@ -12,32 +12,45 @@ public class TerrainManager : MonoBehaviour
     private void Start()
     {
         terrainData = this.GetComponent<Terrain>().terrainData;
-        Dictionary<string, int> cutoffs = new Dictionary<string, int>
-        {
-            {"minHeight", Mathf.FloorToInt((resolution - LocalMeshData.lakeHeight) / 2)},
-            {"maxHeight", Mathf.FloorToInt((resolution - LocalMeshData.lakeHeight) / 2 + LocalMeshData.lakeHeight)},
-            {"minWidth", Mathf.FloorToInt((resolution - LocalMeshData.lakeWidth) / 2)},
-            {"maxWidth", Mathf.FloorToInt((resolution - LocalMeshData.lakeWidth) / 2 + LocalMeshData.lakeWidth)},
-        };
+        resolution = LocalMeshData.resolution;
 
+        // Create and implement height map
+        terrainData.heightmapResolution = resolution;
+        terrainData.size = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * scale, resolution);
+        terrainData.SetHeights(0, 0, CreateHeightmap());
+
+        // Create and implement splat maps
+        terrainData.alphamapResolution = resolution;
+        terrainData.SetAlphamaps(0, 0, CreateSplatMap());
+
+        // Apply the terrain data to terrain object/collider and position terrain at origin with water level at y=0
+        this.GetComponent<Terrain>().terrainData = this.GetComponent<TerrainCollider>().terrainData = terrainData;
+        Vector3 position = this.transform.position;
+        position = new Vector3(0f, offset * Mathf.Abs(terrainData.size.y), 0f);
+        this.transform.position = position;
+
+        // Respawn all trees and grass
+        // this.transform.parent.transform.Find("VegeSpawner").GetComponent<VegetationSpawner>().Respawn();
+    }
+
+    private float[,] CreateHeightmap()
+    {
         // Create and apply height map to terrain
         // Heightmap entries are inverted on row entries for proper orientation in-game
         // All Perlin entries have minimum depth of 0f, and so the 0-1 ratio of the heightmap is scaled
         // // such that 0 to 0.3 is reserved for Perlin noise above lake level, and 0.3 to 1.0 is
         // // reserved for lake depths below base ground level. To achieve this, we need to offset the lake
         // // depth by maxDiff / 0.7f
-        terrainData.heightmapResolution = resolution;
-        
         float[,] heightMap = new float[resolution, resolution];
         for (int row = 0; row < resolution; row++)
         {
-            if (row >= cutoffs["minHeight"] && row < cutoffs["maxHeight"])
+            if (row >= LocalMeshData.cutoffs["minHeight"] && row < LocalMeshData.cutoffs["maxHeight"])
             {
                 for (int column = 0; column < resolution; column++)
                 {
-                    if (column >= cutoffs["minWidth"] && column < cutoffs["maxWidth"])
+                    if (column >= LocalMeshData.cutoffs["minWidth"] && column < LocalMeshData.cutoffs["maxWidth"])
                     {
-                        float entryVal = -float.Parse(LocalMeshData.stringTable.Rows[row - cutoffs["minHeight"]][column - cutoffs["minWidth"]].ToString().Trim());
+                        float entryVal = -float.Parse(LocalMeshData.stringTable.Rows[row - LocalMeshData.cutoffs["minHeight"]][column - LocalMeshData.cutoffs["minWidth"]].ToString().Trim());
                         if (entryVal != 0f)
                         {
                             // Remap to offset range
@@ -56,20 +69,7 @@ public class TerrainManager : MonoBehaviour
             }
         }
 
-        terrainData.size = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * scale, resolution);
-        terrainData.SetHeights(0, 0, heightMap);
-
-        // Create and implement splat maps
-        terrainData.alphamapResolution = resolution;
-        terrainData.SetAlphamaps(0, 0, CreateSplatMap());
-
-        // Apply the terrain data to terrain object/collider
-        this.GetComponent<Terrain>().terrainData = this.GetComponent<TerrainCollider>().terrainData = terrainData;
-        Vector3 position = this.transform.position;
-        position.y = offset * Mathf.Abs(terrainData.size.y);
-        this.transform.position = position;
-
-        this.transform.parent.transform.Find("VegeSpawner").GetComponent<VegetationSpawner>().Respawn();
+        return heightMap;
     }
 
     private float[,,] CreateSplatMap()
@@ -83,10 +83,6 @@ public class TerrainManager : MonoBehaviour
             {3, new List<float>() {0.65f, 0.82f, 0.99f}}, // grass
             {4, new List<float>() {0.99f, 0.995f, 1f}}, // small rocks
         };
-
-        // TODO:
-        // randomly place rock patches in tex == 2 & 3, remove rocks as its own definitive layer
-        // height-based alterations
 
         // For each point on the alphamap...
         for (int y = 0; y < terrainData.alphamapHeight; y++)
@@ -182,14 +178,4 @@ public class TerrainManager : MonoBehaviour
 
         return perlinVal * offset;
     }
-
-    private void OnGrassRespawn(SpawnerBase.GrassPrefab item)
-    {
-        if(item.type == SpawnerBase.GrassType.Mesh) Debug.Log(item.prefab.name + " grass respawned");
-        if(item.type == SpawnerBase.GrassType.Texture) Debug.Log(item.billboard.name + " grass billboard respawned");
-        Debug.Log("grass here");
-    }
-
-    public void OnTreeRespawn(SpawnerBase.TreePrefab item)
-    { Debug.Log(item.prefab + " Tree respawned"); Debug.Log("tree here");}
 }

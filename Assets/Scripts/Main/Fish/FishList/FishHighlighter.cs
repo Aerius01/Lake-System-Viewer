@@ -7,7 +7,7 @@ public class FishHighlighter : MonoBehaviour
 
     private void Start()
     {
-        Color[] stdColors = new Color[renderers.Length];
+        stdColors = new Color[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
         {
             stdColors[i] = renderers[i].material.color;

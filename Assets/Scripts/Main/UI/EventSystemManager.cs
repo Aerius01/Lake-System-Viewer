@@ -1,14 +1,19 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
 using TMPro;
+
+public delegate void AlertScaleChange(float newVal);
 
 public class EventSystemManager : MonoBehaviour
 {
     public GameObject settingsMenu, heightMapObject;
     private Toggle tagToggle, depthLineToggle, trailToggle, GISToggle, datePickerToggle, thermoToggle, windWeatherToggle;
     private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput;
+
+    [SerializeField]
+    private EnvironmentManager environmentManager;
+
+    public static event AlertScaleChange scaleChangeEvent;
 
     private void Awake()
     { 
@@ -32,6 +37,8 @@ public class EventSystemManager : MonoBehaviour
         scalingFactorInput.text = UserSettings.verticalScalingFactor.ToString();
         TimeManager.instance.speedUpCoefficient = 10;
         speedUpInput.text = TimeManager.instance.speedUpCoefficient.ToString();
+
+        scaleChangeEvent += environmentManager.AdjustScales;
     }
 
     public void TagToggle()
@@ -120,10 +127,8 @@ public class EventSystemManager : MonoBehaviour
                 scaleValue = 1f;
                 scalingFactorInput.text = string.Format("{0}", scaleValue);
             }
-            
-            Vector3 scaler = meshObject.transform.localScale;
-            scaler.y = scaleValue;
-            meshObject.transform.localScale = scaler;
+
+            scaleChangeEvent?.Invoke(scaleValue);
 
             UserSettings.verticalScalingFactor = scaleValue;
         }
