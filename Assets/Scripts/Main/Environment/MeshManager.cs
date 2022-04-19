@@ -32,6 +32,7 @@ public class MeshManager : MonoBehaviour
 
         this.transform.eulerAngles = new Vector3(0f, 90f, 0f);
         this.transform.position = new Vector3(0f, depthOffset, LocalMeshData.resolution);
+        this.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
 
         // Size & position water
         Vector3 scale = waterObject.transform.localScale;
@@ -45,7 +46,14 @@ public class MeshManager : MonoBehaviour
         );
     }
 
-    void CreateShape()
+    public void ReZeroMesh()
+    {
+        Vector3 meshPosition = this.gameObject.transform.position;
+        meshPosition.y = this.depthOffset * UserSettings.verticalScalingFactor;
+        this.gameObject.transform.position = meshPosition;
+    }
+
+    private void CreateShape()
     {
         int totalVertices = resolution * resolution;
         int totalQuads = (resolution - 1) * (resolution - 1);

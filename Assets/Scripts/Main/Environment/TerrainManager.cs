@@ -7,7 +7,6 @@ public class TerrainManager : MonoBehaviour
     private int resolution;
     private TerrainData terrainData;
     private float offset = 0.3f, nonOverlap = 0.5f;
-    private float scale = 3f;
 
     private void Start()
     {
@@ -16,7 +15,7 @@ public class TerrainManager : MonoBehaviour
 
         // Create and implement height map
         terrainData.heightmapResolution = resolution;
-        terrainData.size = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * scale, resolution);
+        terrainData.size = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * UserSettings.verticalScalingFactor, resolution);
         terrainData.SetHeights(0, 0, CreateHeightmap());
 
         // Create and implement splat maps
@@ -25,12 +24,24 @@ public class TerrainManager : MonoBehaviour
 
         // Apply the terrain data to terrain object/collider and position terrain at origin with water level at y=0
         this.GetComponent<Terrain>().terrainData = this.GetComponent<TerrainCollider>().terrainData = terrainData;
-        Vector3 position = this.transform.position;
-        position = new Vector3(0f, offset * Mathf.Abs(terrainData.size.y), 0f);
-        this.transform.position = position;
+        ReZeroTerrain();
 
         // Respawn all trees and grass
         // this.transform.parent.transform.Find("VegeSpawner").GetComponent<VegetationSpawner>().Respawn();
+    }
+
+    public void ResizeTerrain()
+    {
+        Vector3 newSize = new Vector3(resolution, -(LocalMeshData.maxDiff / (1f - offset)) * UserSettings.verticalScalingFactor, resolution);
+        terrainData.size = newSize;
+        this.GetComponent<Terrain>().terrainData = this.GetComponent<TerrainCollider>().terrainData = terrainData;
+    }
+
+    public void ReZeroTerrain()
+    {
+        Vector3 position = this.transform.position;
+        position = new Vector3(0f, offset * Mathf.Abs(terrainData.size.y), 0f);
+        this.transform.position = position;
     }
 
     private float[,] CreateHeightmap()

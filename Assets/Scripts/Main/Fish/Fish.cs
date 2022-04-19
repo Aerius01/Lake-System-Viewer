@@ -147,6 +147,16 @@ public class Fish
         Camera.main.transform.LookAt(this.fishObject.transform);
     }
 
+    public void UpdateFishScale(float newVal)
+    {
+        Vector3 currentScale = this.fishObject.transform.localScale;
+        currentScale.x = currentScale.x * newVal / UserSettings.fishScalingFactor;
+        currentScale.y = currentScale.y * newVal / UserSettings.fishScalingFactor;
+        currentScale.z = currentScale.z * newVal / UserSettings.fishScalingFactor;
+
+        this.fishObject.transform.localScale = currentScale;
+    }
+
     public void UpdateCanvasText()
     {
         string fullText =
@@ -163,7 +173,7 @@ public class Fish
         this.utils.UpdateDepthIndicatorLine(LinePoint);
     }
 
-    public void UpdateFishPosition(bool timeJump)
+    public void UpdateFishPosition(bool timeJump, bool scaleChange)
     {
         int currentIndex = this.lastRung == null ? 1 : (int)this.lastRung;
         if (timeJump || this.lastRung == null)
@@ -189,8 +199,8 @@ public class Fish
                 currentIndex = Mathf.Abs(currentIndex) - 1;
             }
 
-            // find new bounding values if we've entered a new timestep range
-            if (currentIndex != this.lastRung)
+            // find new bounding values if we've entered a new timestep range or vertical scale has changed
+            if (currentIndex != this.lastRung || scaleChange)
             {
                 this.startPos = new Vector3(this.dataPoints[currentIndex - 1].x + LocalMeshData.cutoffs["minWidth"], 
                     this.dataPoints[currentIndex - 1].z * UserSettings.verticalScalingFactor, 

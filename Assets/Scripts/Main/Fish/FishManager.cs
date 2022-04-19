@@ -6,12 +6,27 @@ public class FishManager : MonoBehaviour
 {
     private static Dictionary<int, Fish> fishDict {get; set;}
     public static bool jumpingInTime = false;
+    public static bool vertScaleChange = false, fishScaleChange = false;
 
     public static void ActivateAll(string util, bool activationStatus)
     {
         foreach (var key in fishDict.Keys)
         {
             if (fishDict[key].fishShouldExist) fishDict[key].ActivateUtil(util, activationStatus);
+        }
+    }
+
+    public static void ChangeVerticalScale(float newScale)
+    {
+        vertScaleChange = true;
+    }
+
+    public static void ChangeFishScale(float newVal)
+    {
+        foreach (var key in fishDict.Keys)
+        {
+            Fish currentFish = fishDict[key];
+            currentFish.UpdateFishScale(newVal);
         }
     }
 
@@ -58,25 +73,20 @@ public class FishManager : MonoBehaviour
                 GameObject scaleDummy = obj.transform.Find("ScaleDummy").gameObject;
                 BoxCollider collider = scaleDummy.GetComponent<BoxCollider>();
 
-                // Set fish size
-                float localSize = (float)fish.length / 1000 * Species.conversionFactor;
-                // float requiredScale = (scaleDummy.transform.localScale.z / collider.bounds.size.z * localSize) * 20;
-                float requiredScale =  localSize * 3f;
-                Vector3 newScale = new Vector3(requiredScale, requiredScale, requiredScale);
-                scaleDummy.transform.localScale = newScale;
-                
-                // Adjust collider size
                 string name = Species.prefabDict.ContainsKey(fish.speciesName) ? fish.speciesName.ToLower() : "roach";
                 SkinnedMeshRenderer mesh = null;
                 if (fish.speciesName == "Mirror carp" || fish.speciesName == "Scaled carp")
                 {
                     mesh = scaleDummy.transform.Find("carp").GetComponent<SkinnedMeshRenderer>();
                 }
-                else
-                {
-                    mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>();
-                }
+                else { mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>(); }
 
+                // Set fish size, one terrain unit is one meter
+                float currentLength = Mathf.Max(mesh.bounds.size.x, mesh.bounds.size.y, mesh.bounds.size.z);
+                float requiredScale = (float)fish.length / 1000f / currentLength * UserSettings.fishScalingFactor;
+                scaleDummy.transform.localScale = new Vector3(requiredScale, requiredScale, requiredScale);
+
+                // Adjust collider size
                 collider.size = mesh.localBounds.size * 1.2f;
             }
 
@@ -91,6 +101,9 @@ public class FishManager : MonoBehaviour
 
     public void UpdateFish()
     {
+        // localScaler prevents the scale change going into effect halfway through an update
+        bool localScaler = vertScaleChange ? true : false;
+
         foreach (var key in fishDict.Keys)
         {
             Fish currentFish = fishDict[key];
@@ -106,10 +119,11 @@ public class FishManager : MonoBehaviour
                 if (!currentFish.FishIsActive()) currentFish.Activate();
 
                 // Update position if already spawned
-                else currentFish.UpdateFishPosition(jumpingInTime);
+                else currentFish.UpdateFishPosition(jumpingInTime, localScaler);
             }
         }
 
         if (jumpingInTime) jumpingInTime = false;
+        if (vertScaleChange && localScaler) vertScaleChange = false;
     }
 }

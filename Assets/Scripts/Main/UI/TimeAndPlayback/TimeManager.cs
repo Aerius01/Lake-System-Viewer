@@ -5,7 +5,6 @@ public class TimeManager : MonoBehaviour
 {
     public DateTime currentTime {get; private set;}
     public bool paused {get; private set;}
-    public float speedUpCoefficient = 10f;
     
     private double percentJump;
 
@@ -39,7 +38,7 @@ public class TimeManager : MonoBehaviour
     {
         if (!paused)
         {
-            currentTime = currentTime.AddSeconds(Time.deltaTime * speedUpCoefficient);
+            currentTime = currentTime.AddSeconds(Time.deltaTime * UserSettings.speedUpCoefficient);
         }
     }
 
