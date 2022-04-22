@@ -5,33 +5,22 @@ public class WindParticleController : MonoBehaviour
 {
     private ParticleSystem particles;
 
-    private void Start()
+    public void GetSystem()
     {
         this.particles = this.gameObject.GetComponent<ParticleSystem>();
         if (!UserSettings.showWindWeather) this.gameObject.SetActive(false);
     }
 
-    void Update()
+    public void UpdateDirection(Vector2 unitVector)
     {
-        if (WindWeatherMain.instance.newData)
-        {
-            if (!WindWeatherMain.instance.isNull)
-            {
-                // Collect and decompose data from WindMin
-                (float?, float?) windData = WindWeatherMain.instance.windData;
-                double radDir = (double)(360f - windData.Item1) * Math.PI / 180f;
-                Vector2 unitVector = new Vector2((float)Math.Cos(radDir), (float)Math.Sin(radDir));
+        // Collect and decompose data from WindMin
+        (float?, float?) windData = WindWeatherMain.instance.windData;
 
-                // Set speed and direction
-                var vel = particles.velocityOverLifetime;
-                float relativeSpeed = (float)windData.Item2 / 25f;
+        // Set speed and direction
+        var vel = this.particles.velocityOverLifetime;
+        float relativeSpeed = (float)windData.Item2 / 25f;
 
-                float speedX = -unitVector.x * relativeSpeed * 50f;
-                float speedZ = -unitVector.y * relativeSpeed * 50f;
-
-                vel.x = speedX;
-                vel.z = speedZ;
-            }
-        }
+        vel.xMultiplier = -unitVector.x * relativeSpeed * 150f;
+        vel.zMultiplier = -unitVector.y * relativeSpeed * 150f;
     }
 }

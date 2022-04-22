@@ -16,7 +16,7 @@ public class FishManager : MonoBehaviour
         }
     }
 
-    public static void ChangeVerticalScale(float newScale)
+    public static void ChangeVerticalScale()
     {
         vertScaleChange = true;
     }
@@ -40,7 +40,7 @@ public class FishManager : MonoBehaviour
         fishDict[id].SetFishColor(color);
     }
 
-    public static (bool?, string, int?, int?, float) GetFishStats(int fishID)
+    public static (bool?, string, int?, int?, float, bool) GetFishStats(int fishID)
     {
         return fishDict[fishID].stats;
     }

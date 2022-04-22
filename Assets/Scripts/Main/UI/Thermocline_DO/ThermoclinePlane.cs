@@ -16,9 +16,9 @@ public class ThermoclinePlane
         mesh.vertices = new Vector3[]
         {
             new Vector3(0,0,0),
-            new Vector3(LocalMeshData.rowCount,0,0),
-            new Vector3(LocalMeshData.rowCount,0,LocalMeshData.columnCount),
-            new Vector3(0,0,LocalMeshData.columnCount),
+            new Vector3(LocalMeshData.resolution,0,0),
+            new Vector3(LocalMeshData.resolution,0,LocalMeshData.resolution),
+            new Vector3(0,0,LocalMeshData.resolution),
         };
 
         mesh.uv = new Vector2[]
@@ -56,9 +56,9 @@ public class ThermoclinePlane
             mesh.vertices = new Vector3[]
             {
                 new Vector3(0,(float)-depth * UserSettings.verticalScalingFactor,0),
-                new Vector3(LocalMeshData.rowCount,(float)-depth * UserSettings.verticalScalingFactor,0),
-                new Vector3(LocalMeshData.rowCount,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.columnCount),
-                new Vector3(0,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.columnCount),
+                new Vector3(LocalMeshData.resolution,(float)-depth * UserSettings.verticalScalingFactor,0),
+                new Vector3(LocalMeshData.resolution,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
+                new Vector3(0,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
             };
 
             planeObject.GetComponent<MeshFilter>().mesh = mesh;

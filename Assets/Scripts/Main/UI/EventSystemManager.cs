@@ -2,8 +2,9 @@ using UnityEngine.UI;
 using UnityEngine;
 using TMPro;
 
-public delegate void AlertScaleChange(float newVal);
+public delegate void AlertScaleChange();
 public delegate void FishScaleChange(float newVal);
+public delegate void WaterLevelChangeEvent();
 
 public class EventSystemManager : MonoBehaviour
 {
@@ -19,17 +20,12 @@ public class EventSystemManager : MonoBehaviour
 
     public static event AlertScaleChange scaleChangeEvent;
     public static event FishScaleChange fishScaleEvent;
+    public static event WaterLevelChangeEvent waterLevelEvent;
 
     private void Awake()
     { 
         Transform baseToggles = settingsMenu.transform.Find("Toggles");
         Transform baseInputs = settingsMenu.transform.Find("Inputs");
-
-        // tagToggle = baseToggles.transform.Find("TagToggle").GetComponent<Toggle>();
-        // depthLineToggle = baseToggles.transform.Find("DepthLineToggle").GetComponent<Toggle>();
-        // trailToggle = baseToggles.transform.Find("TrailToggle").GetComponent<Toggle>();
-        // thermoToggle = baseToggles.transform.Find("ThermoclineToggle").GetComponent<Toggle>();
-        // windWeatherToggle = baseToggles.transform.Find("WindWeatherToggle").GetComponent<Toggle>();
 
         scalingFactorInput = baseInputs.transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
         speedUpInput = baseInputs.transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
@@ -39,9 +35,11 @@ public class EventSystemManager : MonoBehaviour
 
     private void Start()
     {
+        // Set up event listeners
         scaleChangeEvent += environmentManager.AdjustScales;
         scaleChangeEvent += FishManager.ChangeVerticalScale;
         fishScaleEvent += FishManager.ChangeFishScale;
+        waterLevelEvent += environmentManager.AdjustWaterLevel;
     }
 
     public void TagToggle()
@@ -78,12 +76,8 @@ public class EventSystemManager : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(waterLevelInput.text) || !string.IsNullOrWhiteSpace(waterLevelInput.text))
         {
-            GameObject waterObject = heightMapObject.transform.Find("WaterBlock").gameObject;
-
-            waterObject.transform.position = new Vector3(
-                waterObject.transform.position.x, 
-                float.Parse(waterLevelInput.text), 
-                waterObject.transform.position.z);
+            UserSettings.waterLevel = float.Parse(waterLevelInput.text);
+            waterLevelEvent?.Invoke();
         }
     }
 
@@ -101,7 +95,7 @@ public class EventSystemManager : MonoBehaviour
                 scalingFactorInput.text = string.Format("{0}", scaleValue);
             }
             UserSettings.verticalScalingFactor = scaleValue;
-            scaleChangeEvent?.Invoke(scaleValue);
+            scaleChangeEvent?.Invoke();
         }
     }
 

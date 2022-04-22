@@ -41,5 +41,6 @@ public class UserSettings
     public static float verticalScalingFactor = 3f;
     public static float fishScalingFactor = 25f;
     public static float speedUpCoefficient = 10f;
+    public static float waterLevel = 0f;
 
 }

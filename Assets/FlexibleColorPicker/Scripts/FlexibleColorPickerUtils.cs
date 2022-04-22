@@ -38,7 +38,7 @@ public class FlexibleColorPickerUtils : MonoBehaviour
 
     public void OkayButton()
     {
-        fishListColoringButton.SetNewColor(instance.gameObject.GetComponent<FlexibleColorPicker>().color);
+        fishListColoringButton.SetNewHeaderColor(instance.gameObject.GetComponent<FlexibleColorPicker>().color);
         this.gameObject.SetActive(false);
     }
 

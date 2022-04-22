@@ -5,22 +5,36 @@ using TMPro;
 
 public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
 {
-    float interval = 0.3f;
-    int tap;
+    private float interval = 0.3f;
+    private int tap;
+    private Coroutine moveCamera;
+    private bool zoomDisabled;
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D))
+        {
+            if (this.moveCamera != null) { StopCoroutine(this.moveCamera); }
+        }
+    }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        tap++;
-        if (tap == 1)
+        if (zoomDisabled) { this.gameObject.transform.parent.GetComponent<SubMenuTriggers>().ToggleBool(); }
+        else
         {
-            StartCoroutine(DoubleTapInterval());
-        }
+            tap++;
+            if (tap == 1)
+            {
+                StartCoroutine(DoubleTapInterval());
+            }
 
-        else if (tap > 1)
-        {
-            // Zoom in
-            StartCoroutine(FocusCamera());
-            tap = 0;
+            else if (tap > 1)
+            {
+                // Zoom in
+                this.moveCamera = StartCoroutine(FocusCamera()) as Coroutine;
+                tap = 0;
+            }
         }
     }
     
@@ -50,11 +64,18 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
         FishManager.LookAtFish(fishID);
 
         // Loop until the vector between the camera and fish has a length of <= 30
-        for (float ratio = 0; travelVector.magnitude > 30; ratio = ratio + 0.01f)
+        for (float ratio = 0; travelVector.magnitude > 30; ratio = ratio + 0.035f)
         {
             mainCamera.transform.position = Vector3.Lerp(startCamPos, endCamPos, ratio);
             travelVector = endCamPos - mainCamera.transform.position;
             yield return new WaitForSeconds(0.005f);
         }
+
+        this.moveCamera = null;
+    }
+
+    public void DisableZoom(bool state)
+    {
+        zoomDisabled = state;
     }
 }

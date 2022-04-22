@@ -19,15 +19,26 @@ public class EnvironmentManager : MonoBehaviour
     }
 
     // event handler
-    public void AdjustScales(float scaleValue)
+    public void AdjustScales()
     {
         // Scale & position mesh
-        meshManager.gameObject.transform.localScale = new Vector3(1f, scaleValue, 1f);
+        meshManager.gameObject.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
         meshManager.ReZeroMesh();
 
         // Scale Terrain
         terrainManager.ResizeTerrain();
         terrainManager.ReZeroTerrain();
+
+        // Adjust water level (scale only)
+        AdjustWaterLevel();
+    }
+
+    public void AdjustWaterLevel()
+    {
+        // Water level has already been updated in UserSettings to new value
+        Vector3 newPos = LocalMeshData.meshCenter;
+        newPos.y = UserSettings.waterLevel * UserSettings.verticalScalingFactor;
+        waterBlock.transform.position = newPos;
     }
 
     public static void ToggleSatelliteImage(bool sat)

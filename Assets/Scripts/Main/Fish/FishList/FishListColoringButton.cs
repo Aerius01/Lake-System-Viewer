@@ -4,13 +4,22 @@ using TMPro;
 
 public class FishListColoringButton : MonoBehaviour
 {
+    // Inputs
+    [SerializeField]
+    private GameObject colorButton;
+    [SerializeField]
+    private ButtonClickHandler clickHandler;
+
+    // For button disabling
+    public bool colorApplied {get; private set;} = false;
+    public bool disabled {get; private set;} = false;
+    private Button trackingButton;
+
+    // Core functionality
     private TextMeshProUGUI colorButtonText;
     private Image headerImage;
-    public GameObject colorButton;
     private int fishID;
-    private bool colorApplied = false;
-
-    private Color _color, standardHeaderColor;
+    private Color _color, standardHeaderColor, standardButtonColor, disabledColor;
     public Color color
     {
         get {return _color;}
@@ -23,12 +32,15 @@ public class FishListColoringButton : MonoBehaviour
         }
     }
 
-    private void Start()
+    public void DefineParameters(int id)
     {
-        fishID = int.Parse(this.gameObject.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text);
+        fishID = id;
         colorButtonText = colorButton.transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
         standardHeaderColor = new Color(28f/255f, 27f/255f, 55f/255f, 100f/255f);
+        standardButtonColor = new Color(28f/255f, 27f/255f, 55f/255f, 192f/255f);
+        disabledColor = new Color(1f, 1f, 1f, 100f/255f);
         headerImage = this.gameObject.transform.Find("Header").GetComponent<Image>();
+        trackingButton = colorButton.GetComponent<Button>();
     }
 
     public void ButtonPress()
@@ -44,15 +56,37 @@ public class FishListColoringButton : MonoBehaviour
             FishManager.ResetFishColor(fishID);
             colorButtonText.text = "Apply Tracking Color";
             colorApplied = false;
-            headerImage.color = standardHeaderColor;
+            ResetHeaderColor();
         }
     }
 
-    public void SetNewColor(Color color)
+    public void SetNewHeaderColor(Color color)
     {
         this.color = color;
-
         color.a = 100f/255f;
         headerImage.color = color;
+    }
+
+    public void ResetHeaderColor()
+    {
+        if (colorApplied) { SetNewHeaderColor(color); }
+        else { headerImage.color = standardHeaderColor; }
+    }
+
+    public void DisableButton()
+    {
+        disabled = true;
+        colorButton.GetComponent<Image>().color = headerImage.color = disabledColor;
+        trackingButton.interactable = false;
+        clickHandler.DisableZoom(true);
+    }
+
+    public void EnableButton()
+    {
+        disabled = false;
+        ResetHeaderColor();
+        colorButton.GetComponent<Image>().color = standardButtonColor;
+        trackingButton.interactable = true;
+        clickHandler.DisableZoom(false);
     }
 }

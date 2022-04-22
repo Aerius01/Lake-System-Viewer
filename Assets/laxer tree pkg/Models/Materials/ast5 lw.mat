@@ -101,6 +101,7 @@ Material:
     - _Glossiness: 0
     - _GlossinessSource: 0
     - _GlossyReflections: 0
+    - _MaxCameraDistance: 300
     - _Metallic: 0
     - _Occlusion: 0.71428573
     - _OcclusionStrength: 1

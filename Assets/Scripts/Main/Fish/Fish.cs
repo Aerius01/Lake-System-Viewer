@@ -42,11 +42,11 @@ public class Fish
     public DateTime latestTime {get; private set;}
     private string canvasTextPart1, canvasTextPart2;
 
-    public (bool?, string, int?, int?, float) stats
+    public (bool?, string, int?, int?, float, bool) stats
     {
         get
         {
-            return (this.male, this.speciesName, this.weight, this.length, this.fishObject.transform.position.y);
+            return (this.male, this.speciesName, this.weight, this.length, this.fishObject.transform.position.y / UserSettings.verticalScalingFactor, this.fishShouldExist);
         }
     }
 

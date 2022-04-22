@@ -1,30 +1,25 @@
 using UnityEngine;
+using System.Collections.Generic;
 using TMPro;
 
 public class FishList : MonoBehaviour
 {
     public GameObject headerPrefab;
+    private List<FishListElement> elements;
 
     public void PopulateList()
     {
+        elements = new List<FishListElement>();
+
         // Populate the list
         foreach (int id in LocalPositionData.uniquefishIDs)
         {
             GameObject obj = (Instantiate (headerPrefab) as GameObject);
-            //obj.transform.parent = this.gameObject.transform;
             obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
             obj.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text = id.ToString();
+            FishListColoringButton colorHandler = obj.GetComponent<FishListColoringButton>();
 
-            (bool? male, string speciesName, int? weight, int? length, float currentDepth) = FishManager.GetFishStats(id);
-
-            obj.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
-                string.Format("Sex: {0}\nSpecies: {1}\nWeight: {2}g\nSize: {3}mm\nDepth: {4:0.00}m",
-                male == null ? "?" : (male == true ? "M" : "F"), 
-                string.IsNullOrEmpty(speciesName) ? "?" : speciesName,
-                weight == null ? "?" : ((int)weight).ToString(),
-                length == null ? "?" : ((int)length).ToString(),
-                currentDepth
-            );
+            elements.Add(new FishListElement(id, obj, colorHandler));
         }
 
         // Set the initial content box size
@@ -35,19 +30,25 @@ public class FishList : MonoBehaviour
 
     private void FixedUpdate()
     {
-        foreach (Transform child in this.gameObject.transform)
+        foreach (FishListElement element in elements)
         {
-            string id = child.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>().text;
-            (bool? male, string speciesName, int? weight, int? length, float currentDepth) = FishManager.GetFishStats(int.Parse(id));
+            if (element.fishActive)
+            {
+                element.UpdateText();
+                if (element.greyedOut) { element.RestoreColor(); }
+                // if header greyed out, restore
+                // re-enable all functionality
+            }
+            else
+            {
+                element.UpdateText(active:false);
+                if (!element.greyedOut) { element.Greyout(); }
+                // disable color button
+                // disable double click zoom
+                // grey out header
+            }
 
-            child.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>().text = 
-                string.Format("Sex: {0}\nSpecies: {1}\nWeight: {2}g\nSize: {3}mm\nDepth: {4:0.00}m",
-                male == null ? "?" : (male == true ? "M" : "F"), 
-                string.IsNullOrEmpty(speciesName) ? "?" : speciesName,
-                weight == null ? "?" : ((int)weight).ToString(),
-                length == null ? "?" : ((int)length).ToString(),
-                currentDepth
-            );
+            // use fishActive to determine whether to grey out or not, ColoringButton SetNewColor() method
         }
     }
 }

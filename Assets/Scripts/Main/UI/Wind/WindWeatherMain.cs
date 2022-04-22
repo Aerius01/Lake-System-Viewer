@@ -4,13 +4,18 @@ using TMPro;
 using System;
 using System.Data;
 
+public delegate void WindChangeEvent(Vector2 newDir);
+
+
 public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     // Required game objects
     [SerializeField]
     private TextMeshProUGUI windSpeedText;
     [SerializeField]
-    private GameObject particleObject, compassDial, compassArrow, toolTip, weatherText;
+    private GameObject[] particleObject;
+    [SerializeField]
+    private GameObject compassDial, compassArrow, toolTip, weatherText;
     [SerializeField]
     private CanvasGroup canvasGroup;
 
@@ -30,19 +35,8 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private float? windDirection, windSpeed, temp = null, airPressure = null, humidity = null, precip = null;
 
     // For the particle controller
-    public bool isNull { get { return dataisNull; } }
     public (float?, float?) windData { get { return (windDirection, windSpeed); } }
-    private bool _newData = false;
-    public bool newData
-    {
-        get
-        {   
-            bool temp = _newData;
-            _newData = false;
-            return temp;
-        }
-        private set { _newData = value;}
-    }
+    private WindChangeEvent windChanged;
 
     private void Awake()
     {
@@ -59,6 +53,13 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     private void Start()
     {
+        foreach (GameObject obj in particleObject)
+        { 
+            WindParticleController controller = obj.GetComponent<WindParticleController>();
+            controller.GetSystem();
+            windChanged += controller.UpdateDirection;
+        }
+
         windStartPos = instance.transform.Find("Wind").GetComponent<RectTransform>().position;
         weatherStartPos = instance.transform.Find("General").GetComponent<RectTransform>().position;
         ToggleWind();
@@ -122,8 +123,6 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = string.Format("{0:###}°", windDirection);
         }
 
-        newData = true;
-
         // Get other weather data
         try { temp = float.Parse(foundRows[0]["temp"].ToString()); }
         catch (FormatException) { temp = null; }
@@ -143,6 +142,11 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         string strPrecip = precip == null ? " - \n" : string.Format("{0:#0.0} mm/h", precip);
 
         weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
+
+        // Invoke the event for particle systems to update
+        double radDir = (double)(360f - windData.Item1) * Math.PI / 180f;
+        Vector2 unitVector = new Vector2((float)Math.Cos(radDir), (float)Math.Sin(radDir));
+        windChanged?.Invoke(unitVector);
     }
 
     private void ApplyNullSettings()
@@ -166,14 +170,14 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if (UserSettings.showWindWeather)
         {
             instance.gameObject.GetComponent<CanvasGroup>().alpha = 1;
-            particleObject.SetActive(true);
+            foreach (GameObject obj in particleObject) { obj.SetActive(true); }
         }
         else
         {
             instance.gameObject.GetComponent<CanvasGroup>().alpha = 0;
             instance.transform.Find("Wind").GetComponent<RectTransform>().position = windStartPos;
             instance.transform.Find("General").GetComponent<RectTransform>().position = weatherStartPos;
-            particleObject.SetActive(false);
+            foreach (GameObject obj in particleObject) { obj.SetActive(false); }
         }
     }
 }
