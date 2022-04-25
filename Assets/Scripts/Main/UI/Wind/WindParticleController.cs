@@ -20,7 +20,7 @@ public class WindParticleController : MonoBehaviour
         var vel = this.particles.velocityOverLifetime;
         float relativeSpeed = (float)windData.Item2 / 25f;
 
-        vel.xMultiplier = -unitVector.x * relativeSpeed * 150f;
-        vel.zMultiplier = -unitVector.y * relativeSpeed * 150f;
+        vel.xMultiplier = unitVector.x * relativeSpeed * 150f;
+        vel.zMultiplier = unitVector.y * relativeSpeed * 150f;
     }
 }

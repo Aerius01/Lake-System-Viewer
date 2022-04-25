@@ -10,7 +10,7 @@ public class EventSystemManager : MonoBehaviour
 {
     public GameObject settingsMenu, heightMapObject;
     private Toggle GISToggle, datePickerToggle;
-    private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput, fishScaleInput;
+    private TMP_InputField scalingFactorInput, speedUpInput, waterLevelInput, fishScaleInput, cutoffInput;
 
     [SerializeField]
     private EnvironmentManager environmentManager;
@@ -31,6 +31,7 @@ public class EventSystemManager : MonoBehaviour
         speedUpInput = baseInputs.transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
         waterLevelInput = baseInputs.transform.Find("WaterLevel").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>();
         fishScaleInput = baseInputs.transform.Find("FishScale").transform.Find("FishScaleInput").GetComponent<TMP_InputField>();
+        cutoffInput = baseInputs.transform.Find("Cutoff").transform.Find("CutoffInput").GetComponent<TMP_InputField>();
     }
 
     private void Start()
@@ -130,5 +131,18 @@ public class EventSystemManager : MonoBehaviour
         // // scaling in the Fish UpdateScale method
         fishScaleEvent?.Invoke(scaleValue);
         UserSettings.fishScalingFactor = scaleValue;
+    }
+
+    public void AdjustCutoff()
+    {
+        float userValue = float.Parse(cutoffInput.text);
+        if (userValue < 0)
+        {
+            // we only want positive scaling factors
+            userValue = 0.5f;
+            scalingFactorInput.text = string.Format("{0}", userValue);
+        }
+
+        UserSettings.cutoffDist = userValue;
     }
 }

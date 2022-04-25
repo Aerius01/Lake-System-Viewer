@@ -5,7 +5,7 @@ using System;
 public class FishManager : MonoBehaviour
 {
     private static Dictionary<int, Fish> fishDict {get; set;}
-    public static bool jumpingInTime = false;
+    private static bool jumpingInTime = false;
     public static bool vertScaleChange = false, fishScaleChange = false;
 
     public static void ActivateAll(string util, bool activationStatus)
@@ -14,6 +14,11 @@ public class FishManager : MonoBehaviour
         {
             if (fishDict[key].fishShouldExist) fishDict[key].ActivateUtil(util, activationStatus);
         }
+    }
+
+    public static void JumpInTime()
+    {
+        jumpingInTime = true;
     }
 
     public static void ChangeVerticalScale()

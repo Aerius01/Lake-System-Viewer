@@ -16,7 +16,7 @@ public class ThermoclineDOMain : MonoBehaviour
     public ThermoclinePlane thermoclinePlane {get; private set;}
     private float? oldScalingFactor = null;
     [HideInInspector]
-    public bool jumpingInTime = false;
+    private static bool jumpingInTime = false;
     private float incrementalHeight;
     private Vector3 originPositionBar, originContainer;
 
@@ -80,6 +80,11 @@ public class ThermoclineDOMain : MonoBehaviour
 
         lastIndex = currentIndex;
         oldScalingFactor = UserSettings.verticalScalingFactor;
+    }
+
+    public static void JumpInTime()
+    {
+        jumpingInTime = true;
     }
 
     public int CurrentIndex()

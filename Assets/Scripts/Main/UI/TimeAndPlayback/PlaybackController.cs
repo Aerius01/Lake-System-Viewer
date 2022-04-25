@@ -4,29 +4,25 @@ using TMPro;
 using System.Globalization;
 using UnityEngine.UI;
 
+public delegate void JumpInTime();
+
 public class PlaybackController : MonoBehaviour
 {
     private TextMeshProUGUI timeDisplayText;
     private Slider timeControlSlider;
     private Single totalTicks;
     private bool sliderSelected;
-
-    public static bool sliderHasChanged {
-        set {
-            if (value)
-            {
-                ThermoclineDOMain.instance.jumpingInTime = true;
-                // WindMain.instance.jumpingInTime = true;
-                FishManager.jumpingInTime = true;
-            }
-        }
-    
-    }
+    public static event JumpInTime jumpingInTime;
 
     private void Awake()
     {
         timeDisplayText = GameObject.Find("TimeDisplayText").GetComponent<TextMeshProUGUI>();
         timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
+
+        // Set up event listeners
+        jumpingInTime += FishManager.JumpInTime;
+        jumpingInTime += WindWeatherMain.JumpInTime;
+        jumpingInTime += ThermoclineDOMain.JumpInTime;
     }
 
     void Start()
@@ -53,10 +49,23 @@ public class PlaybackController : MonoBehaviour
     }
 
     // Slider controls
-    public void SliderChanged()
+    public void SliderDeselect()
     {
-        sliderHasChanged = true;
         long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
+        jumpingInTime?.Invoke();
+        sliderSelected = false;
+    }
+
+    public void ChangingValue()
+    {
+        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks);
+        TimeManager.instance.AddTicksToTime(differential);
+        jumpingInTime?.Invoke();
+    }
+
+    public void SliderSelect()
+    {
+        sliderSelected = true;
     }
 }

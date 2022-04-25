@@ -6,7 +6,6 @@ using System.Data;
 
 public delegate void WindChangeEvent(Vector2 newDir);
 
-
 public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     // Required game objects
@@ -28,7 +27,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private int lastIndex = -1, currentIndex;
     private bool dataisNull;
     [HideInInspector]
-    public bool jumpingInTime = false;
+    private static bool jumpingInTime = false;
 
     // Other
     private Vector3 windStartPos, weatherStartPos;
@@ -65,6 +64,11 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         ToggleWind();
     }
 
+    public static void JumpInTime()
+    {
+        jumpingInTime = true;
+    }
+
     public void UpdateWindWeather()
     {
         // Find most recent timestamp for which there is data
@@ -75,13 +79,12 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             currentIndex = Mathf.Abs(currentIndex) - 2;
         }
 
-        compassDial.transform.localEulerAngles = new Vector3(0f, 0f, Camera.main.transform.eulerAngles.y + 90f);
+        compassDial.transform.localEulerAngles = new Vector3(0f, 0f, Camera.main.transform.eulerAngles.y);
 
         // Only update if something is different
         if (jumpingInTime || currentIndex != lastIndex)
         {
             PerformUpdate();
-            // particles will update via the newData property
         }
 
         // End-of-update attributions
@@ -144,7 +147,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
 
         // Invoke the event for particle systems to update
-        double radDir = (double)(360f - windData.Item1) * Math.PI / 180f;
+        double radDir = (double)(360f - windData.Item1) * Math.PI / 180f + Math.PI/2;
         Vector2 unitVector = new Vector2((float)Math.Cos(radDir), (float)Math.Sin(radDir));
         windChanged?.Invoke(unitVector);
     }

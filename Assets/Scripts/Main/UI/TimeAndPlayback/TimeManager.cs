@@ -60,7 +60,7 @@ public class TimeManager : MonoBehaviour
 
     public void SkipBack()
     {
-        currentTime = currentTime.AddHours(-percentJump);
+        currentTime = currentTime.AddHours(-percentJump) > LocalPositionData.earliestDate ? currentTime.AddHours(-percentJump) : LocalPositionData.earliestDate;
     }
 
     // All changes to time are done centrally through the time manager
