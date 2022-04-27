@@ -24,6 +24,11 @@ public class Fish
             else return true;
         }
     }
+    
+    public bool canvasActive {get { return utils.canvas.activeSelf; }} 
+    public bool depthLineActive {get { return utils.depthLine.activeSelf; }} 
+    public bool trailActive {get { return utils.trail.activeSelf; }} 
+    public bool thermoIndActive {get { return utils.thermoInd.activeSelf; }}
 
     // Full point lists
     public DataPointClass[] dataPoints {get; private set;}

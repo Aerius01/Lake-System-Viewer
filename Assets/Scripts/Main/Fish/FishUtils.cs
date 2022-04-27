@@ -7,6 +7,11 @@ public class FishUtils : MonoBehaviour
     public GameObject canvas, depthLine, trail, thermoInd;
     private TextMeshProUGUI textElement;
 
+    public bool canvasActive {get { return canvas.activeSelf; }} 
+    public bool depthLineActive {get { return depthLine.activeSelf; }} 
+    public bool trailActive {get { return trail.activeSelf; }} 
+    public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
+
     private Dictionary<string, GameObject> classifier;
     public string newCanvasText {
         set
