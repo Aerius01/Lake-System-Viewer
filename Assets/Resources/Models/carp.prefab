@@ -53,6 +53,7 @@ MonoBehaviour:
   depthLine: {fileID: 1933004185797410670}
   trail: {fileID: 452667528355033292}
   thermoInd: {fileID: 8798508971830370314}
+  skinRenderer: {fileID: 137282803160378426}
 --- !u!114 &617102672988980870
 MonoBehaviour:
   m_ObjectHideFlags: 0

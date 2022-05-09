@@ -8,14 +8,12 @@ public class FishHighlighter : MonoBehaviour
     private void Start()
     {
         stdColors = new Color[renderers.Length];
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            stdColors[i] = renderers[i].material.color;
-        }        
+        for (int i = 0; i < renderers.Length; i++) { stdColors[i] = renderers[i].material.color; }        
     }
 
     public void ResetColor()
     {
+        if (stdColors == null) { Start(); }
         for (int i = 0; i < renderers.Length; i++)
         {
             renderers[i].material.DisableKeyword("_EMISSION");

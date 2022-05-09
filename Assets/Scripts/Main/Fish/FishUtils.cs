@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class FishUtils : MonoBehaviour
 {
     public GameObject canvas, depthLine, trail, thermoInd;
+    [SerializeField] private SkinnedMeshRenderer skinRenderer;
     private TextMeshProUGUI textElement;
 
     public bool canvasActive {get { return canvas.activeSelf; }} 
@@ -13,12 +14,7 @@ public class FishUtils : MonoBehaviour
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
 
     private Dictionary<string, GameObject> classifier;
-    public string newCanvasText {
-        set
-        {
-            textElement.text = value;
-        }
-    }
+    public string newCanvasText { set { textElement.text = value; } }
 
     private void Awake()
     {
@@ -94,9 +90,9 @@ public class FishUtils : MonoBehaviour
             LinePoint.y = (float)-ThermoclineDOMain.instance.thermoclinePlane.currentDepth * UserSettings.verticalScalingFactor;
             thermoInd.transform.position = LinePoint;
         }
-        else
-        {
-            thermoInd.SetActive(false);
-        }
+        else { thermoInd.SetActive(false); }
     }
+
+    public float MaxExtent() { return Mathf.Max(skinRenderer.bounds.extents.x, skinRenderer.bounds.extents.y, skinRenderer.bounds.extents.z); }
+    public Vector3 Extents() { return skinRenderer.bounds.extents; }
 }

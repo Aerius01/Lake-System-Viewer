@@ -1,88 +1,50 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
+using System.Collections;
+using TMPro;
 
 public class ListBox : MonoBehaviour
 {
     public bool open {get; protected set;} = false;
+    protected bool? opening = null;
     public bool active {get { return activeToggle.isOn; }}
     public bool colored {get; protected set;} = false;
+    public int rank {get; protected set;}
 
-    [SerializeField]
-    protected Toggle activeToggle;
-}
+    // Coroutine
+    protected RectTransform parentRect;
+    [SerializeField] protected GameObject arrowImage;
 
-public class FishBox : ListBox
-{
-    public Fish fish {get; private set;}
-    public float contentSize
+    protected RectTransform rect;
+    [SerializeField] protected Toggle activeToggle, tagToggle, depthToggle, trailToggle;
+    protected TextMeshProUGUI headerText;
+
+
+    protected virtual IEnumerator AnimateChange(float headerSize, float contentSize)
     {
-        get
+        // if currently open, the position differential is negative
+        float diff = this.open ? headerSize - contentSize : contentSize - headerSize;
+        float rotDiff = this.open ? 90f : -90f;
+
+        // rotation of arrowhead occurs in the first 1/3 of the animation, always
+        float targetTime = 0.1f;
+        float totalIncrements = 60f * targetTime; // 60fps
+        float rotIncrements = Mathf.RoundToInt(totalIncrements / 3);
+        float period = targetTime / totalIncrements;
+        
+        float increment = diff / totalIncrements;
+        float rotIncr = rotDiff / rotIncrements;
+
+        for (float i = 0; i < totalIncrements; i ++)
         {
-            if (this.open) return 60f;
-            else return 20f;
+            if (i < rotIncrements) arrowImage.transform.localEulerAngles += new Vector3(0f, 0f, rotIncr);
+            this.rect.sizeDelta += new Vector2(0, increment);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+            yield return new WaitForSeconds(period);
         }
+
+        if (this.opening == true) this.open = true;
+        else this.open = false;
+        this.opening = null;
     }
-
-    public int rank {get; private set;}
-
-    // Fish utility booleans
-    private bool canvas {get { return fish.canvasActive; }} 
-    private bool depthLine {get { return fish.depthLineActive; }} 
-    private bool trail {get { return fish.trailActive; }} 
-    private bool thermo {get { return fish.thermoIndActive; }} 
-
-    // METHODS
-    public void Activate(bool state=true)
-    {
-        activeToggle.isOn = state;
-        // deactivate the fish
-    }
-
-    public void SetRank(int rank) { this.rank = rank; }
-}
-
-public class SpeciesBox : ListBox
-{
-    private List<FishBox> components;
-    private int currentRank = 0;
-    private string speciesName;
-    public float contentSize
-    {
-        get
-        {
-            float totalSize = 0f;
-            foreach (FishBox box in components) { totalSize += box.contentSize; }
-            return totalSize;
-        }
-    }
-
-    // METHODS
-    public SpeciesBox(string name) { this.speciesName = name; components = new List<FishBox>();}
-
-    public void Add(FishBox box) { box.SetRank(this.currentRank); this.currentRank += 1; this.components.Add(box); }
-
-    public void Open()
-    {
-        this.open = true;
-        // increase the window size by contentSize (animate)
-    }
-
-    public void Close()
-    {
-        this.open = false;
-        // decrease the window size by contentSize (animate)
-    }
-
-    public void Activate(bool state=true)
-    {
-        activeToggle.isOn = state;
-        foreach (FishBox box in components) { box.Activate(state); }
-        // grey out gameobject so toggle is still selectable and components interactable
-    }
-
-    public void ActivateTags(bool state=true) { foreach (FishBox box in components) { box.fish.ActivateUtil("tag", state); } }
-    public void ActivateDepthLines(bool state=true) { foreach (FishBox box in components) { box.fish.ActivateUtil("line", state); } }
-    public void ActivateTrails(bool state=true) { foreach (FishBox box in components) { box.fish.ActivateUtil("trail", state); } }
-    public void ActivateThermos(bool state=true) { foreach (FishBox box in components) { box.fish.ActivateUtil("thermo", state); } }
 }

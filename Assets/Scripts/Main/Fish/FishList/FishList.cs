@@ -7,7 +7,13 @@ public class FishList : MonoBehaviour
     public GameObject headerPrefab;
     private List<FishListElement> elements;
 
-    public void PopulateList()
+    private float listSize;
+
+    private List<SpeciesBox> speciesList;
+    private int speciesRank;
+    [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
+
+    public void PopulateListNew()
     {
         elements = new List<FishListElement>();
 
@@ -28,27 +34,70 @@ public class FishList : MonoBehaviour
         this.gameObject.GetComponent<RectTransform>().sizeDelta = currentSize;
     }
 
-    private void FixedUpdate()
+    public void PopulateList()
     {
-        foreach (FishListElement element in elements)
+        speciesList = new List<SpeciesBox>();
+
+        // Populate the list
+        foreach (Fish fish in FishManager.fishDict.Values)
         {
-            if (element.fishActive)
+            bool attributed = false;
+            foreach (SpeciesBox speciesBox in speciesList)
             {
-                element.UpdateText();
-                if (element.greyedOut) { element.RestoreColor(); }
-                // if header greyed out, restore
-                // re-enable all functionality
-            }
-            else
-            {
-                element.UpdateText(active:false);
-                if (!element.greyedOut) { element.Greyout(); }
-                // disable color button
-                // disable double click zoom
-                // grey out header
+                if (fish.speciesName == speciesBox.speciesName)
+                {
+                    GameObject obj = (Instantiate (fishBoxTemplate) as GameObject);
+                    FishBox fishBox = obj.GetComponent<FishBox>();
+
+                    // sets parent, rank, and sets up the FishBox
+                    speciesBox.AddFish(fish, fishBox);
+                    attributed = true;
+                }
+
+                if (attributed) break;
             }
 
-            // use fishActive to determine whether to grey out or not, ColoringButton SetNewColor() method
+            if (!attributed) // create the species box if it doesn't exist
+            {
+                GameObject obj = (Instantiate (speciesBoxTemplate) as GameObject);
+                obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
+
+                SpeciesBox box = obj.GetComponent<SpeciesBox>();
+                box.SetUpBox(fish.speciesName, this.speciesRank);
+
+                speciesList.Add(box);
+                this.speciesRank += 1;
+
+                // Add the fish to the new SpeciesBox
+                GameObject fishBoxObj = (Instantiate (fishBoxTemplate) as GameObject);
+                FishBox fishBox = fishBoxObj.GetComponent<FishBox>();
+                box.AddFish(fish, fishBox);
+            }
         }
+    }
+
+    private void FixedUpdate()
+    {
+        listSize = 0f;
+        foreach (SpeciesBox speciesBox in speciesList)
+        {
+            listSize += speciesBox.open ? speciesBox.contentSize : 60f;
+            foreach (FishBox fishBox in speciesBox.components)
+            {
+                if (fishBox.fish.fishShouldExist)
+                {
+                    fishBox.UpdateText();
+                    if (fishBox.greyedOut) { fishBox.RestoreColor(); }
+                }
+                else
+                {
+                    fishBox.UpdateText(active:false);
+                    if (!fishBox.greyedOut) { fishBox.Greyout(); }
+                }
+            }
+        }
+
+        RectTransform recter = this.GetComponent<RectTransform>();
+        recter.sizeDelta += new Vector2(0f, listSize - recter.rect.height);
     }
 }

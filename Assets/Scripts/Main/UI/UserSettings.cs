@@ -39,7 +39,7 @@ public class UserSettings
     private static bool _showSatelliteImage;
 
     public static float verticalScalingFactor = 3f;
-    public static float fishScalingFactor = 25f;
+    public static float fishScalingFactor = 1f;
     public static float speedUpCoefficient = 10f;
     public static float waterLevel = 0f;
     public static float cutoffDist = 0.1f;

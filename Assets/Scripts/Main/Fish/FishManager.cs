@@ -4,7 +4,7 @@ using System;
 
 public class FishManager : MonoBehaviour
 {
-    private static Dictionary<int, Fish> fishDict {get; set;}
+    public static Dictionary<int, Fish> fishDict {get; private set;}
     private static bool jumpingInTime = false;
     public static bool vertScaleChange = false, fishScaleChange = false;
 
@@ -73,31 +73,23 @@ public class FishManager : MonoBehaviour
             obj.transform.parent = this.gameObject.transform;
             obj.name = string.Format("{0}", fish.id);
 
+            fish.SetFishUtils(obj.GetComponent<FishUtils>());
+            fish.SetFishHighlighter(obj.GetComponent<FishHighlighter>());
+            fish.SetFishGameObject(obj);
+
             if (fish.length != null)
             {
                 GameObject scaleDummy = obj.transform.Find("ScaleDummy").gameObject;
                 BoxCollider collider = scaleDummy.GetComponent<BoxCollider>();
 
                 string name = Species.prefabDict.ContainsKey(fish.speciesName) ? fish.speciesName.ToLower() : "roach";
-                SkinnedMeshRenderer mesh = null;
-                if (fish.speciesName == "Mirror carp" || fish.speciesName == "Scaled carp")
-                {
-                    mesh = scaleDummy.transform.Find("carp").GetComponent<SkinnedMeshRenderer>();
-                }
-                else { mesh = scaleDummy.transform.Find(name).GetComponent<SkinnedMeshRenderer>(); }
 
-                // Set fish size, one terrain unit is one meter
-                float currentLength = Mathf.Max(mesh.bounds.size.x, mesh.bounds.size.y, mesh.bounds.size.z);
-                float requiredScale = (float)fish.length / 1000f / currentLength * UserSettings.fishScalingFactor;
+                float requiredScale = (float)fish.length / 1000f / fish.maxExtent * UserSettings.fishScalingFactor;
                 scaleDummy.transform.localScale = new Vector3(requiredScale, requiredScale, requiredScale);
 
                 // Adjust collider size
-                collider.size = mesh.localBounds.size * 1.2f;
+                collider.size = fish.extents * 1.2f;
             }
-
-            fish.SetFishUtils(obj.GetComponent<FishUtils>());
-            fish.SetFishHighlighter(obj.GetComponent<FishHighlighter>());
-            fish.SetFishGameObject(obj);
 
             obj.SetActive(false);
             fishDict.Add(key, fish);

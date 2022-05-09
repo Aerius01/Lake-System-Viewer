@@ -18,17 +18,20 @@ public class Fish
     {
         get
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestTime) < 0 
-                || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0)
+            if ((DateTime.Compare(TimeManager.instance.currentTime, this.earliestTime) < 0 
+                || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0) || spawnOverride)
                 return false;
             else return true;
         }
     }
+    public bool spawnOverride = false;
     
     public bool canvasActive {get { return utils.canvas.activeSelf; }} 
     public bool depthLineActive {get { return utils.depthLine.activeSelf; }} 
     public bool trailActive {get { return utils.trail.activeSelf; }} 
     public bool thermoIndActive {get { return utils.thermoInd.activeSelf; }}
+    public float maxExtent { get { return utils.MaxExtent(); } }
+    public Vector3 extents { get { return utils.Extents(); } }
 
     // Full point lists
     public DataPointClass[] dataPoints {get; private set;}
@@ -104,56 +107,25 @@ public class Fish
         this.canvasTextPart2 = string.Format("\nSpecies: {0}\nSex: {1}", this.speciesName, this.male == null ? " ? " : this.male == true ? "M" : "F");
     }
 
-    public void SetFishUtils(FishUtils utils)
-    {
-        this.utils = utils;
-    }
+    public void SetFishUtils(FishUtils utils) { this.utils = utils; }
 
-    public void SetFishHighlighter(FishHighlighter highlighter)
-    {
-        this.highlighter = highlighter;
-    }
+    public void SetFishHighlighter(FishHighlighter highlighter) { this.highlighter = highlighter; }
 
-    public void SetFishGameObject(GameObject obj)
-    {
-        this.fishObject = obj;
-    }
+    public void SetFishGameObject(GameObject obj) { this.fishObject = obj; }
 
-    public void Deactivate()
-    {
-        this.fishObject.SetActive(false);
-    }
+    public void Deactivate() { this.fishObject.SetActive(false); }
 
-    public void Activate()
-    {
-        this.fishObject.SetActive(true);
-    }
+    public void Activate() { this.fishObject.SetActive(true); }
 
-    public bool FishIsActive()
-    {
-        return this.fishObject.activeSelf;
-    }
+    public bool FishIsActive() { return this.fishObject.activeSelf; }
 
-    public void ActivateUtil(string util, bool activationStatus)
-    {
-        this.utils.ActivateUtil(util, activationStatus);
-    }
+    public void ActivateUtil(string util, bool activationStatus) { this.utils.ActivateUtil(util, activationStatus); }
 
-    public void ResetFishColor()
-    {
-        this.highlighter.ResetColor();
-    }
+    public void ResetFishColor() { this.highlighter.ResetColor(); }
 
-    public void SetFishColor(Color color)
-    {
-        this.highlighter.SetColor(color);
+    public void SetFishColor(Color color) { this.highlighter.SetColor(color); }
 
-    }
-
-    public void LookAtFish()
-    {
-        Camera.main.transform.LookAt(this.fishObject.transform);
-    }
+    public void LookAtFish() { Camera.main.transform.LookAt(this.fishObject.transform); }
 
     public void UpdateFishScale(float newVal)
     {

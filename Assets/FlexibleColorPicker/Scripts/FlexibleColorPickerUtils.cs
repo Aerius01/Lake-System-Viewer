@@ -1,45 +1,40 @@
 using UnityEngine;
 using System;
-using TMPro;
+
+public delegate void ColorAccepted(Color color);
 
 public class FlexibleColorPickerUtils : MonoBehaviour
 {
+    private static FishListColoringButton fishListColoringButton;
+    public static Color currentColor {get; private set;}
+    public static Color standardHeaderColor {get; private set;}
+    public static Color standardButtonColor {get; private set;}
+    public static Color disabledColor {get; private set;}
+    public static event ColorAccepted colorAcceptedEvent;
+
     private static FlexibleColorPickerUtils _instance;
     [HideInInspector]
     public static FlexibleColorPickerUtils instance {get { return _instance; } set {_instance = value; }}
-    private static FishListColoringButton fishListColoringButton;
 
     private void Awake()
     {
         // Destroy duplicates instances
-        if (_instance != null && _instance != this)
-        {
-            Destroy(this.gameObject);
-        }
-        else
-        {
-            _instance = this;
-        }
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+
+        standardHeaderColor = new Color(28f/255f, 27f/255f, 55f/255f, 100f/255f);
+        standardButtonColor = new Color(28f/255f, 27f/255f, 55f/255f, 192f/255f);
+        disabledColor = new Color(1f, 1f, 1f, 100f/255f);
     }
 
-    private void Start()
-    {
-        instance.gameObject.SetActive(false);
-    }
-
-    public void SetNewTarget(FishListColoringButton fLButton)
-    {
-        fishListColoringButton = fLButton;
-        if (this.gameObject.activeSelf != true)
-        {
-            this.gameObject.SetActive(true);
-        }
-    }
+    private void Start() { this.gameObject.SetActive(false); }
+    public static void SetNewColor() { if (instance.gameObject.activeSelf != true) { instance.gameObject.SetActive(true); } }
 
     public void OkayButton()
     {
-        fishListColoringButton.SetNewHeaderColor(instance.gameObject.GetComponent<FlexibleColorPicker>().color);
-        this.gameObject.SetActive(false);
+        currentColor = instance.gameObject.GetComponent<FlexibleColorPicker>().color;
+        colorAcceptedEvent?.Invoke(currentColor);
+        instance.gameObject.SetActive(false);
     }
 
     private void HideIfClickedOutside(GameObject panel)
@@ -52,11 +47,12 @@ public class FlexibleColorPickerUtils : MonoBehaviour
                 null))
         {
             panel.SetActive(false);
+            colorAcceptedEvent = null;
         }
     }
 
     private void Update()
     {
-        HideIfClickedOutside(instance.gameObject);
+        HideIfClickedOutside(this.gameObject);
     }
 }
