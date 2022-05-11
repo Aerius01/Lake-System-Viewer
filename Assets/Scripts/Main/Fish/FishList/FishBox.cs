@@ -6,7 +6,7 @@ using TMPro;
 public class FishBox : ListBox
 {
     public Fish fish {get; private set;}
-    public float contentSize { get { return 215f; } }
+    public float contentSize { get { return 266f; } }
     private SpeciesBox parentBox;
 
     // Text updating
@@ -57,7 +57,7 @@ public class FishBox : ListBox
             if (this.open) this.opening = false;
             else this.opening = true;
 
-            StartCoroutine(AnimateChange(30f, this.contentSize));
+            StartCoroutine(AnimateChange(40f, this.contentSize));
         }
     }
 
@@ -128,6 +128,7 @@ public class FishBox : ListBox
             colorHandler.DisableButton();
             greyedOut = true;
             headerText.text = this.fish.id + " (inactive)";
+            ToggleInteractable(false);
         }
     }
 
@@ -138,10 +139,9 @@ public class FishBox : ListBox
             colorHandler.EnableButton();
             greyedOut = false;
             headerText.text = string.Format("{0}", this.fish.id);
+            ToggleInteractable(true);
         }
     }
-
-    public void SetRank(int rank) { this.rank = rank; }
 
     public void ActivateTag() { this.fish.ActivateUtil("tag", this.tagToggle.isOn); }
     public void ActivateDepthLine() { this.fish.ActivateUtil("line", this.depthToggle.isOn); }

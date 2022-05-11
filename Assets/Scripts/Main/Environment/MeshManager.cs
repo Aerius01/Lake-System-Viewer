@@ -19,6 +19,8 @@ public class MeshManager : MonoBehaviour
     public GameObject waterObject;
     public Gradient gradient;
 
+    [SerializeField] private TMP_InputField waterText;
+
     public void SetUpMesh()
     {   
         mesh = new Mesh();
@@ -40,10 +42,7 @@ public class MeshManager : MonoBehaviour
         waterObject.transform.position = LocalMeshData.meshCenter;
 
         // Set the text in the settings menu
-        GameObject.Find("Canvas").transform.Find("MainPanel").transform.Find("Settings").transform.Find("SettingsMenu").
-            transform.Find("Inputs").transform.Find("WaterLevel").transform.Find("WaterLevelInput").
-            GetComponent<TMP_InputField>().text = string.Format("{0}", waterObject.transform.position.y
-        );
+        waterText.text = string.Format("{0}", waterObject.transform.position.y);
     }
 
     public void ReZeroMesh()

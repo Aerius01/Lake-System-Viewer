@@ -7,9 +7,6 @@ public class ListBox : MonoBehaviour
 {
     public bool open {get; protected set;} = false;
     protected bool? opening = null;
-    public bool active {get { return activeToggle.isOn; }}
-    public bool colored {get; protected set;} = false;
-    public int rank {get; protected set;}
 
     // Coroutine
     protected RectTransform parentRect;
@@ -47,4 +44,7 @@ public class ListBox : MonoBehaviour
         else this.open = false;
         this.opening = null;
     }
+
+    protected void ToggleInteractable(bool status) { this.tagToggle.interactable = this.depthToggle.interactable = this.trailToggle.interactable = status; }
+
 }

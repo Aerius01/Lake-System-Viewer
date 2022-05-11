@@ -10,7 +10,6 @@ public class FishList : MonoBehaviour
     private float listSize;
 
     private List<SpeciesBox> speciesList;
-    private int speciesRank;
     [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
 
     public void PopulateListNew()
@@ -63,10 +62,8 @@ public class FishList : MonoBehaviour
                 obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
 
                 SpeciesBox box = obj.GetComponent<SpeciesBox>();
-                box.SetUpBox(fish.speciesName, this.speciesRank);
-
+                box.SetUpBox(fish.speciesName);
                 speciesList.Add(box);
-                this.speciesRank += 1;
 
                 // Add the fish to the new SpeciesBox
                 GameObject fishBoxObj = (Instantiate (fishBoxTemplate) as GameObject);

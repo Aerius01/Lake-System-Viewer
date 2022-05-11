@@ -7,6 +7,7 @@ public class SpeciesBox : ListBox
 {
     // Game objects and components
     [SerializeField] private GameObject fishBoxes, countField;
+    [SerializeField] private GameObject colorButton, removeButton;
 
     public List<FishBox> components {get; private set;}
     private int currentRank = 0;
@@ -17,17 +18,16 @@ public class SpeciesBox : ListBox
         get
         {
             float totalSize = 0f;
-            foreach (FishBox box in components) { totalSize += box.open ? box.contentSize : 30f; }
+            foreach (FishBox box in components) { totalSize += box.open ? box.contentSize : 40f; }
             totalSize += 298f;
             return totalSize;
         }
     }
 
     // METHODS
-    public void SetUpBox(string name, int rank)
+    public void SetUpBox(string name)
     {
         this.speciesName = name;
-        this.rank = rank;
 
         this.headerText = this.transform.Find("Header").transform.Find("SpeciesName").GetComponent<TextMeshProUGUI>();
         headerText.text = name;
@@ -40,7 +40,6 @@ public class SpeciesBox : ListBox
     public void AddFish(Fish fish, FishBox box)
     {
         // rank also serves as counter of individuals
-        box.SetRank(this.currentRank);
         this.currentRank += 1;
         this.components.Add(box);
         box.transform.SetParent(fishBoxes.transform, worldPositionStays: false);
@@ -69,8 +68,16 @@ public class SpeciesBox : ListBox
 
     public void Activate()
     { 
-        foreach (FishBox box in components) { box.Activate(this.activeToggle.isOn); }
-        // grey out gameobject so toggle is still selectable and components interactable
+        this.removeButton.GetComponent<Image>().color = this.colorButton.GetComponent<Image>().color =
+            this.activeToggle.isOn ? FlexibleColorPickerUtils.standardButtonColor : FlexibleColorPickerUtils.disabledColor;
+        this.removeButton.GetComponent<Button>().interactable = this.colorButton.GetComponent<Button>().interactable =
+            this.activeToggle.isOn;
+
+        foreach (FishBox box in components)
+        {
+            box.Activate(this.activeToggle.isOn);
+            this.ToggleInteractable(this.activeToggle.isOn);
+        }
     }
 
     public void SetSpeciesColor()

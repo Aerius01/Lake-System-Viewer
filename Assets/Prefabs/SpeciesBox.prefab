@@ -606,6 +606,8 @@ MonoBehaviour:
   trailToggle: {fileID: 6859071712650112337}
   fishBoxes: {fileID: 515298605585060599}
   countField: {fileID: 1344540687604419814}
+  colorButton: {fileID: 1344540688521554843}
+  removeButton: {fileID: 5881152381352233086}
 --- !u!1 &1344540687604419814
 GameObject:
   m_ObjectHideFlags: 0
@@ -798,8 +800,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 50
-    m_Right: 8
+    m_Left: 40
+    m_Right: 20
     m_Top: 8
     m_Bottom: 8
   m_ChildAlignment: 1

@@ -13,38 +13,24 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D))
-        {
-            if (this.moveCamera != null) { StopCoroutine(this.moveCamera); }
-        }
+        { if (this.moveCamera != null) { StopCoroutine(this.moveCamera); } }
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (zoomDisabled) { this.gameObject.transform.parent.GetComponent<SubMenuTriggers>().ToggleBool(); }
-        else
+        if (!zoomDisabled)
         {
             tap++;
-            if (tap == 1)
-            {
-                StartCoroutine(DoubleTapInterval());
-            }
-
-            else if (tap > 1)
-            {
-                // Zoom in
-                this.moveCamera = StartCoroutine(FocusCamera()) as Coroutine;
-                tap = 0;
-            }
+            if (tap == 1) { StartCoroutine(DoubleTapInterval()); }
         }
     }
     
     private IEnumerator DoubleTapInterval()
     {
-        yield return new WaitForSeconds(interval);
-        
-        if (this.tap == 1)
+        for (float i = 0; i < interval; i += 0.02f)
         {
-            this.gameObject.transform.parent.GetComponent<SubMenuTriggers>().ToggleBool();
+            if (tap > 1) { this.moveCamera = StartCoroutine(FocusCamera()) as Coroutine; break; }
+            yield return new WaitForSeconds(0.02f);
         }
         
         this.tap = 0;
@@ -74,8 +60,5 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
         this.moveCamera = null;
     }
 
-    public void DisableZoom(bool state)
-    {
-        zoomDisabled = state;
-    }
+    public void DisableZoom(bool state) { zoomDisabled = state; }
 }
