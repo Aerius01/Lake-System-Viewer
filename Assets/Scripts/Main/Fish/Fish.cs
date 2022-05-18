@@ -173,12 +173,15 @@ public class Fish
 
             // find new bounding values if we've entered a new timestep range or vertical scale has changed
             if (currentIndex != this.lastRung || scaleChange)
-            {
+            {   
+                // scale changes break the update without adjustment since index is not incremented, but cutoff is
+                if (scaleChange && smallDist) cutoffCounter -= 1;         
+
                 this.startPos = new Vector3(this.dataPoints[currentIndex - 1 - cutoffCounter].x + LocalMeshData.cutoffs["minWidth"], 
                     this.dataPoints[currentIndex - 1 - cutoffCounter].z * UserSettings.verticalScalingFactor, 
                     LocalMeshData.cutoffs["maxHeight"] - this.dataPoints[currentIndex - 1 - cutoffCounter].y)
                 ;
-
+                
                 this.endPos = new Vector3(this.dataPoints[currentIndex].x + LocalMeshData.cutoffs["minWidth"],
                     this.dataPoints[currentIndex].z * UserSettings.verticalScalingFactor,
                     LocalMeshData.cutoffs["maxHeight"] - this.dataPoints[currentIndex].y)
