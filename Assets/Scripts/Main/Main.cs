@@ -3,6 +3,8 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 
+public delegate void FishDictAssembled();
+
 public class Main : MonoBehaviour
 {
     [SerializeField]
@@ -21,6 +23,8 @@ public class Main : MonoBehaviour
 
     [SerializeField]
     private Texture2D NDVI;
+
+    public static event FishDictAssembled fishDictAssembled;
 
     private void Awake()
     {
@@ -54,6 +58,8 @@ public class Main : MonoBehaviour
     private IEnumerator SetupWorld()
     {
         fishManager.SetUpFish();
+        fishDictAssembled?.Invoke();
+
         meshManager.SetUpMesh();
         fishList.PopulateList();
         yield return new WaitForSeconds(0.1f);

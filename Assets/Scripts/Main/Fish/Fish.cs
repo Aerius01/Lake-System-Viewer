@@ -44,6 +44,7 @@ public class Fish
 
     // Fish specific data
     public int id {get; private set;}
+    public string captureType {get; private set;}
     public int? length {get; private set;}
     public int? speciesCode {get; private set;}
     public int? weight {get; private set;}

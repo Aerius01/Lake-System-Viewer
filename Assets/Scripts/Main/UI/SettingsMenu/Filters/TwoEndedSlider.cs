@@ -13,10 +13,13 @@ public class TwoEndedSlider : MonoBehaviour
     private TMP_InputField minInput, maxInput;
 
     private bool isMinNode;
-    public float currentMin { get { return minSlider.normalizedValue; }}
-    public float currentMax { get { return maxSlider.normalizedValue; }}
-
     private float minValue = 0f, maxValue = 1f;
+
+    // Exposed
+    public float currentMin { get { return minSlider.normalizedValue * minValue; } }
+    public float currentMax { get { return maxSlider.normalizedValue * maxValue; } }
+    public bool inverted { get { return this.invertToggle.isOn; } }
+
 
     private void Awake()
     {
@@ -28,17 +31,15 @@ public class TwoEndedSlider : MonoBehaviour
 
         minInput = minObject.transform.Find("InputField (TMP)").GetComponent<TMP_InputField>();
         maxInput = maxObject.transform.Find("InputField (TMP)").GetComponent<TMP_InputField>();
-
-        UpdateMaskBars();
-        lowerBar.gameObject.SetActive(invertToggle.isOn);
-        middleBar.gameObject.SetActive(!invertToggle.isOn);
-        upperBar.gameObject.SetActive(invertToggle.isOn);
     }
 
-    public void SetUpComponent(float min, float max)
+    private void Start() { UpdateMaskBars(); }
+
+    public void SetRange(float min, float max)
     {
         this.minValue = min;
         this.maxValue = max;
+        UpdateTextValues();
     }
 
     public void ValueControl()
@@ -61,8 +62,8 @@ public class TwoEndedSlider : MonoBehaviour
 
     public void UpdateTextValues()
     {
-        minInput.text = string.Format("{0:0.00}", minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
-        maxInput.text = string.Format("{0:0.00}", maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
+        minInput.text = string.Format("{0:###}", minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
+        maxInput.text = string.Format("{0:###}", maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
     }
 
     public void UpdateMaskBars()
@@ -71,13 +72,15 @@ public class TwoEndedSlider : MonoBehaviour
         middleBar.position = minHandle.position;
         middleBar.sizeDelta += new Vector2( (maxHandle.position.x - minHandle.position.x) - middleBar.rect.width, 0f);
         upperBar.sizeDelta += new Vector2( upperBar.position.x - maxHandle.position.x - upperBar.rect.width, 0f);
+
+        MaskBarActivations();
     }
 
-    public void InvertSelection()
+    public void MaskBarActivations()
     {
-        lowerBar.gameObject.SetActive(this.invertToggle.isOn);
-        middleBar.gameObject.SetActive(!this.invertToggle.isOn);
-        upperBar.gameObject.SetActive(this.invertToggle.isOn);
+        lowerBar.gameObject.SetActive(!this.invertToggle.isOn);
+        middleBar.gameObject.SetActive(this.invertToggle.isOn);
+        upperBar.gameObject.SetActive(!this.invertToggle.isOn);
     }
 
     public void UpdateSliderFromInputMin() { minSlider.normalizedValue = float.Parse(minInput.text); }
