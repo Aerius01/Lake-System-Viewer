@@ -19,7 +19,7 @@ public class Fish
         get
         {
             if ((DateTime.Compare(TimeManager.instance.currentTime, this.earliestTime) < 0 
-                || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0) || spawnOverride)
+                || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0) || spawnOverride || !FilterManager.PassesAllFilters(this))
                 return false;
             else return true;
         }

@@ -16,8 +16,8 @@ public class TwoEndedSlider : MonoBehaviour
     private float minValue = 0f, maxValue = 1f;
 
     // Exposed
-    public float currentMin { get { return minSlider.normalizedValue * minValue; } }
-    public float currentMax { get { return maxSlider.normalizedValue * maxValue; } }
+    public float currentMin { get { return minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
+    public float currentMax { get { return maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
     public bool inverted { get { return this.invertToggle.isOn; } }
 
 

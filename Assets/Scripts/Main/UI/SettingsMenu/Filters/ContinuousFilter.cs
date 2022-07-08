@@ -1,8 +1,11 @@
 public class ContinuousFilter : Filter
 {
-    private float maxVal, minVal;
-    private bool inverted;
+    public float maxVal{ get; private set;}
+    public float minVal{ get; private set;}
+    public bool inverted{ get; private set;}
     public bool length { get; private set;}
+    public ContinuousFilterTile tile { get; private set;}
+
 
     public ContinuousFilter(float maxVal, float minVal, bool inverted, bool length)
     {
@@ -10,6 +13,8 @@ public class ContinuousFilter : Filter
         this.minVal = minVal;
         this.inverted = inverted;
         this.length = length;
+
+        this.tile = FiltersBar.instance.AddCont(this);
     }
 
     public override bool PassesFilter(Fish fish)
