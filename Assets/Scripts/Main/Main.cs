@@ -27,7 +27,7 @@ public class Main : MonoBehaviour
     public static event FishDictAssembled fishDictAssembled;
 
     private void Awake()
-    {
+    {       
         Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
             {"meshData", meshDataCSV},
             {"positionData", positionDataCSV},
@@ -59,10 +59,12 @@ public class Main : MonoBehaviour
     {
         fishManager.SetUpFish();
         fishDictAssembled?.Invoke();
-
         meshManager.SetUpMesh();
         fishList.PopulateList();
         yield return new WaitForSeconds(0.1f);
         TimeManager.instance.PlayButton();
+
+        DatabaseConnection dbCon = new DatabaseConnection();
+        dbCon.DoIt();
     }
 }

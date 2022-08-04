@@ -15,18 +15,22 @@ public class ContinuousFilterHandler : MonoBehaviour
     private float rangeMin = float.MaxValue, rangeMax = float.MinValue;
     private int counter = 0;
 
-    private void Start()
+    private void Awake()
     {
         Main.fishDictAssembled += this.GetScales;
-        if (this.length) { this.header.text =  "Length"; }
-        else { this.header.text = "Weight"; }
+    }
+
+    private void Start()
+    {
+        if (this.length) { this.header.text =  "Length";}
+        else { this.header.text = "Weight";}
     }
 
     private void GetScales()
     {
         foreach (var key in FishManager.fishDict.Keys)
         {
-            if (length)
+            if (this.length)
             {
                 if (FishManager.fishDict[key].length != null)
                 {

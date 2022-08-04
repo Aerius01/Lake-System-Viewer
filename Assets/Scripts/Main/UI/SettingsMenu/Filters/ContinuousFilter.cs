@@ -22,13 +22,13 @@ public class ContinuousFilter : Filter
         if (this.length)
         {
             if (fish.length == null) { return false; }
-            else if (!this.inverted) { if ((float)fish.length < this.maxVal && (float)fish.length > this.minVal) { return true; } }
+            else if (!this.inverted) { if ((float)fish.length <= this.maxVal && (float)fish.length >= this.minVal) { return true; } }
             else if (this.inverted) { if (!((float)fish.length < this.maxVal && (float)fish.length > this.minVal)) { return true; } }
         }
         else
         {
             if (fish.weight == null) { return false; }
-            else if (!this.inverted) { if ((float)fish.weight < this.maxVal && (float)fish.weight > this.minVal) { return true; } }
+            else if (!this.inverted) { if ((float)fish.weight <= this.maxVal && (float)fish.weight >= this.minVal) { return true; } }
             else if (this.inverted) { if (!((float)fish.weight < this.maxVal && (float)fish.weight > this.minVal)) { return true; } }
         }
 

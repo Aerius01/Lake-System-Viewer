@@ -12,14 +12,16 @@ public class CategoricalFilterHandler : MonoBehaviour
     [SerializeField] private GameObject togglePrefab;
     [SerializeField] private RectTransform contentPanel;
 
-
     private List<Toggle> toggles;
     private int counter = 0;
 
+    private void Awake()
+    {
+        Main.fishDictAssembled += this.GetOptions;
+    }
 
     private void Start()
     {
-        Main.fishDictAssembled += this.GetOptions;
         if (this.sex) { this.header.text = "Sex"; }
         else { this.header.text = "Capture Type"; }
 

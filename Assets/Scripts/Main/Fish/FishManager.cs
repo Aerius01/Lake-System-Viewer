@@ -105,7 +105,7 @@ public class FishManager : MonoBehaviour
         {
             Fish currentFish = fishDict[key];
             
-            // if before first time step or after last and fish exists, despawn it
+            // Check whether the fish should be currently spawned or not
             if (!currentFish.fishShouldExist)
             {
                 if (currentFish.FishIsActive()) currentFish.Deactivate();
