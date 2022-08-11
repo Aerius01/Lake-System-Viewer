@@ -66,7 +66,6 @@ public class FishManager : MonoBehaviour
         foreach (int key in LocalPositionData.positionDict.Keys)
         {
             Fish fish = new Fish(key);
-            this.gameObject.GetComponent<Species>().CreateDict();
 
             GameObject prefab = Species.prefabDict.ContainsKey(fish.speciesName) ? Species.prefabDict[fish.speciesName] : Species.prefabDict["Roach"];
             GameObject obj = (Instantiate (prefab, fish.startPos, fish.startOrient) as GameObject);
