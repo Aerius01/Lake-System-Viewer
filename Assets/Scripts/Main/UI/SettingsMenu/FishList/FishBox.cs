@@ -37,16 +37,14 @@ public class FishBox : ListBox
         this.headerText = this.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>();
         headerText.text = string.Format("{0}", fish.id);
 
-        (bool? male, string speciesName, int? weight, int? length, float currentDepth, bool fishActive) = FishManager.GetFishStats(this.fish.id);
-
         // This information never changes
         initText = string.Format("Sex: {0}\nSpecies: {1}\nWeight: {2}g\nSize: {3}mm\nDepth: ",
-            male == null ? "?" : (male == true ? "M" : "F"), 
-            string.IsNullOrEmpty(speciesName) ? "?" : speciesName,
-            weight == null ? "?" : ((int)weight).ToString(),
-            length == null ? "?" : ((int)length).ToString());
+            fish.male == null ? "?" : (fish.male == true ? "M" : "F"), 
+            string.IsNullOrEmpty(fish.speciesName) ? "?" : fish.speciesName,
+            fish.weight == null ? "?" : ((int)fish.weight).ToString(),
+            fish.length == null ? "?" : ((int)fish.length).ToString());
 
-        gameText.text = string.Format("{0}{1:0.00}m", initText, currentDepth);
+        gameText.text = string.Format("{0}{1:0.00}m", initText, fish.currentDepth);
     }
 
     public void OpenCloseBox()
@@ -113,11 +111,7 @@ public class FishBox : ListBox
 
     public void UpdateText(bool active=true)
     {
-        if (active)
-        {
-            (bool? male, string speciesName, int? weight, int? length, float currentDepth, bool fishActive) = FishManager.GetFishStats(this.fish.id);
-            gameText.text = string.Format("{0}{1:0.00}m", initText, currentDepth);
-        }
+        if (active) { gameText.text = string.Format("{0}{1:0.00}m", initText, this.fish.currentDepth); }
         else { gameText.text = string.Format("{0}{1}", initText, "-"); }
     }
 
@@ -143,9 +137,9 @@ public class FishBox : ListBox
         }
     }
 
-    public void ActivateTag() { if (fish.fishShouldExist) this.fish.ActivateUtil("tag", this.tagToggle.isOn); }
-    public void ActivateDepthLine() { if (fish.fishShouldExist) this.fish.ActivateUtil("line", this.depthToggle.isOn); }
-    public void ActivateTrail() { if (fish.fishShouldExist) this.fish.ActivateUtil("trail", this.trailToggle.isOn); }
+    public void ActivateTag() { this.fish.ActivateTag(this.tagToggle.isOn); }
+    public void ActivateDepthLine() { this.fish.ActivateDepthLine(this.depthToggle.isOn); }
+    public void ActivateTrail() { this.fish.ActivateTrail(this.trailToggle.isOn); }
 
     public void ToggleTag(bool active) { if (fish.fishShouldExist) this.tagToggle.isOn = active; }
     public void ToggleDepthLine(bool active) { if (fish.fishShouldExist) this.depthToggle.isOn = active; }

@@ -3,17 +3,17 @@ public class UserSettings
     public static bool showFishTags
     {
         get {return _showFishTags;}
-        set {_showFishTags = value; FishManager.ActivateAll("tag", value);}
+        set {_showFishTags = value; FishManager.ActivateAllTags(value);}
     }
     public static bool showFishDepthLines
     {
         get {return _showFishDepthLines;}
-        set {_showFishDepthLines = value; FishManager.ActivateAll("line", value);}
+        set {_showFishDepthLines = value; FishManager.ActivateAllDepths(value);}
     }
     public static bool showFishTrails
     {
         get {return _showFishTrails;}
-        set {_showFishTrails = value; FishManager.ActivateAll("trail", value);}
+        set {_showFishTrails = value; FishManager.ActivateAllTrails(value);}
     }
     public static bool showThermocline 
     {

@@ -8,13 +8,12 @@ public class FishUtils : MonoBehaviour
     [SerializeField] private SkinnedMeshRenderer skinRenderer;
     private TextMeshProUGUI textElement;
 
+    public float maxExtent { get { return Mathf.Max(skinRenderer.bounds.extents.x, skinRenderer.bounds.extents.y, skinRenderer.bounds.extents.z); } }
+    public Vector3 extents { get { return skinRenderer.bounds.extents; } }
     public bool canvasActive {get { return canvas.activeSelf; }} 
     public bool depthLineActive {get { return depthLine.activeSelf; }} 
     public bool trailActive {get { return trail.activeSelf; }} 
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
-
-    private Dictionary<string, GameObject> classifier;
-    public string newCanvasText { set { textElement.text = value; } }
 
     private void Awake()
     {
@@ -24,18 +23,10 @@ public class FishUtils : MonoBehaviour
 
     private void Start()
     {
-        classifier = new Dictionary<string, GameObject>()
-        {
-            {"tag", canvas},
-            {"line", depthLine},
-            {"trail", trail},
-            {"thermo", thermoInd}
-        };
-
-        if (UserSettings.showFishTags) ActivateUtil("tag", true);
-        if (UserSettings.showFishDepthLines) ActivateUtil("line", true);
-        if (UserSettings.showFishTrails) ActivateUtil("trail", true);
-        if (UserSettings.showThermocline) ActivateUtil("thermo", true);
+        if (UserSettings.showFishTags) ActivateTag(true);
+        if (UserSettings.showFishDepthLines) ActivateDepthLine(true);
+        if (UserSettings.showFishTrails) ActivateTrail(true);
+        if (UserSettings.showThermocline) ActivateThermoBob(true);
     }
 
     private void Update()
@@ -49,27 +40,22 @@ public class FishUtils : MonoBehaviour
              
             if (collider.Raycast(ray, out hit, 999999f))
             {
-                this.ToggleUtil("tag");
+                this.ToggleTag();
             }
         }
     }
 
-    public void ActivateUtil(string util, bool activationStatus)
-    {
-        GameObject obj = classifier[util];
-        obj.SetActive(activationStatus);
-    }
+    public void ActivateTag(bool activationStatus) { canvas.SetActive(activationStatus); }
+    public void ActivateDepthLine(bool activationStatus) { depthLine.SetActive(activationStatus); }
+    public void ActivateTrail(bool activationStatus) { trail.SetActive(activationStatus); }
+    public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); }
 
-    public void ToggleUtil(string util)
-    {
-        GameObject obj = classifier[util];
-        obj.SetActive(!obj.activeSelf);
-    }
+    public void ToggleTag() { canvas.SetActive(!canvas.activeSelf); }
+    public void ToggleDepthLine() { depthLine.SetActive(!depthLine.activeSelf); }
+    public void ToggleTrail() { trail.SetActive(!trail.activeSelf); }
+    public void ToggleThermoBob() { thermoInd.SetActive(!thermoInd.activeSelf); }
 
-    public void ClearTrail()
-    {
-        this.trail.GetComponent<TrailRenderer>().Clear();
-    }
+    public void ClearTrail() { this.trail.GetComponent<TrailRenderer>().Clear(); }
 
     public void UpdateDepthIndicatorLine(Vector3 LinePoint)
     {
@@ -93,6 +79,5 @@ public class FishUtils : MonoBehaviour
         else { thermoInd.SetActive(false); }
     }
 
-    public float MaxExtent() { return Mathf.Max(skinRenderer.bounds.extents.x, skinRenderer.bounds.extents.y, skinRenderer.bounds.extents.z); }
-    public Vector3 Extents() { return skinRenderer.bounds.extents; }
+    public void setNewText(string val) { textElement.text = val; }
 }

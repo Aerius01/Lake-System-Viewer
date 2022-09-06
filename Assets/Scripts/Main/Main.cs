@@ -26,6 +26,9 @@ public class Main : MonoBehaviour
     [SerializeField]
     private Texture2D NDVI;
 
+    [SerializeField]
+    private GameObject managerObject;
+
     public static event FishDictAssembled fishDictAssembled;
 
     private bool called = false;
@@ -58,24 +61,26 @@ public class Main : MonoBehaviour
         ThermoclineDOMain.instance.UpdateBars();
         WindWeatherMain.instance.UpdateWindWeather();
 
-        if (!called)
-        {
-            try
-            {
-                GetData();
-                called = true;
-            }
-            catch { throw; }
-        }
+        // if (!called)
+        // {
+        //     try
+        //     {
+        //         GetData();
+        //         called = true;
+        //     }
+        //     catch { throw; }
+        // }
         
     }
 
     private IEnumerator SetupWorld()
     {
-        fishManager.SetUpFish();
-        fishDictAssembled?.Invoke();
+        // fishManager.SetUpFish();
+        // fishDictAssembled?.Invoke();
         // meshManager.SetUpMesh();
+        fishManager = new FishManager(managerObject);
         fishList.PopulateList();
+
         yield return new WaitForSeconds(0.1f);
         TimeManager.instance.PlayButton();
         // Debug.Log(DatabaseConnection.connected);
@@ -84,17 +89,18 @@ public class Main : MonoBehaviour
 
     // private async void ConnectToDB() { await DatabaseConnection.ConnectAsync(); }
     
-    private async void GetData()
+    private void GetData()
     {
-        DataPacket[] packet = await DatabaseConnection.GetFishData(FishManager.fishDict[2033]);
+        FishPacket packet = DatabaseConnection.GetMetaData(2054);
 
-        foreach (DataPacket pack in packet)
-        {
-            Debug.Log(pack);
-            Debug.Log(pack.timestamp);
-            Debug.Log(pack.id);
-            Debug.Log(pack.pos);
-        }
-        
+        Debug.Log(packet.fishID);
+        Debug.Log(packet.earliestTime);
+        Debug.Log(packet.latestTime);
+        Debug.Log(packet.length);
+        Debug.Log(packet.weight);
+        Debug.Log(packet.speciesCode);
+        Debug.Log(packet.speciesName);
+        Debug.Log(packet.male);
+        Debug.Log(packet.captureType);
     }
 }

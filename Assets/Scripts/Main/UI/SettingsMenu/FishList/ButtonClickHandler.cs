@@ -43,7 +43,7 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
 
         int fishID = int.Parse(this.gameObject.transform.Find("FishID").GetComponent<TextMeshProUGUI>().text);
 
-        Vector3 endCamPos = FishManager.GetFishPosition(fishID);
+        Vector3 endCamPos = FishManager.fishDict[fishID].currentPosition;
 
         // The vector along which the camera will travel
         Vector3 travelVector = endCamPos - startCamPos;
