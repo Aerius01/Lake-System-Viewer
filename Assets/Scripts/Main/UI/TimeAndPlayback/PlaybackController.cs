@@ -8,9 +8,9 @@ public delegate void JumpInTime();
 
 public class PlaybackController : MonoBehaviour
 {
-    private TextMeshProUGUI timeDisplayText;
+    private static TextMeshProUGUI timeDisplayText;
     private Slider timeControlSlider;
-    private Single totalTicks;
+    private static Single totalTicks;
     private bool sliderSelected;
     public static event JumpInTime jumpingInTime;
 
@@ -20,17 +20,16 @@ public class PlaybackController : MonoBehaviour
         timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
 
         // Set up event listeners
-        jumpingInTime += FishManager.JumpInTime;
         jumpingInTime += WindWeatherMain.JumpInTime;
         jumpingInTime += ThermoclineDOMain.JumpInTime;
     }
 
-    void Start()
-    {
-        timeDisplayText.text = LocalPositionData.earliestDate.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+    private void Start() { sliderSelected = false; }
 
-        sliderSelected = false;
-        totalTicks = LocalPositionData.latestDate.Ticks - LocalPositionData.earliestDate.Ticks;
+    public static void SetTickerDisplay()
+    {
+        timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+        totalTicks = FishManager.latestOverallTime.Ticks - FishManager.earliestOverallTime.Ticks;
     }
 
     void FixedUpdate()
@@ -43,7 +42,7 @@ public class PlaybackController : MonoBehaviour
             // Adjust the slider value automatically if not touching it
             if (!sliderSelected)
             {
-                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks) / (double)totalTicks);
+                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks) / (double)totalTicks);
             }
         }
     }
@@ -51,7 +50,7 @@ public class PlaybackController : MonoBehaviour
     // Slider controls
     public void SliderDeselect()
     {
-        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks);
+        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
         jumpingInTime?.Invoke();
         sliderSelected = false;
@@ -59,13 +58,10 @@ public class PlaybackController : MonoBehaviour
 
     public void ChangingValue()
     {
-        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - LocalPositionData.earliestDate.Ticks);
+        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
         jumpingInTime?.Invoke();
     }
 
-    public void SliderSelect()
-    {
-        sliderSelected = true;
-    }
+    public void SliderSelect() { sliderSelected = true; }
 }

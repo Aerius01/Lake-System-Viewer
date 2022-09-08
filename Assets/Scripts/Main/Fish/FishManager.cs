@@ -1,16 +1,21 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class FishManager 
 {
     public static Dictionary<int, Fish> fishDict {get; private set;}
-    private static bool jumpingInTime = false;
     public static bool vertScaleChange = false, fishScaleChange = false;
+    public static DateTime earliestOverallTime {get; private set;}
+    public static DateTime latestOverallTime {get; private set;}
 
     public FishManager(GameObject managerObject)
     {
         fishDict = new Dictionary<int, Fish>();
-        foreach (int key in LocalPositionData.positionDict.Keys)
+        earliestOverallTime = DateTime.MaxValue;
+        latestOverallTime = DateTime.MinValue;
+
+        foreach (int key in LocalPositionData.positionDict.Keys) // temporary to not overwhelm during dev
         {
             FishPacket packet = DatabaseConnection.GetMetaData(key);
             if (packet != null)
@@ -18,15 +23,20 @@ public class FishManager
                 Fish newFish = managerObject.AddComponent<Fish>() as Fish;
                 newFish.CreateFish(packet, managerObject);
                 fishDict.Add(key, newFish);
+
+                // Determine bounding DateTimes on dataset
+                if (DateTime.Compare(newFish.earliestTime, FishManager.earliestOverallTime) < 0) FishManager.earliestOverallTime = newFish.earliestTime;
+                if (DateTime.Compare(newFish.latestTime, FishManager.latestOverallTime) > 0) FishManager.latestOverallTime = newFish.latestTime;
             }
         }
+
+        TimeManager.instance.SetBoundingDates(FishManager.earliestOverallTime, FishManager.latestOverallTime);
     }
 
     public static void ActivateAllTags(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTag(activationStatus); } }
     public static void ActivateAllDepths(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateDepthLine(activationStatus); } }
     public static void ActivateAllTrails(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTrail(activationStatus); } }
 
-    public static void JumpInTime() { jumpingInTime = true; } // ascribed to the event handled by PlaybackController.cs
     public static void ChangeVerticalScale() { vertScaleChange = true; } // ascribed to the event handled by EventSystemManager.cs
     public static void ChangeFishScale(float newVal) // ascribed to the event handled by EventSystemManager.cs
     { foreach (Fish fish in fishDict.Values) { fish.UpdateFishScale(newVal); } }
@@ -48,11 +58,10 @@ public class FishManager
                 if (!currentFish.fishCurrentlyExists) currentFish.Activate();
 
                 // Update position if already spawned
-                else currentFish.UpdateFishPosition(jumpingInTime, localScaler);
+                else currentFish.UpdateFishPosition(localScaler);
             }
         }
 
-        if (jumpingInTime) jumpingInTime = false;
         if (vertScaleChange && localScaler) vertScaleChange = false;
     }
 

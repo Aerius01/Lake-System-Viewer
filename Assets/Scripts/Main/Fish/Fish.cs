@@ -1,12 +1,12 @@
 using UnityEngine;
 using System;
-using System.Threading.Tasks;
-using System.Data;
+using System.Threading;
 
 public class Fish : MonoBehaviour
 {   
     // World position data
     public Vector3 startPos, endPos;
+    private readonly object locker = new object();
     public Quaternion startOrient, endOrient;
     private float extremeFishAngle = 15f;
 
@@ -32,10 +32,6 @@ public class Fish : MonoBehaviour
     public float maxExtent { get { return utils.maxExtent; } }
     public Vector3 extents { get { return utils.extents; } }
 
-    // Full point lists
-    // public DataPointClass[] dataPoints {get; private set;}
-    // public DateTime[] timeVector {get; private set;}
-    // public int totalReadings {get; private set;}
 
     // Utility class representing depth lines, tags, etc
     private FishUtils utils;
@@ -57,6 +53,8 @@ public class Fish : MonoBehaviour
     public Vector3 currentPosition {get {return this.fishObject.transform.position;} }
     public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor; } }
     private DataPacket[] currentPacket = null;
+    private Thread fetchingThread;
+    private bool timeBounded { get { return DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[0].timestamp) > 0 && DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[1].timestamp) < 0; }}
    
     public void CreateFish(FishPacket packet, GameObject manager)
     {
@@ -132,57 +130,72 @@ public class Fish : MonoBehaviour
         this.utils.setNewText(fullText);
     }
 
-    // need to modify SQL for min dist btw points --> handle cut-offs passively
-    // UserSettings.cutoffDist
-    public void UpdateFishPosition(bool timeJump, bool scaleChange)
+    // need to modify SQL for min dist btw points --> handle cut-offs passively (UserSettings.cutoffDist)
+    public void UpdateFishPosition(bool scaleChange)
     {
-        // First runthrough condition. Query result can never be null due to FishManager gatekeeping with this.fishShouldExist
-        if (this.currentPacket == null) { this.EvaluateNewBounds();}
+        // Create the thread if it doesn't exist to not break the subsequent if statement
+        if (this.fetchingThread == null) { this.fetchingThread = new Thread(new ThreadStart(this.ContactDB)); }
 
-        // Check if we've changed boundary conditions
-        else if (DateTime.Compare(this.currentPacket[1].timestamp, TimeManager.instance.currentTime) > 0 || timeJump || scaleChange) { this.EvaluateNewBounds(); Debug.Log("requerying"); } 
+        // Only update if the thread is not already running
+        if (this.fetchingThread.ThreadState == ThreadState.Stopped || this.fetchingThread.ThreadState == ThreadState.Unstarted)
+        {
+            // First runthrough condition. Successful query can never be null due to FishManager gatekeeping with this.fishShouldExist
+            if (this.currentPacket == null) { FetchNewBounds(); }
 
-        // Update normally
-        else { this.CalculatePositions(true); }
+            // Check if we've changed boundary conditions
+            else if (!timeBounded || scaleChange) { FetchNewBounds(); }
+
+            // Update normally if we're bounded (simple LERP)
+            else if (timeBounded) { this.CalculatePositions(); }
+        }
     }
 
-    private async void EvaluateNewBounds() { this.CalculatePositions(await this.UpdateVectors()); }
+    private void FetchNewBounds()
+    {
+        this.fetchingThread = new Thread(new ThreadStart(this.ContactDB));
+        this.fetchingThread.Start();
+    }
 
-    private async Task<bool> UpdateVectors()
+    private void ContactDB()
     {
         try
         {
-            this.currentPacket = await DatabaseConnection.GetFishData(this);
+            this.currentPacket = DatabaseConnection.GetFishData(this);
 
             Vector3 workingStartVector = this.currentPacket[0].pos;
-            this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                    workingStartVector.z * UserSettings.verticalScalingFactor, 
-                    LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-            ;
-
             Vector3 workingEndVector = this.currentPacket[1].pos;
-            this.startPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                    workingEndVector.z * UserSettings.verticalScalingFactor, 
-                    LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-            ;
 
-            return true;
+            lock(this.locker)
+            {
+                this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+                        workingStartVector.z * UserSettings.verticalScalingFactor, 
+                        LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+                ;
+
+                this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+                        workingEndVector.z * UserSettings.verticalScalingFactor, 
+                        LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+                ;
+            }
         }
-        catch { return false; }
+        catch (Npgsql.NpgsqlOperationInProgressException)
+        {
+            this.currentPacket = null;
+            Debug.Log(string.Format("ID: {0}; DB Operation already in progress", this.id));
+        }
     }
 
-    private void CalculatePositions(bool dataBoundsExist)
+    private void CalculatePositions()
     {
-        if (dataBoundsExist)
-        {    
-            this.startOrient = this.fishObject.transform.rotation;
-            if (this.endPos - this.startPos == new Vector3(0f, 0f, 0f)) this.endOrient = this.fishObject.transform.rotation;
-            else this.endOrient = Quaternion.LookRotation(this.endPos - this.startPos, Vector3.up);
-
-            float ratio = Convert.ToSingle((double)(TimeManager.instance.currentTime - this.currentPacket[0].timestamp).Ticks 
+        bool levelFish = false;
+        this.startOrient = this.fishObject.transform.rotation;
+        float ratio = Convert.ToSingle((double)(TimeManager.instance.currentTime - this.currentPacket[0].timestamp).Ticks 
             / (double)(this.currentPacket[1].timestamp - this.currentPacket[0].timestamp).Ticks);
         
-            bool levelFish = false;
+        lock(this.locker)
+        {
+            if (this.endPos - this.startPos == new Vector3(0f, 0f, 0f)) this.endOrient = this.fishObject.transform.rotation;
+            else this.endOrient = Quaternion.LookRotation(this.endPos - this.startPos, Vector3.up);
 
             // Section to enhance fish rotation believability
             if (Vector3.Magnitude(this.endPos - this.startPos) > 5f)
@@ -216,18 +229,18 @@ public class Fish : MonoBehaviour
                 }
             }
 
-            // SLERP according to required method. Map the final range [0.8, 1] to the range [0, 1]
-            if (levelFish) { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(5 * (ratio - 0.8))); }
-            // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
-            else { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio)))); }
-
             // Update both position (LERP) and depth indicator line
             Vector3 LinePoint = this.fishObject.transform.position = Vector3.Lerp(this.startPos, this.endPos, ratio);
             this.utils.UpdateDepthIndicatorLine(LinePoint);
-
-            // Update info text
-            this.UpdateCanvasText();
         }
+
+        // SLERP according to required method. Map the final range [0.8, 1] to the range [0, 1]
+        if (levelFish) { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(5 * (ratio - 0.8))); }
+        // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
+        else { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio)))); }
+
+        // Update info text
+        this.UpdateCanvasText();
     }
 
 

@@ -15,48 +15,26 @@ public class TimeManager : MonoBehaviour
     private void Awake()
     {
         // Destroy duplicates instances
-        if (_instance != null && _instance != this)
-        {
-            Destroy(this.gameObject);
-        }
-        else
-        {
-            _instance = this;
-        }
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+
+        paused = true;
     }
 
-    // Start is called before the first frame update
-    private void Start()
+    public void SetBoundingDates(DateTime earliestTime, DateTime latestTime)
     {
-        currentTime = LocalPositionData.earliestDate;
-        paused = true;
-        percentJump = LocalPositionData.latestDate.Subtract(LocalPositionData.earliestDate).TotalHours * 0.005;
+        currentTime = earliestTime;
+        percentJump = latestTime.Subtract(earliestTime).TotalHours * 0.005;
+        PlaybackController.SetTickerDisplay();
     }
 
     // Update is called once per frame
-    private void FixedUpdate()
-    {
-        if (!paused)
-        {
-            currentTime = currentTime.AddSeconds(Time.deltaTime * UserSettings.speedUpCoefficient);
-        }
-    }
+    private void FixedUpdate()  { if (!paused) { currentTime = currentTime.AddSeconds(Time.deltaTime * UserSettings.speedUpCoefficient); }}
 
     // Playback controls
-    public void PlayButton()
-    {
-        paused = false;
-    }
-
-    public void PauseButton()
-    {
-        paused = true;
-    }
-
-    public void SkipAhead()
-    {
-        currentTime = currentTime.AddHours(percentJump);
-    }
+    public void PlayButton() { paused = false; }
+    public void PauseButton() { paused = true; }
+    public void SkipAhead() { currentTime = currentTime.AddHours(percentJump); }
 
     public void SkipBack()
     {

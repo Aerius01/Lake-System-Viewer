@@ -31,8 +31,6 @@ public class Main : MonoBehaviour
 
     public static event FishDictAssembled fishDictAssembled;
 
-    private bool called = false;
-
     private void Awake()
     {       
         Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
@@ -50,7 +48,11 @@ public class Main : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(SetupWorld());
+        meshManager.SetUpMesh();
+        fishManager = new FishManager(managerObject);
+        fishDictAssembled?.Invoke();
+        fishList.PopulateList();
+        TimeManager.instance.PlayButton();
     }
 
     private void FixedUpdate()
@@ -59,36 +61,9 @@ public class Main : MonoBehaviour
         sunController.AdjustSunPosition();
         moonController.AdjustMoonPosition();
         ThermoclineDOMain.instance.UpdateBars();
-        WindWeatherMain.instance.UpdateWindWeather();
-
-        // if (!called)
-        // {
-        //     try
-        //     {
-        //         GetData();
-        //         called = true;
-        //     }
-        //     catch { throw; }
-        // }
-        
+        WindWeatherMain.instance.UpdateWindWeather();        
     }
 
-    private IEnumerator SetupWorld()
-    {
-        // fishManager.SetUpFish();
-        // fishDictAssembled?.Invoke();
-        // meshManager.SetUpMesh();
-        fishManager = new FishManager(managerObject);
-        fishList.PopulateList();
-
-        yield return new WaitForSeconds(0.1f);
-        TimeManager.instance.PlayButton();
-        // Debug.Log(DatabaseConnection.connected);
-        // dbCon.DoIt();
-    }
-
-    // private async void ConnectToDB() { await DatabaseConnection.ConnectAsync(); }
-    
     private void GetData()
     {
         FishPacket packet = DatabaseConnection.GetMetaData(2054);
