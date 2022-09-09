@@ -72,12 +72,6 @@ public class DatabaseConnection
                     float y = LocalMeshData.rowCount - DatabaseConnection.ConvertLat(rdr.GetValue(rdr.GetOrdinal("y")));
                     float z = - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("z")));
 
-                    // if (id == 2033)
-                    // {
-                    //     if (i == 0) {Debug.Log(string.Format("startPos: ({0}, {1}, {2}); bound: {3}", x, y, z, timestamp));}
-                    //     else {Debug.Log(string.Format("endPos: ({0}, {1}, {2}); bound: {3}", x, y, z, timestamp));}
-                    // }
-
                     returnPacket[i] = new DataPacket(id, timestamp, x, y, z);
                     i++;
                 };
@@ -89,26 +83,6 @@ public class DatabaseConnection
         }
 
         return returnPacket;
-    }
-
-    private static float ConvertLat(object latObject)
-    {
-        double lat = Convert.ToDouble(latObject);
-        if (lat > DatabaseConnection.GISCoords["MaxLat"] || lat < DatabaseConnection.GISCoords["MinLat"])
-        { throw new FormatException("The provided latitude is outside the range of the bounding box"); }
-
-        return (float)((LocalMeshData.rowCount) * ((lat - DatabaseConnection.GISCoords["MinLat"]) / (DatabaseConnection.GISCoords["MaxLat"] - DatabaseConnection.GISCoords["MinLat"])));
-    }
-
-    private static float ConvertLong(object longObject)
-    {
-        string stringLong = "3" + Convert.ToString(longObject);
-        double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
-
-        if (doubleLong > DatabaseConnection.GISCoords["MaxLong"] || doubleLong < DatabaseConnection.GISCoords["MinLong"])
-        { throw new FormatException("The provided longitude is outside the range of the bounding box"); }
-
-        return (float)((LocalMeshData.columnCount) * ((doubleLong - DatabaseConnection.GISCoords["MinLong"]) / (DatabaseConnection.GISCoords["MaxLong"] - DatabaseConnection.GISCoords["MinLong"])));
     }
 
     public static FishPacket GetMetaData(int fishID)
@@ -212,33 +186,117 @@ public class DatabaseConnection
         return returnPacket;
     }
 
-    // public void smmn()
-    // {
-    //     Debug.Log(TimeManager.instance.currentTime);
-    //     Debug.Log(TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss"));
+    public static WeatherPacket GetWeatherData()
+    {
+        // https://stackoverflow.com/questions/8145479/can-constructors-be-async
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+        WeatherPacket returnPacket = null;
 
-    //     string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+        string sql = string.Format(
+        @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation
+        FROM weatherstation
+        where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            AND timestamp IS NOT null
+            and (windspeed is not null
+                or winddirection is not null
+                or temperature is not null
+                or humidity is not null
+                or airpressure is not null
+                or precipitation is not null))
+        AND timestamp IS NOT NULL", strTime);
 
-    //     string sql =
-    //         string.Format(@"select 
-    //         p.id, p.timestamp, p.x, p.y, p.z, lead(p.timestamp) over (order by p.timestamp) as next 
-    //         from positions p 
-    //         where timestamp = (select max(timestamp) from positions where timestamp < TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS'))", strTime);
-        
-    //     Debug.Log(sql);
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-    //     using var cmd = new NpgsqlCommand(sql, connection);
-    //     NpgsqlDataReader rdr = cmd.ExecuteReader();
+            int i = 0;
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); }
 
-    //     while (rdr.Read()) { Debug.Log(rdr.GetValue(rdr.GetOrdinal("timestamp")).GetType()); };
-        
+                while (rdr.Read())
+                {
+                    DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
 
-    //     // foreach (NpgsqlDbColumn tableColumn in rdr.GetColumnSchema())
-    //     // {
-    //     //     Debug.Log(tableColumn.ColumnName);
-    //     //     Debug.Log(tableColumn.ColumnAttributeNumber);
-    //     //     Debug.Log(tableColumn.DataType);
-    //     //     Debug.Log(tableColumn.NpgsqlDbType);
-    //     // }
-    // }
+                    float? windspeed = null;
+                    var entry = rdr.GetValue(rdr.GetOrdinal("windspeed"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { windspeed = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: windspeed"); }
+                    }   
+
+                    float? winddirection = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("winddirection"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { winddirection = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: winddirection"); }
+                    }   
+
+                    float? temperature = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { temperature = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: temperature"); }
+                    }   
+
+                    float? humidity = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("humidity"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { humidity = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: humidity"); }
+                    }  
+
+                    float? airpressure = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("airpressure"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { airpressure = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: airpressure"); }
+                    }  
+
+                    float? precipitation = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("precipitation"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { precipitation = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: precipitation"); }
+                    }  
+
+                    returnPacket = new WeatherPacket(timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
+                    i++;
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        return returnPacket;
+    }
+
+    private static float ConvertLat(object latObject)
+    {
+        double lat = Convert.ToDouble(latObject);
+        if (lat > DatabaseConnection.GISCoords["MaxLat"] || lat < DatabaseConnection.GISCoords["MinLat"])
+        { throw new FormatException("The provided latitude is outside the range of the bounding box"); }
+
+        return (float)((LocalMeshData.rowCount) * ((lat - DatabaseConnection.GISCoords["MinLat"]) / (DatabaseConnection.GISCoords["MaxLat"] - DatabaseConnection.GISCoords["MinLat"])));
+    }
+
+    private static float ConvertLong(object longObject)
+    {
+        string stringLong = "3" + Convert.ToString(longObject);
+        double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
+
+        if (doubleLong > DatabaseConnection.GISCoords["MaxLong"] || doubleLong < DatabaseConnection.GISCoords["MinLong"])
+        { throw new FormatException("The provided longitude is outside the range of the bounding box"); }
+
+        return (float)((LocalMeshData.columnCount) * ((doubleLong - DatabaseConnection.GISCoords["MinLong"]) / (DatabaseConnection.GISCoords["MaxLong"] - DatabaseConnection.GISCoords["MinLong"])));
+    }
 }

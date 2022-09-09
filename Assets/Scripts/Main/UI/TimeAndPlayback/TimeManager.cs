@@ -34,16 +34,12 @@ public class TimeManager : MonoBehaviour
     // Playback controls
     public void PlayButton() { paused = false; }
     public void PauseButton() { paused = true; }
-    public void SkipAhead() { currentTime = currentTime.AddHours(percentJump); }
+    public void SkipAhead()
+    { currentTime = currentTime.AddHours(percentJump) < FishManager.latestOverallTime ? currentTime.AddHours(percentJump) : FishManager.latestOverallTime; }
 
     public void SkipBack()
-    {
-        currentTime = currentTime.AddHours(-percentJump) > LocalPositionData.earliestDate ? currentTime.AddHours(-percentJump) : LocalPositionData.earliestDate;
-    }
+    { currentTime = currentTime.AddHours(-percentJump) > FishManager.earliestOverallTime ? currentTime.AddHours(-percentJump) : FishManager.earliestOverallTime; }
 
     // All changes to time are done centrally through the time manager
-    public void AddTicksToTime(long ticksDifferential)
-    {
-        currentTime = currentTime.AddTicks(ticksDifferential);
-    }
+    public void AddTicksToTime(long ticksDifferential) { currentTime = currentTime.AddTicks(ticksDifferential); }
 }

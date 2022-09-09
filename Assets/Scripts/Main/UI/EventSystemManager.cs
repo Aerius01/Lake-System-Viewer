@@ -43,35 +43,12 @@ public class EventSystemManager : MonoBehaviour
         waterLevelEvent += environmentManager.AdjustWaterLevel;
     }
 
-    public void TagToggle()
-    {
-        UserSettings.showFishTags = tagToggle.isOn ? true : false;
-    }
-
-    public void DepthLineToggle()
-    {
-        UserSettings.showFishDepthLines = depthLineToggle.isOn ? true : false;
-    }
-
-    public void TrailToggle()
-    {
-        UserSettings.showFishTrails = trailToggle.isOn ? true : false;
-    }
-
-    public void ThermoToggle()
-    {
-        UserSettings.showThermocline = thermoToggle.isOn ? true : false;
-    }
-
-    public void WindWeatherToggle()
-    {
-        UserSettings.showWindWeather = windWeatherToggle.isOn ? true : false;
-    }
-
-    public void SatelliteToggle()
-    {
-        UserSettings.showSatelliteImage = satelliteToggle.isOn ? true : false;
-    }
+    public void TagToggle()  { UserSettings.showFishTags = tagToggle.isOn ? true : false; }
+    public void DepthLineToggle() { UserSettings.showFishDepthLines = depthLineToggle.isOn ? true : false; }
+    public void TrailToggle() { UserSettings.showFishTrails = trailToggle.isOn ? true : false; }
+    public void ThermoToggle() { UserSettings.showThermocline = thermoToggle.isOn ? true : false; }
+    public void WindWeatherToggle() { UserSettings.showWindWeather = windWeatherToggle.isOn ? true : false; }
+    public void SatelliteToggle() { UserSettings.showSatelliteImage = satelliteToggle.isOn ? true : false; }
 
     public void AdjustWaterHeight()
     {

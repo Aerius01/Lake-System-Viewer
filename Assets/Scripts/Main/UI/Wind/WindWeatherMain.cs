@@ -158,15 +158,8 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = " - °";
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        toolTip.GetComponent<CanvasGroup>().alpha = 1f;
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        toolTip.GetComponent<CanvasGroup>().alpha = 0f;
-    }
+    public void OnPointerEnter(PointerEventData eventData) { toolTip.GetComponent<CanvasGroup>().alpha = 1f; }
+    public void OnPointerExit(PointerEventData eventData) { toolTip.GetComponent<CanvasGroup>().alpha = 0f; }
 
     public void ToggleWind()
     {

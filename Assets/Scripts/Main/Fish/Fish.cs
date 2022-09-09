@@ -54,7 +54,7 @@ public class Fish : MonoBehaviour
     public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor; } }
     private DataPacket[] currentPacket = null;
     private Thread fetchingThread;
-    private bool timeBounded { get { return DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[0].timestamp) > 0 && DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[1].timestamp) < 0; }}
+    private bool timeBounded { get { return this.currentPacket == null ? false : this.currentPacket[1] == null ? false : DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[0].timestamp) > 0 && DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[1].timestamp) < 0; }}
    
     public void CreateFish(FishPacket packet, GameObject manager)
     {
@@ -162,20 +162,28 @@ public class Fish : MonoBehaviour
         {
             this.currentPacket = DatabaseConnection.GetFishData(this);
 
-            Vector3 workingStartVector = this.currentPacket[0].pos;
-            Vector3 workingEndVector = this.currentPacket[1].pos;
-
-            lock(this.locker)
+            // If we're past an extremity, don't bother (the object will be despawned by the FishManager)
+            if (this.currentPacket != null)
             {
-                this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                        workingStartVector.z * UserSettings.verticalScalingFactor, 
-                        LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-                ;
+                if (this.currentPacket[1] != null)
+                {
+                    Vector3 workingStartVector = this.currentPacket[0].pos;
+                    Vector3 workingEndVector = this.currentPacket[1].pos;
 
-                this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                        workingEndVector.z * UserSettings.verticalScalingFactor, 
-                        LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-                ;
+                    lock(this.locker)
+                    {
+                        this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+                                workingStartVector.z * UserSettings.verticalScalingFactor, 
+                                LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+                        ;
+
+                        this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+                                workingEndVector.z * UserSettings.verticalScalingFactor, 
+                                LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+                        ;
+                    }
+                }
+                else { this.currentPacket = null; }
             }
         }
         catch (Npgsql.NpgsqlOperationInProgressException)
