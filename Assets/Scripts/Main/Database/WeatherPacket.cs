@@ -5,21 +5,23 @@ using System;
 public class WeatherPacket
 {
     public DateTime timestamp {get; private set;}
+    public DateTime? nextTimestamp {get; private set;}
     public float? windspeed {get; private set;}
-    public float? winddirection {get; private set;}
+    public float? windDirection {get; private set;}
     public float? temperature {get; private set;}
     public float? humidity {get; private set;}
-    public float? airpressure {get; private set;}
+    public float? airPressure {get; private set;}
     public float? precipitation {get; private set;}
 
-    public WeatherPacket(DateTime timestamp, float? windspeed, float? winddirection, float? temperature, float? humidity, float? airPressure, float? precipitation)
+    public WeatherPacket(DateTime timestamp, DateTime? nextTimestamp, float? windspeed, float? windDirection, float? temperature, float? humidity, float? airPressure, float? precipitation)
     {
         this.timestamp = timestamp;
+        this.nextTimestamp = nextTimestamp;
         this.windspeed = windspeed;
-        this.winddirection = winddirection;
+        this.windDirection = windDirection;
         this.temperature = temperature;
         this.humidity = humidity;
-        this.airpressure = airpressure;
+        this.airPressure = airPressure;
         this.precipitation = precipitation;
     }
 }

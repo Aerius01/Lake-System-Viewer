@@ -193,7 +193,7 @@ public class DatabaseConnection
         WeatherPacket returnPacket = null;
 
         string sql = string.Format(
-        @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation
+        @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
         FROM weatherstation
         where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
             AND timestamp IS NOT null
@@ -203,7 +203,17 @@ public class DatabaseConnection
                 or humidity is not null
                 or airpressure is not null
                 or precipitation is not null))
-        AND timestamp IS NOT NULL", strTime);
+        or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            AND timestamp IS NOT null
+            and (windspeed is not null
+                or winddirection is not null
+                or temperature is not null
+                or humidity is not null
+                or airpressure is not null
+                or precipitation is not null))
+        AND timestamp IS NOT null 
+        order by timestamp
+        limit 1", strTime);
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -225,6 +235,14 @@ public class DatabaseConnection
                     {
                         try { windspeed = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: windspeed"); }
+                    }   
+
+                    DateTime? nextTimestamp = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { nextTimestamp = Convert.ToDateTime(entry); }
+                        catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
                     }   
 
                     float? winddirection = null;
@@ -267,7 +285,7 @@ public class DatabaseConnection
                         catch { Debug.Log("Weather data conversion fail: precipitation"); }
                     }  
 
-                    returnPacket = new WeatherPacket(timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
+                    returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
                     i++;
                 };
 
@@ -278,6 +296,49 @@ public class DatabaseConnection
         }
 
         return returnPacket;
+    }
+
+    public static DateTime[] GetWeatherMinMaxTimes()
+    {
+        DateTime earliestTimestamp = DateTime.MaxValue;
+        DateTime latestTimestamp = DateTime.MinValue;
+
+        string sql = 
+        @"SELECT max(timestamp), min(timestamp)
+        FROM weatherstation
+        where windspeed is not null
+            or winddirection is not null
+            or temperature is not null
+            or humidity is not null
+            or airpressure is not null
+            or precipitation is not null
+            AND timestamp IS NOT null";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            int i = 0;
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); }
+
+                while (rdr.Read())
+                {
+                    earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
+                    latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
+
+                    i++;
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        return new DateTime[2] { earliestTimestamp, latestTimestamp };
     }
 
     private static float ConvertLat(object latObject)

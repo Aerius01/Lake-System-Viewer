@@ -20,7 +20,6 @@ public class PlaybackController : MonoBehaviour
         timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
 
         // Set up event listeners
-        jumpingInTime += WindWeatherMain.JumpInTime;
         jumpingInTime += ThermoclineDOMain.JumpInTime;
     }
 
