@@ -1,6 +1,7 @@
 using Npgsql;
 using UnityEngine;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 public class DatabaseConnection
@@ -323,6 +324,153 @@ public class DatabaseConnection
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
                 if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); }
+
+                while (rdr.Read())
+                {
+                    earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
+                    latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
+
+                    i++;
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        return new DateTime[2] { earliestTimestamp, latestTimestamp };
+    }
+
+    public static ThermoPacket GetThermoData()
+    {
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+        // Inits
+        List<ThermoReading> readings = new List<ThermoReading>();
+        DateTime timestamp = DateTime.MaxValue;
+        DateTime? nextTimestamp = null;
+
+        string sql = string.Format(
+        @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
+        FROM weatherstation
+        where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            AND timestamp IS NOT null
+            and (windspeed is not null
+                or winddirection is not null
+                or temperature is not null
+                or humidity is not null
+                or airpressure is not null
+                or precipitation is not null))
+        or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            AND timestamp IS NOT null
+            and (windspeed is not null
+                or winddirection is not null
+                or temperature is not null
+                or humidity is not null
+                or airpressure is not null
+                or precipitation is not null))
+        AND timestamp IS NOT null 
+        order by timestamp
+        limit 1", strTime);
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            int i = 0;
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); }
+
+                while (rdr.Read())
+                {
+                    timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                    nextTimestamp = null;
+                    var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { nextTimestamp = Convert.ToDateTime(entry); }
+                        catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
+                    }   
+
+                    // Never null by the architecture of the DB
+                    float depth = float.MaxValue;
+                    entry = rdr.GetValue(rdr.GetOrdinal("depth"));
+                    try { depth = Convert.ToSingle(entry); }
+                    catch { Debug.Log("Weather data conversion fail: depth"); }
+
+                    float? temperature = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { temperature = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: temperature"); }
+                    }   
+
+                    float? oxygen = null;
+                    entry = rdr.GetValue(rdr.GetOrdinal("oxygen"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { oxygen = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Weather data conversion fail: oxygen"); }
+                    }  
+
+                    ThermoReading reading = new ThermoReading(depth, temperature, oxygen);
+
+                    // Check uniqueness of depth entry before adding to list
+                    bool unique = true;
+                    foreach (ThermoReading record in readings)
+                    {
+                        if (record.depth == reading.depth)
+                        {
+                            unique = false;
+                            break;
+                        }
+                    }
+
+                    if (unique) readings.Add(reading);
+                    i++;
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        if (readings.Any()) return new ThermoPacket(timestamp, nextTimestamp, readings);
+        else return null;
+    }
+
+    public static DateTime[] GetThermoMinMaxTimes()
+    {
+        DateTime earliestTimestamp = DateTime.MaxValue;
+        DateTime latestTimestamp = DateTime.MinValue;
+
+        // TODO: adapt SQL query
+        string sql = 
+        @"SELECT max(timestamp), min(timestamp)
+        FROM weatherstation
+        where windspeed is not null
+            or winddirection is not null
+            or temperature is not null
+            or humidity is not null
+            or airpressure is not null
+            or precipitation is not null
+            AND timestamp IS NOT null";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            int i = 0;
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); }
 
                 while (rdr.Read())
                 {

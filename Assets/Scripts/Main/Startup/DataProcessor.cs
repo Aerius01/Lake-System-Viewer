@@ -8,10 +8,10 @@ public class DataProcessor
 {
     private LocalMeshData meshData;
     private LocalPositionData positionData;
-    private LocalFishData fishData;
+    // private LocalFishData fishData;
     private LocalThermoclineData thermoclineData;
-    private LocalWeatherData weatherData;
-    private LocalYSIData ysiData;
+    // private LocalWeatherData weatherData;
+    // private LocalYSIData ysiData;
     private Dictionary<string, TextAsset> textAssetDict;
     private Texture2D NDVI;
 
@@ -28,10 +28,10 @@ public class DataProcessor
         // Parse all data sets into static classes
         meshData = new LocalMeshData(reader.parseTable(textAssetDict["meshData"].ToString()), NDVI);
         positionData = new LocalPositionData(reader.parseTable(textAssetDict["positionData"].ToString()));
-        fishData = new LocalFishData(reader.parseTable(textAssetDict["fishData"].ToString()));
+        // fishData = new LocalFishData(reader.parseTable(textAssetDict["fishData"].ToString()));
         thermoclineData = new LocalThermoclineData(reader.parseTable(textAssetDict["thermoclineData"].ToString()));
-        weatherData = new LocalWeatherData(reader.parseTable(textAssetDict["weatherData"].ToString()));
-        ysiData = new LocalYSIData(reader.parseTable(textAssetDict["ysiData"].ToString()));
+        // weatherData = new LocalWeatherData(reader.parseTable(textAssetDict["weatherData"].ToString()));
+        // ysiData = new LocalYSIData(reader.parseTable(textAssetDict["ysiData"].ToString()));
     }
 }
 
@@ -257,82 +257,82 @@ public class LocalPositionData
     }
 }
 
-public class LocalFishData
-{
-    public static int rowCount {get; private set;}
-    public static int columnCount {get; private set;}
-    public static Dictionary<int, DataRow> fishDict {get; private set;}
-    public static int[] uniquefishIDs {get; private set;}
+// public class LocalFishData
+// {
+//     public static int rowCount {get; private set;}
+//     public static int columnCount {get; private set;}
+//     public static Dictionary<int, DataRow> fishDict {get; private set;}
+//     public static int[] uniquefishIDs {get; private set;}
 
-    public LocalFishData(DataTable table)
-    {
-        table.Rows[0].Delete();
-        table.AcceptChanges();
+//     public LocalFishData(DataTable table)
+//     {
+//         table.Rows[0].Delete();
+//         table.AcceptChanges();
 
-        rowCount = table.Rows.Count;
-        columnCount = table.Columns.Count;
+//         rowCount = table.Rows.Count;
+//         columnCount = table.Columns.Count;
 
-        List<string> columnNames = new List<string> {"id", "surgeryTime", "speciesCode", "speciesName", "tl", "sl", "weight", "male", "firstPos", "lastPos"};
-        for (int c = 0; c < table.Columns.Count; c++)
-        {
-            table.Columns[c].ColumnName = columnNames[c];
-        }
+//         List<string> columnNames = new List<string> {"id", "surgeryTime", "speciesCode", "speciesName", "tl", "sl", "weight", "male", "firstPos", "lastPos"};
+//         for (int c = 0; c < table.Columns.Count; c++)
+//         {
+//             table.Columns[c].ColumnName = columnNames[c];
+//         }
 
-        foreach (DataRow row in table.Rows)
-        {
-            // Binarize fish sex
-            if (row["male"].ToString() == "male")
-            {
-                row["male"] = true;
-            }
-            else if (row["male"].ToString() == "female")
-            {
-                row["male"] = false;
-            }
-            else
-            {
-                row["male"] = null;
-            }
-        }
+//         foreach (DataRow row in table.Rows)
+//         {
+//             // Binarize fish sex
+//             if (row["male"].ToString() == "male")
+//             {
+//                 row["male"] = true;
+//             }
+//             else if (row["male"].ToString() == "female")
+//             {
+//                 row["male"] = false;
+//             }
+//             else
+//             {
+//                 row["male"] = null;
+//             }
+//         }
 
-        table.AcceptChanges();
+//         table.AcceptChanges();
 
-        // Assemble unique fish IDs
-        List<string> uniqueStrIDs = new List<string>();
-        foreach (DataRow row in table.Rows)
-        {
-            if (!uniqueStrIDs.Contains(row["id"]))
-            {
-                uniqueStrIDs.Add(row["id"].ToString());
-            }
-        }
+//         // Assemble unique fish IDs
+//         List<string> uniqueStrIDs = new List<string>();
+//         foreach (DataRow row in table.Rows)
+//         {
+//             if (!uniqueStrIDs.Contains(row["id"]))
+//             {
+//                 uniqueStrIDs.Add(row["id"].ToString());
+//             }
+//         }
 
-        // Assemble a dictionary keyed by, and a sorted array of, those unique IDs
-        fishDict = new Dictionary<int, DataRow>();
-        uniquefishIDs = new int[uniqueStrIDs.Count];
+//         // Assemble a dictionary keyed by, and a sorted array of, those unique IDs
+//         fishDict = new Dictionary<int, DataRow>();
+//         uniquefishIDs = new int[uniqueStrIDs.Count];
 
-        for (int i = 0; i < uniqueStrIDs.Count; i++)
-        {
-            string item = uniqueStrIDs[i];
-            string searchExp = string.Format("id = '{0}'", item);
-            DataRow[] foundRows = table.Select(searchExp);
+//         for (int i = 0; i < uniqueStrIDs.Count; i++)
+//         {
+//             string item = uniqueStrIDs[i];
+//             string searchExp = string.Format("id = '{0}'", item);
+//             DataRow[] foundRows = table.Select(searchExp);
 
-            try
-            {
-                int id = int.Parse(item);
-                uniquefishIDs[i] = id;
-                // Choose the first entry, which should be the only one
-                fishDict.Add(id, foundRows[0]);
-            }
-            catch
-            {
-                Debug.Log("Unsuccessful parsing of fish data");
-            }
-        }
+//             try
+//             {
+//                 int id = int.Parse(item);
+//                 uniquefishIDs[i] = id;
+//                 // Choose the first entry, which should be the only one
+//                 fishDict.Add(id, foundRows[0]);
+//             }
+//             catch
+//             {
+//                 Debug.Log("Unsuccessful parsing of fish data");
+//             }
+//         }
 
-        Array.Sort(uniquefishIDs);
-    }
-}
+//         Array.Sort(uniquefishIDs);
+//     }
+// }
 
 public class LocalThermoclineData
 {
@@ -407,86 +407,86 @@ public class LocalThermoclineData
     }
 }
 
-public class LocalWeatherData
-{
-    public static DataTable stringTable;
-    public static int rowCount, columnCount;
-    public static DateTime[] uniqueTimeStamps {get; private set;}
+// public class LocalWeatherData
+// {
+//     public static DataTable stringTable;
+//     public static int rowCount, columnCount;
+//     public static DateTime[] uniqueTimeStamps {get; private set;}
 
-    public LocalWeatherData(DataTable table)
-    {
-        table.Rows[0].Delete();
-        table.AcceptChanges();
+//     public LocalWeatherData(DataTable table)
+//     {
+//         table.Rows[0].Delete();
+//         table.AcceptChanges();
 
-        rowCount = table.Rows.Count;
-        columnCount = table.Columns.Count;
+//         rowCount = table.Rows.Count;
+//         columnCount = table.Columns.Count;
 
-        List<string> columnNames = new List<string> {"time", "windSpeed", "windDir", "temp", "humidity", "airPress", "precip"};
-        for (int c = 0; c < table.Columns.Count; c++)
-        {
-            table.Columns[c].ColumnName = columnNames[c];
-        }
+//         List<string> columnNames = new List<string> {"time", "windSpeed", "windDir", "temp", "humidity", "airPress", "precip"};
+//         for (int c = 0; c < table.Columns.Count; c++)
+//         {
+//             table.Columns[c].ColumnName = columnNames[c];
+//         }
 
-        table.AcceptChanges();
+//         table.AcceptChanges();
 
-        stringTable = table.Clone();
-        stringTable.Columns["time"].DataType = typeof(DateTime);
-        List<DateTime> uniqueTSList = new List<DateTime>();
-        foreach (DataRow row in table.Rows)
-        {
-            try
-            {
-                stringTable.ImportRow(row);
+//         stringTable = table.Clone();
+//         stringTable.Columns["time"].DataType = typeof(DateTime);
+//         List<DateTime> uniqueTSList = new List<DateTime>();
+//         foreach (DataRow row in table.Rows)
+//         {
+//             try
+//             {
+//                 stringTable.ImportRow(row);
 
-                // Assemble unique timestamps
-                if (!uniqueTSList.Contains(DateTime.Parse(row["time"].ToString())))
-                {
-                    uniqueTSList.Add(DateTime.Parse(row["time"].ToString()));
-                }
-            }
-            catch { continue; }
-        }
+//                 // Assemble unique timestamps
+//                 if (!uniqueTSList.Contains(DateTime.Parse(row["time"].ToString())))
+//                 {
+//                     uniqueTSList.Add(DateTime.Parse(row["time"].ToString()));
+//                 }
+//             }
+//             catch { continue; }
+//         }
 
-        stringTable.AcceptChanges();
-        uniqueTSList.Sort();
+//         stringTable.AcceptChanges();
+//         uniqueTSList.Sort();
 
-        // Restrict active list to limits of position data
-        DateTime[] uniqueTSArray = uniqueTSList.ToArray();
+//         // Restrict active list to limits of position data
+//         DateTime[] uniqueTSArray = uniqueTSList.ToArray();
 
-        int lowerIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.earliestDate);
-        lowerIndex = lowerIndex < 0 ? Math.Abs(lowerIndex) - 2 : lowerIndex;
+//         int lowerIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.earliestDate);
+//         lowerIndex = lowerIndex < 0 ? Math.Abs(lowerIndex) - 2 : lowerIndex;
 
-        int upperIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.latestDate);
-        upperIndex = upperIndex < 0 ? Math.Abs(upperIndex) - 1 : upperIndex;
+//         int upperIndex = Array.BinarySearch(uniqueTSArray, LocalPositionData.latestDate);
+//         upperIndex = upperIndex < 0 ? Math.Abs(upperIndex) - 1 : upperIndex;
 
-        List<DateTime> arrayList = new List<DateTime>();
-        for (int i = lowerIndex; i <= upperIndex; i++) arrayList.Add(uniqueTSArray[i]);
+//         List<DateTime> arrayList = new List<DateTime>();
+//         for (int i = lowerIndex; i <= upperIndex; i++) arrayList.Add(uniqueTSArray[i]);
 
-        // Assemble array from reduced selection
-        uniqueTimeStamps = arrayList.ToArray();
-    }
-}
+//         // Assemble array from reduced selection
+//         uniqueTimeStamps = arrayList.ToArray();
+//     }
+// }
 
-public class LocalYSIData
-{
-    public static DataTable stringTable;
-    public static int rowCount, columnCount;
+// public class LocalYSIData
+// {
+//     public static DataTable stringTable;
+//     public static int rowCount, columnCount;
 
-    public LocalYSIData(DataTable table)
-    {
-        table.Rows[0].Delete();
-        table.AcceptChanges();
+//     public LocalYSIData(DataTable table)
+//     {
+//         table.Rows[0].Delete();
+//         table.AcceptChanges();
 
-        stringTable = table;
-        rowCount = table.Rows.Count;
-        columnCount = table.Columns.Count;
+//         stringTable = table;
+//         rowCount = table.Rows.Count;
+//         columnCount = table.Columns.Count;
 
-        List<string> columnNames = new List<string> {"time", "temp", "odo", "odoSat"};
-        for (int c = 0; c < table.Columns.Count; c++)
-        {
-            table.Columns[c].ColumnName = columnNames[c];
-        }
+//         List<string> columnNames = new List<string> {"time", "temp", "odo", "odoSat"};
+//         for (int c = 0; c < table.Columns.Count; c++)
+//         {
+//             table.Columns[c].ColumnName = columnNames[c];
+//         }
 
-        table.AcceptChanges();
-    }
-}
+//         table.AcceptChanges();
+//     }
+// }

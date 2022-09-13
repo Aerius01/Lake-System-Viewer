@@ -4,23 +4,17 @@ using TMPro;
 using System.Globalization;
 using UnityEngine.UI;
 
-public delegate void JumpInTime();
-
 public class PlaybackController : MonoBehaviour
 {
     private static TextMeshProUGUI timeDisplayText;
     private Slider timeControlSlider;
     private static Single totalTicks;
     private bool sliderSelected;
-    public static event JumpInTime jumpingInTime;
 
     private void Awake()
     {
         timeDisplayText = GameObject.Find("TimeDisplayText").GetComponent<TextMeshProUGUI>();
         timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
-
-        // Set up event listeners
-        jumpingInTime += ThermoclineDOMain.JumpInTime;
     }
 
     private void Start() { sliderSelected = false; }
@@ -51,7 +45,6 @@ public class PlaybackController : MonoBehaviour
     {
         long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
-        jumpingInTime?.Invoke();
         sliderSelected = false;
     }
 
@@ -59,7 +52,6 @@ public class PlaybackController : MonoBehaviour
     {
         long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
-        jumpingInTime?.Invoke();
     }
 
     public void SliderSelect() { sliderSelected = true; }

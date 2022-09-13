@@ -4,9 +4,8 @@ public class ThermoclinePlane
 {
     private GameObject planeObject;
     private Mesh mesh;
-    public float? currentDepth {get; private set;}
 
-    public void CreatePlane(Material material)
+    public ThermoclinePlane(Material material)
     {
         planeObject = new GameObject("ThermoclinePlane");
         MeshFilter meshFilter = planeObject.AddComponent(typeof(MeshFilter)) as MeshFilter;
@@ -40,43 +39,20 @@ public class ThermoclinePlane
         mesh.RecalculateNormals();
     }
 
-    public void RecalculatePlane()
+    public void RecalculatePlane(float currentDepth)
     {
-        ThermoclDepth depthCalc = new ThermoclDepth();
-        var (depth, index) = depthCalc.ThermoDepth();
-        currentDepth = depth;
-
-        if (depth != null)
+        mesh.vertices = new Vector3[]
         {
-            if (!planeObject.activeSelf && UserSettings.showThermocline)
-            {
-                planeObject.SetActive(true);
-            }
+            new Vector3(0,(float)-currentDepth * UserSettings.verticalScalingFactor,0),
+            new Vector3(LocalMeshData.resolution,(float)-currentDepth * UserSettings.verticalScalingFactor,0),
+            new Vector3(LocalMeshData.resolution,(float)-currentDepth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
+            new Vector3(0,(float)-currentDepth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
+        };
 
-            mesh.vertices = new Vector3[]
-            {
-                new Vector3(0,(float)-depth * UserSettings.verticalScalingFactor,0),
-                new Vector3(LocalMeshData.resolution,(float)-depth * UserSettings.verticalScalingFactor,0),
-                new Vector3(LocalMeshData.resolution,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
-                new Vector3(0,(float)-depth * UserSettings.verticalScalingFactor,LocalMeshData.resolution),
-            };
-
-            planeObject.GetComponent<MeshFilter>().mesh = mesh;
-            mesh.RecalculateBounds();
-            mesh.RecalculateNormals();
-        }
-        else
-        {
-            if (planeObject.activeSelf)
-            {
-                planeObject.SetActive(false);
-            }
-        }
+        planeObject.GetComponent<MeshFilter>().mesh = mesh;
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
     }
 
-    public void TogglePlane()
-    {
-        if (UserSettings.showThermocline && this.currentDepth != null) planeObject.SetActive(true);
-        else planeObject.SetActive(false);
-    }
+    public void TogglePlane(bool status) { planeObject.SetActive(status); }
 }

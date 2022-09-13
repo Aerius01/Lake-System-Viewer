@@ -69,11 +69,11 @@ public class FishUtils : MonoBehaviour
         LinePoint.y = waterblock.transform.position.y;
         line.SetPosition(1, LinePoint);
 
-        if (ThermoclineDOMain.instance.thermoclinePlane.currentDepth != null)
+        if (ThermoclineDOMain.currentThermoDepth != null)
         {
             thermoInd.SetActive(true);
 
-            LinePoint.y = (float)-ThermoclineDOMain.instance.thermoclinePlane.currentDepth * UserSettings.verticalScalingFactor;
+            LinePoint.y = (float)-ThermoclineDOMain.currentThermoDepth * UserSettings.verticalScalingFactor;
             thermoInd.transform.position = LinePoint;
         }
         else { thermoInd.SetActive(false); }

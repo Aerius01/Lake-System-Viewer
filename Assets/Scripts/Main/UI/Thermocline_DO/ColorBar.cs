@@ -60,19 +60,16 @@ public class ColorBar : MonoBehaviour
         oxyGradient.SetKeys(colorKeyOxy, alphaKeyOxy);   
     }
 
-    public void UpdateCells(int index, string colName)
+    public void UpdateCells(string colName, List<ThermoReading> readings)
     {
-        // Fetch the active data set
-        DataRow[] currentData = LocalThermoclineData.thermoDict[LocalThermoclineData.uniqueTimeStamps[index]];
-
         for (int i = 0; i < gradientCells.Count; i++)
         {
             // Determine the individual cell color & set it
             GradientCell currentCell = gradientCells[i].GetComponent<GradientCell>();
-            currentCell.SetDepth(float.Parse(currentData[i]["d"].ToString()));
+            currentCell.SetDepth(readings[i].depth);
             
-            string stringValue = currentData[i][colName].ToString().Trim();
-            if (string.IsNullOrEmpty(stringValue))
+            float? value = colName == "temp" ? readings[i].temperature : readings[i].oxygen;
+            if (value == null)
             {
                 currentCell.SetColor(Color.black);
                 currentCell.SetVal(null);
@@ -82,15 +79,15 @@ public class ColorBar : MonoBehaviour
                 if (colName == "temp")
                 {
                     currentCell.IsTemp(true);
-                    currentCell.SetColor(tempGradient.Evaluate((float.Parse(currentData[i][colName].ToString()) - lowerVal) / (upperVal - lowerVal)));
+                    currentCell.SetColor(tempGradient.Evaluate(((float)value - lowerVal) / (upperVal - lowerVal)));
                 }
                 else
                 {
                     currentCell.IsTemp(false);
-                    currentCell.SetColor(oxyGradient.Evaluate((float.Parse(currentData[i][colName].ToString()) - lowerVal) / (upperVal - lowerVal)));
+                    currentCell.SetColor(oxyGradient.Evaluate(((float)value - lowerVal) / (upperVal - lowerVal)));
                 }
 
-                currentCell.SetVal(float.Parse(currentData[i][colName].ToString()));
+                currentCell.SetVal((float)value);
             }        
         }
     }

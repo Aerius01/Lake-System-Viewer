@@ -8,7 +8,13 @@ public class UserSettings
     public static bool showFishDepthLines
     {
         get {return _showFishDepthLines;}
-        set {_showFishDepthLines = value; FishManager.ActivateAllDepths(value);}
+        set 
+        {
+            _showFishDepthLines = value;
+            FishManager.ActivateAllDepths(value);
+            if (UserSettings.showFishDepthLines && UserSettings.showThermocline) { if (!UserSettings.showThermoBobs) UserSettings.showThermoBobs = true; }
+            else { if (UserSettings.showThermoBobs) UserSettings.showThermoBobs = false; }
+        }
     }
     public static bool showFishTrails
     {
@@ -18,7 +24,18 @@ public class UserSettings
     public static bool showThermocline 
     {
         get {return _showThermocline;} 
-        set {_showThermocline = value; ThermoclineDOMain.instance.ToggleThermocline();}
+        set 
+        {
+            _showThermocline = value; 
+            ThermoclineDOMain.instance.ToggleThermocline();
+            if (UserSettings.showFishDepthLines && UserSettings.showThermocline) { if (!UserSettings.showThermoBobs) UserSettings.showThermoBobs = true; }
+            else { if (UserSettings.showThermoBobs) UserSettings.showThermoBobs = false; }
+        }
+    }
+    public static bool showThermoBobs
+    {
+        get {return _showThermoBobs;}
+        set {_showThermoBobs = value; FishManager.ActivateAllThermoBobs(value);}
     }
     public static bool showWindWeather 
     {
@@ -35,6 +52,7 @@ public class UserSettings
     private static bool _showFishDepthLines;
     private static bool _showFishTrails;
     private static bool _showThermocline;
+    private static bool _showThermoBobs;
     private static bool _showWindWeather;
     private static bool _showSatelliteImage;
 

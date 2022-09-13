@@ -135,7 +135,6 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
         else if (WindWeatherMain.currentPacket != null)
         {
-            // TODO
             if (!WindWeatherMain.instance.toggle.interactable) WindWeatherMain.EnableWindWeather(true);
 
             // Execute wind-related updates

@@ -36,6 +36,7 @@ public class FishManager
     public static void ActivateAllTags(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTag(activationStatus); } }
     public static void ActivateAllDepths(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateDepthLine(activationStatus); } }
     public static void ActivateAllTrails(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTrail(activationStatus); } }
+    public static void ActivateAllThermoBobs(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateThermoBob(activationStatus); } }
 
     public static void ChangeVerticalScale() { vertScaleChange = true; } // ascribed to the event handled by EventSystemManager.cs
     public static void ChangeFishScale(float newVal) // ascribed to the event handled by EventSystemManager.cs
