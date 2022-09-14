@@ -59,7 +59,4 @@ public static class FilterManager
 
         return true;
     }
-
-    // have the fish shouldExist parameter constantly check PassesAllFilters
-
 }

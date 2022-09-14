@@ -12,12 +12,11 @@ public class ContinuousFilterHandler : MonoBehaviour
     [SerializeField] private TwoEndedSlider slider;
     [SerializeField] private TextMeshProUGUI header;
     
-    private float rangeMin = float.MaxValue, rangeMax = float.MinValue;
     private int counter = 0;
 
     private void Awake()
     {
-        Main.fishDictAssembled += this.GetScales;
+        Main.fishDictAssembled += this.SetScales;
     }
 
     private void Start()
@@ -26,29 +25,10 @@ public class ContinuousFilterHandler : MonoBehaviour
         else { this.header.text = "Weight";}
     }
 
-    private void GetScales()
+    private void SetScales()
     {
-        foreach (var key in FishManager.fishDict.Keys)
-        {
-            if (this.length)
-            {
-                if (FishManager.fishDict[key].length != null)
-                {
-                    rangeMin = Mathf.Min((float)FishManager.fishDict[key].length, rangeMin);
-                    rangeMax = Mathf.Max((float)FishManager.fishDict[key].length, rangeMax);
-                }
-            }
-            else
-            {
-                if (FishManager.fishDict[key].weight != null)
-                {
-                    rangeMin = Mathf.Min((float)FishManager.fishDict[key].weight, rangeMin);
-                    rangeMax = Mathf.Max((float)FishManager.fishDict[key].weight, rangeMax);
-                }
-            }
-        }
-
-        slider.SetRange(rangeMin, rangeMax);
+        if (this.length) slider.SetRange(FishManager.minLength, FishManager.maxLength);
+        else slider.SetRange(FishManager.minWeight, FishManager.maxWeight);
     }
 
     public void ApplyFilter()

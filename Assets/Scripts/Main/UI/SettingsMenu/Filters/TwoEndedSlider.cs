@@ -62,8 +62,8 @@ public class TwoEndedSlider : MonoBehaviour
 
     public void UpdateTextValues()
     {
-        minInput.text = string.Format("{0:###}", minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
-        maxInput.text = string.Format("{0:###}", maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue);
+        minInput.text = string.Format("{0:###}", currentMin);
+        maxInput.text = string.Format("{0:###}", currentMax);
     }
 
     public void UpdateMaskBars()
@@ -83,8 +83,8 @@ public class TwoEndedSlider : MonoBehaviour
         upperBar.gameObject.SetActive(!this.invertToggle.isOn);
     }
 
-    public void UpdateSliderFromInputMin() { minSlider.normalizedValue = float.Parse(minInput.text); }
-    public void UpdateSliderFromInputMax() { maxSlider.normalizedValue = float.Parse(maxInput.text); }
+    public void UpdateSliderFromInputMin() { minSlider.normalizedValue = (float.Parse(minInput.text) - this.minValue) / (this.maxValue - this.minValue); }
+    public void UpdateSliderFromInputMax() { maxSlider.normalizedValue = (float.Parse(maxInput.text) - this.minValue) / (this.maxValue - this.minValue); }
 
     public void UpdateSelectedNode(bool min)
     {

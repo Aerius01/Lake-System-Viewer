@@ -160,7 +160,7 @@ public class Fish : MonoBehaviour
     {
         try
         {
-            this.currentPacket = DatabaseConnection.GetFishData(this);
+            this.currentPacket = DatabaseConnection.GetFishPositions(this);
 
             // If we're past an extremity, don't bother (the object will be despawned by the FishManager)
             if (this.currentPacket != null)

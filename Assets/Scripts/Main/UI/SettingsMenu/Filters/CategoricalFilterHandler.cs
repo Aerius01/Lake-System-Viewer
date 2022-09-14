@@ -30,20 +30,7 @@ public class CategoricalFilterHandler : MonoBehaviour
 
     private void GetOptions()
     {
-        List<String> optionsList = new List<String>();
-
-        if (this.sex) { optionsList = new List<String>() {"Undefined", "Male", "Female"}; }
-        else
-        {
-            foreach (var key in FishManager.fishDict.Keys)
-            {
-                string newString = FishManager.fishDict[key].captureType;
-                if (String.IsNullOrEmpty(newString)) { newString = "Undefined"; }
-
-                if (!optionsList.Any(s => s.Contains(newString)))
-                { optionsList.Add(newString); }
-            }
-        }
+        List<string> optionsList = sex ? FishManager.listOfSexes : FishManager.listOfCaptureTypes;
 
         // Populate the toggle list with discovered options
         int toggleCount = 0;
@@ -70,10 +57,7 @@ public class CategoricalFilterHandler : MonoBehaviour
         this.counter += 1;
 
         List<string> chosenOptions = new List<string>();
-        foreach (Toggle toggle in toggles)
-        {
-            if (toggle.isOn) { chosenOptions.Add(toggle.transform.Find("Text").GetComponent<TextMeshProUGUI>().text); }
-        }
+        foreach (Toggle toggle in toggles) { if (toggle.isOn) { chosenOptions.Add(toggle.transform.Find("Text").GetComponent<TextMeshProUGUI>().text); } }
 
         if (this.sex) { this.header.text =  string.Format("Sex ({0})", counter); }
         else { this.header.text = string.Format("Capture Type ({0})", counter); }

@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 using System.Threading.Tasks;
+using System;
 
 
 public delegate void FishDictAssembled();
@@ -36,10 +37,7 @@ public class Main : MonoBehaviour
         Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
             {"meshData", meshDataCSV},
             {"positionData", positionDataCSV},
-            {"fishData", fishDataCSV},
             {"thermoclineData", thermoclineDataCSV},
-            {"weatherData", weatherDataCSV},
-            {"ysiData", ysiDataCSV}
         };
 
         processor = new DataProcessor(textAssetDict, NDVI);
@@ -60,13 +58,13 @@ public class Main : MonoBehaviour
         fishManager.UpdateFish();
         sunController.AdjustSunPosition();
         moonController.AdjustMoonPosition();
-        ThermoclineDOMain.instance.UpdateThermoclineDOMain();
+        // ThermoclineDOMain.instance.UpdateThermoclineDOMain();
         WindWeatherMain.instance.UpdateWindWeather();        
     }
 
     private void GetData()
     {
-        FishPacket packet = DatabaseConnection.GetMetaData(2054);
+        FishPacket packet = DatabaseConnection.GetFishMetadata(2054);
 
         Debug.Log(packet.fishID);
         Debug.Log(packet.earliestTime);

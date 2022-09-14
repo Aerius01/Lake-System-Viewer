@@ -1,35 +1,64 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 
 public class FishManager 
 {
     public static Dictionary<int, Fish> fishDict {get; private set;}
     public static bool vertScaleChange = false, fishScaleChange = false;
+
+    // Data set extremes
     public static DateTime earliestOverallTime {get; private set;}
     public static DateTime latestOverallTime {get; private set;}
+    public static int minLength {get; private set;}
+    public static int maxLength {get; private set;}
+    public static float minWeight {get; private set;}
+    public static float maxWeight {get; private set;}
+    public static List<string> listOfSexes {get; private set;}
+    public static List<string> listOfCaptureTypes {get; private set;}
+
 
     public FishManager(GameObject managerObject)
     {
         fishDict = new Dictionary<int, Fish>();
+
+        // Extreme value initializations
         earliestOverallTime = DateTime.MaxValue;
         latestOverallTime = DateTime.MinValue;
+        minLength = int.MaxValue;
+        maxLength = int.MinValue;
+        minWeight = int.MaxValue;
+        maxWeight = int.MinValue;
+        listOfSexes = new List<string>();
+        listOfCaptureTypes = new List<string>();
 
-        foreach (int key in LocalPositionData.positionDict.Keys) // temporary to not overwhelm during dev
+        double totalTime = 0;
+
+        foreach (int key in DatabaseConnection.GetFishKeys()) // temporary to not overwhelm during dev
         {
-            FishPacket packet = DatabaseConnection.GetMetaData(key);
+            DateTime startTime = DateTime.Now;
+            FishPacket packet = DatabaseConnection.GetFishMetadata(key);
             if (packet != null)
             {
                 Fish newFish = managerObject.AddComponent<Fish>() as Fish;
                 newFish.CreateFish(packet, managerObject);
                 fishDict.Add(key, newFish);
 
-                // Determine bounding DateTimes on dataset
+                // Extreme value assessments
                 if (DateTime.Compare(newFish.earliestTime, FishManager.earliestOverallTime) < 0) FishManager.earliestOverallTime = newFish.earliestTime;
                 if (DateTime.Compare(newFish.latestTime, FishManager.latestOverallTime) > 0) FishManager.latestOverallTime = newFish.latestTime;
+                minLength = newFish.length == null ? minLength : (int)newFish.length < minLength ? (int)newFish.length : minLength;
+                maxLength = newFish.length == null ? maxLength : (int)newFish.length > maxLength ? (int)newFish.length : maxLength;
+                minWeight = newFish.weight == null ? minWeight : (int)newFish.weight < minWeight ? (int)newFish.weight : minWeight;
+                maxWeight = newFish.weight == null ? maxWeight : (int)newFish.weight > maxWeight ? (int)newFish.weight : maxWeight;
+                if (!listOfSexes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.male.ToString()) ? "Undefined" : newFish.male.ToString()))) { listOfSexes.Add(string.IsNullOrEmpty(newFish.male.ToString()) ? "Undefined" : newFish.male.ToString()); }
+                if (!listOfCaptureTypes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.captureType.ToString()) ? "Undefined" : newFish.captureType.ToString()))) { listOfCaptureTypes.Add(string.IsNullOrEmpty(newFish.captureType.ToString()) ? "Undefined" : newFish.captureType.ToString()); }
             }
+            totalTime += (DateTime.Now - startTime).TotalSeconds;
         }
 
+        Debug.Log(string.Format("fishDict assembly: {0}", totalTime));
         TimeManager.instance.SetBoundingDates(FishManager.earliestOverallTime, FishManager.latestOverallTime);
     }
 

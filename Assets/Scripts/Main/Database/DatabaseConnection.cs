@@ -7,7 +7,8 @@ using System.Collections.Generic;
 public class DatabaseConnection
 {
     private static Dictionary<string, double> GISCoords;
-    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0";
+    // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=1000;ConnectionIdleLifetime=10";
+    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
 
     static DatabaseConnection()  
     {      
@@ -19,7 +20,7 @@ public class DatabaseConnection
         };
     }
 
-    public static DataPacket[] GetFishData(Fish fish)
+    public static DataPacket[] GetFishPositions(Fish fish)
     {
         // https://stackoverflow.com/questions/8145479/can-constructors-be-async
         DataPacket[] returnPacket = new DataPacket[2];
@@ -86,7 +87,51 @@ public class DatabaseConnection
         return returnPacket;
     }
 
-    public static FishPacket GetMetaData(int fishID)
+    public static List<int> GetFishKeys()
+    {
+        DateTime startTime = DateTime.Now;
+        Debug.Log("Fetching fish keys");
+
+        List<int> idList = new List<int>();
+        string sql = 
+        @"select distinct fish.id
+        from fish
+        inner join positions
+            on fish.id = positions.id
+        where fish.id is not null
+            and positions.z is not null
+            and (fish.id = 2033 or fish.id = 2037)";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows)
+                {
+                    // ERROR HANDLING
+                    Debug.Log("there's no data");
+                }
+
+                while (rdr.Read())
+                {
+                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+                    idList.Add(id);
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        Debug.Log(string.Format("Key fetching: {0}; number of keys: {1}", (DateTime.Now - startTime).TotalSeconds, idList.Count));
+        return idList;
+    }
+
+    public static FishPacket GetFishMetadata(int fishID)
     {
         FishPacket returnPacket = null;
         string sql = string.Format(
@@ -108,7 +153,6 @@ public class DatabaseConnection
                 // No fish metadata could be recovered
                 if (!rdr.HasRows) { rdr.Close(); connection.Close(); return returnPacket; }
 
-                int i = 0;
                 while (rdr.Read())
                 {
                     int id = rdr.GetInt32(rdr.GetOrdinal("id"));
@@ -175,7 +219,6 @@ public class DatabaseConnection
                     DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
 
                     returnPacket = new FishPacket(id, captureType, length, speciesCode, weight, speciesName, male, earliestTimestamp, latestTimestamp);
-                    i++;
                 };
 
                 rdr.Close();
@@ -221,7 +264,6 @@ public class DatabaseConnection
             connection.Open(); 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            int i = 0;
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
                 if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); }
@@ -287,7 +329,6 @@ public class DatabaseConnection
                     }  
 
                     returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
-                    i++;
                 };
 
                 rdr.Close();
@@ -320,7 +361,6 @@ public class DatabaseConnection
             connection.Open(); 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            int i = 0;
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
                 if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); }
@@ -329,8 +369,6 @@ public class DatabaseConnection
                 {
                     earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
                     latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
-
-                    i++;
                 };
 
                 rdr.Close();
@@ -379,7 +417,6 @@ public class DatabaseConnection
             connection.Open(); 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            int i = 0;
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
                 if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); }
@@ -432,7 +469,6 @@ public class DatabaseConnection
                     }
 
                     if (unique) readings.Add(reading);
-                    i++;
                 };
 
                 rdr.Close();
@@ -467,7 +503,6 @@ public class DatabaseConnection
             connection.Open(); 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            int i = 0;
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
                 if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); }
@@ -476,8 +511,6 @@ public class DatabaseConnection
                 {
                     earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
                     latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
-
-                    i++;
                 };
 
                 rdr.Close();

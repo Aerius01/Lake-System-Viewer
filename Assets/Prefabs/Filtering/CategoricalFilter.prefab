@@ -335,7 +335,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sex
+  m_text: Categorical Filter
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -592,6 +592,7 @@ MonoBehaviour:
   sex: 1
   header: {fileID: 6924984453177395829}
   togglePrefab: {fileID: 7761440757167399038, guid: dbdaaf16e29500547b4e5419dcc21bca, type: 3}
+  contentPanel: {fileID: 0}
 --- !u!1 &6924984454696738928
 GameObject:
   m_ObjectHideFlags: 0
