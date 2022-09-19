@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4413001907074080}
   - component: {fileID: 2744306173752579806}
-  - component: {fileID: 617102672988980870}
   m_Layer: 0
   m_Name: carp
   m_TagString: Untagged
@@ -54,20 +53,17 @@ MonoBehaviour:
   trail: {fileID: 452667528355033292}
   thermoInd: {fileID: 8798508971830370314}
   skinRenderer: {fileID: 137282803160378426}
---- !u!114 &617102672988980870
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1062887002482736}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
   renderers:
   - {fileID: 137282803160378426}
+  deflt: {fileID: 2100000, guid: 418bfc81a7b621a47b1598b55adc9470, type: 2}
+  blue: {fileID: 2100000, guid: 6b21a654b49061b45b5e9ef76e85d76f, type: 2}
+  lBlue: {fileID: 2100000, guid: b940c15f32a89a742bb57f77779b1e1a, type: 2}
+  green: {fileID: 2100000, guid: 95fc1abe767da0a4c82f1cad1695b10d, type: 2}
+  purple: {fileID: 2100000, guid: 262dcf10343b33f4dba15a8fa7235e5d, type: 2}
+  orange: {fileID: 2100000, guid: ef93a875094ca644394224a8b50956cd, type: 2}
+  red: {fileID: 2100000, guid: 8a0423f91e8a7ea41a1a30923e9ecca9, type: 2}
+  pink: {fileID: 2100000, guid: fbbaa794f99cb6142b120a21b9ed7acc, type: 2}
+  yellow: {fileID: 2100000, guid: 05b61e5f43e843e4e9d13c2deedc9279, type: 2}
 --- !u!1 &1159126098305048
 GameObject:
   m_ObjectHideFlags: 0

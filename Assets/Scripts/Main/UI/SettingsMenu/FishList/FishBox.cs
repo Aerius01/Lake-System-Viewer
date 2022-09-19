@@ -31,7 +31,7 @@ public class FishBox : ListBox
         this.parentRect = this.transform.parent.GetComponent<RectTransform>();
         this.parentBox = this.transform.parent.transform.parent.transform.parent.GetComponent<SpeciesBox>();
         this.colorHandler = this.GetComponent<FishListColoringButton>();
-        this.colorHandler.DefineParameters(this.fish.id);
+        this.colorHandler.DefineParameters(fish);
 
         gameText = this.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>();
         this.headerText = this.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>();
@@ -101,7 +101,7 @@ public class FishBox : ListBox
         else { this.fish.spawnOverride = true; this.fish.Deactivate(); }
     }
 
-    public void SetIndividualColor(Color color)
+    public void SetIndividualColor(string color)
     {
         RemoveIndividualColor(); // remove any existing coloring
         this.colorHandler.SetColor(color);

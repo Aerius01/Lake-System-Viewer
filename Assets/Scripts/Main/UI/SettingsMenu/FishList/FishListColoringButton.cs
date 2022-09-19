@@ -18,12 +18,13 @@ public class FishListColoringButton : MonoBehaviour
     // Core functionality
     private TextMeshProUGUI colorButtonText;
     private Image headerImage;
-    private int fishID;
+    private Fish fish;
     private Color trackingColor;
+    private string stringColor;
 
-    public void DefineParameters(int id)
+    public void DefineParameters(Fish fish)
     {
-        fishID = id;
+        this.fish = fish;
         colorButtonText = colorButton.transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
 
         headerImage = this.gameObject.transform.Find("Header").GetComponent<Image>();
@@ -34,25 +35,26 @@ public class FishListColoringButton : MonoBehaviour
     {
         if (!colorApplied)
         {
-            // Open the FCP
-            FlexibleColorPickerUtils.SetNewColor();
-            FlexibleColorPickerUtils.colorAcceptedEvent += this.SetColor;
+            // Open the CP
+            ColorPicker.ShowMenu(true);
+            ColorPicker.colorAcceptedEvent += this.SetColor;
         }
         else
         {
             // Remove the color
-            FishManager.ResetFishColor(this.fishID);
+            this.fish.ResetFishColor();
             colorButtonText.text = "Apply Tracking Color";
             colorApplied = false;
             ResetHeaderColor();
         }
     }
 
-    public void SetColor(Color color)
+    public void SetColor(string color)
     {
-        this.trackingColor = color;
+        this.stringColor = color;
+        this.fish.SetFishColor(this.stringColor);
+        this.trackingColor = this.fish.color;
 
-        FishManager.SetFishColor(fishID, this.trackingColor);
         this.colorApplied = true;
         this.colorButtonText.text = "Remove Color";
 
@@ -60,19 +62,19 @@ public class FishListColoringButton : MonoBehaviour
         this.headerImage.color = this.trackingColor;
 
         // Unsubscribe event listener
-        FlexibleColorPickerUtils.colorAcceptedEvent -= this.SetColor;
+        ColorPicker.colorAcceptedEvent -= this.SetColor;
     }
 
     public void ResetHeaderColor()
     {
-        if (colorApplied) { SetColor(trackingColor); }
-        else { headerImage.color = FlexibleColorPickerUtils.standardHeaderColor; }
+        if (colorApplied) { SetColor(this.stringColor); }
+        else { headerImage.color = ColorPicker.standardHeaderColor; }
     }
 
     public void DisableButton()
     {
         disabled = true;
-        colorButton.GetComponent<Image>().color = headerImage.color = FlexibleColorPickerUtils.disabledColor;
+        colorButton.GetComponent<Image>().color = headerImage.color = ColorPicker.disabledColor;
         trackingButton.interactable = false;
         if (clickHandler != null) clickHandler.DisableZoom(true);
     }
@@ -81,7 +83,7 @@ public class FishListColoringButton : MonoBehaviour
     {
         disabled = false;
         ResetHeaderColor();
-        colorButton.GetComponent<Image>().color = FlexibleColorPickerUtils.standardButtonColor;
+        colorButton.GetComponent<Image>().color = ColorPicker.standardButtonColor;
         trackingButton.interactable = true;
         if (clickHandler != null) clickHandler.DisableZoom(false);
     }

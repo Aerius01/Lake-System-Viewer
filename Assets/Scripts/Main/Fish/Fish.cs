@@ -33,9 +33,9 @@ public class Fish : MonoBehaviour
     public Vector3 extents { get { return utils.extents; } }
 
 
-    // Utility class representing depth lines, tags, etc
+    // Utility class representing depth lines, tags, colors, etc
     private FishUtils utils;
-    private FishHighlighter highlighter;
+    public Color color { get { return this.utils.GetFishColor(); } }
 
     // Fish specific data
     public int id {get; private set;}
@@ -80,7 +80,6 @@ public class Fish : MonoBehaviour
         this.fishObject.name = string.Format("{0}", this.id);
 
         this.utils = this.fishObject.GetComponent<FishUtils>();
-        this.highlighter = this.fishObject.GetComponent<FishHighlighter>();
 
         if (this.length != null)
         {
@@ -251,17 +250,6 @@ public class Fish : MonoBehaviour
         this.UpdateCanvasText();
     }
 
-
-
-
-
-
-
-
-
-
-    public void ResetFishColor() { this.highlighter.ResetColor(); }
-
-    public void SetFishColor(Color color) { this.highlighter.SetColor(color); }
-
+    public void ResetFishColor() { this.utils.ResetColor(); }
+    public void SetFishColor(string color) { this.utils.SetFishColor(color); }
 }

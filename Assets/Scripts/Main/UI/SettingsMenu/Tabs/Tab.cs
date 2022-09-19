@@ -19,8 +19,8 @@ public class Tab : MonoBehaviour
             this.panel.alpha = value ? 1f : 0f;
             this.panel.interactable = this.panel.blocksRaycasts = value;
 
-            if (value) { this.background.color = FlexibleColorPickerUtils.standardButtonColor; }
-            else { this.background.color = FlexibleColorPickerUtils.disabledColor; }
+            if (value) { this.background.color = ColorPicker.standardButtonColor; }
+            else { this.background.color = ColorPicker.disabledColor; }
         }
     }
     public TabController tabController { set { newTabEvent += value.ChangeTab; }}

@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4613738149773452}
   - component: {fileID: 95887894859017138}
   - component: {fileID: 6819660770141619726}
-  - component: {fileID: 6407725927713224519}
   m_Layer: 0
   m_Name: perch
   m_TagString: Untagged
@@ -74,22 +73,18 @@ MonoBehaviour:
   depthLine: {fileID: 2178721762898413084}
   trail: {fileID: 2716385810516687759}
   thermoInd: {fileID: 7053002406301417418}
-  skinRenderer: {fileID: 137872001215294266}
---- !u!114 &6407725927713224519
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1003825803692174}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
   renderers:
   - {fileID: 137872001215294266}
   - {fileID: 137741570643551718}
+  deflt: {fileID: 2100000, guid: 926d0e4e01d43a4419cec6cba46d5628, type: 2}
+  blue: {fileID: 2100000, guid: dd10ebf27464e6f4aaad0e68e1c5792a, type: 2}
+  lBlue: {fileID: 2100000, guid: 20b375a0d8d284b428af57a8ebad45b4, type: 2}
+  green: {fileID: 2100000, guid: 092ed0d51c8771e4e94f01836fb6839e, type: 2}
+  purple: {fileID: 2100000, guid: 7729c81abd3435644b77b4bd4c01a86e, type: 2}
+  orange: {fileID: 2100000, guid: 006c416d510d5a24dbd64e084323da44, type: 2}
+  red: {fileID: 2100000, guid: 8fef2b695de65fc40adb98ac663680f5, type: 2}
+  pink: {fileID: 2100000, guid: 70c3cba688a87aa4f926deed10899339, type: 2}
+  yellow: {fileID: 2100000, guid: 32ac20927606bf64a9c8de91684ca60a, type: 2}
 --- !u!1 &1019765100907588
 GameObject:
   m_ObjectHideFlags: 0

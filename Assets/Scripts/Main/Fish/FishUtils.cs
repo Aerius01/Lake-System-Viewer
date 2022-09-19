@@ -1,15 +1,16 @@
 using UnityEngine;
 using TMPro;
-using System.Collections.Generic;
 
 public class FishUtils : MonoBehaviour
 {
     public GameObject canvas, depthLine, trail, thermoInd;
-    [SerializeField] private SkinnedMeshRenderer skinRenderer;
+    [SerializeField] private Renderer[] renderers;
+    [SerializeField] private Material deflt, blue, lBlue, green, purple, orange, red, pink, yellow;
+
     private TextMeshProUGUI textElement;
 
-    public float maxExtent { get { return Mathf.Max(skinRenderer.bounds.extents.x, skinRenderer.bounds.extents.y, skinRenderer.bounds.extents.z); } }
-    public Vector3 extents { get { return skinRenderer.bounds.extents; } }
+    public float maxExtent { get { return Mathf.Max(renderers[0].bounds.extents.x, renderers[0].bounds.extents.y, renderers[0].bounds.extents.z); } }
+    public Vector3 extents { get { return renderers[0].bounds.extents; } }
     public bool canvasActive {get { return canvas.activeSelf; }} 
     public bool depthLineActive {get { return depthLine.activeSelf; }} 
     public bool trailActive {get { return trail.activeSelf; }} 
@@ -80,4 +81,21 @@ public class FishUtils : MonoBehaviour
     }
 
     public void setNewText(string val) { textElement.text = val; }
+
+    // Color-handling
+    public void ResetColor() { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = deflt; } }
+    public void SetFishColor(string color)
+    {
+        if (color == "blue") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = blue; } }
+        else if (color == "lBlue") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = lBlue; } }
+        else if (color == "green") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = green; } }
+        else if (color == "purple") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = purple; } }
+        else if (color == "orange") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = orange; } }
+        else if (color == "pink") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = pink; } }
+        else if (color == "red") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = red; } }
+        else if (color == "yellow") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = yellow; } }
+        else ResetColor();
+    }
+
+    public Color GetFishColor() { return renderers[0].material.color; }
 }

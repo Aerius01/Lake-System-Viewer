@@ -75,7 +75,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4081515861406798}
   - component: {fileID: 7544114577022486417}
-  - component: {fileID: 717752081267242086}
   m_Layer: 0
   m_Name: catfish
   m_TagString: Untagged
@@ -118,21 +117,17 @@ MonoBehaviour:
   depthLine: {fileID: 1592928395435954436}
   trail: {fileID: 5215593403531496517}
   thermoInd: {fileID: 9182187108278775353}
-  skinRenderer: {fileID: 137185205850663428}
---- !u!114 &717752081267242086
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1124833601402256}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
   renderers:
   - {fileID: 137185205850663428}
+  deflt: {fileID: 2100000, guid: 9462e2b71457a9041880856a4b5cdca6, type: 2}
+  blue: {fileID: 2100000, guid: 8c43f8b7e88e88e4cb438c1d6010099e, type: 2}
+  lBlue: {fileID: 2100000, guid: 6454d2217492b0f46944f418412dda39, type: 2}
+  green: {fileID: 2100000, guid: ceb3054abcd6c4b4892dc5aabdcc660d, type: 2}
+  purple: {fileID: 2100000, guid: d687194d42d99284fb69fde6ee61a12b, type: 2}
+  orange: {fileID: 2100000, guid: 04db131ed5568f74aab4ef08aa0a6f05, type: 2}
+  red: {fileID: 2100000, guid: 390088643e0307a4fb154e3452259f0c, type: 2}
+  pink: {fileID: 2100000, guid: 071ada4e112c65342b49edde3d07fbf5, type: 2}
+  yellow: {fileID: 2100000, guid: af16ea4e230d6dd4ba27075890d9eb20, type: 2}
 --- !u!1 &1142954830363470
 GameObject:
   m_ObjectHideFlags: 0

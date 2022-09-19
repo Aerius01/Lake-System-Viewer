@@ -69,7 +69,7 @@ public class SpeciesBox : ListBox
     public void Activate()
     { 
         this.removeButton.GetComponent<Image>().color = this.colorButton.GetComponent<Image>().color =
-            this.activeToggle.isOn ? FlexibleColorPickerUtils.standardButtonColor : FlexibleColorPickerUtils.disabledColor;
+            this.activeToggle.isOn ? ColorPicker.standardButtonColor : ColorPicker.disabledColor;
         this.removeButton.GetComponent<Button>().interactable = this.colorButton.GetComponent<Button>().interactable =
             this.activeToggle.isOn;
 
@@ -82,8 +82,8 @@ public class SpeciesBox : ListBox
 
     public void SetSpeciesColor()
     {
-        FlexibleColorPickerUtils.SetNewColor();
-        foreach (FishBox box in components) { if (!box.greyedOut) { FlexibleColorPickerUtils.colorAcceptedEvent += box.SetIndividualColor; } }
+        ColorPicker.ShowMenu(true);
+        foreach (FishBox box in components) { if (!box.greyedOut) { ColorPicker.colorAcceptedEvent += box.SetIndividualColor; } }
     }
 
     public void RemoveSpeciesColor() { foreach (FishBox box in components) { box.RemoveIndividualColor(); } }

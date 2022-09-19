@@ -77,7 +77,6 @@ GameObject:
   - component: {fileID: 6757737976170740740}
   - component: {fileID: 95358032290358910}
   - component: {fileID: 249498450965361554}
-  - component: {fileID: 1361268293280886137}
   m_Layer: 0
   m_Name: roach
   m_TagString: Untagged
@@ -153,22 +152,18 @@ MonoBehaviour:
   depthLine: {fileID: 5818511005564706259}
   trail: {fileID: 7279655448250839922}
   thermoInd: {fileID: 5252719103298452572}
-  skinRenderer: {fileID: 137562815665822614}
---- !u!114 &1361268293280886137
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1456522639038900}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09396ba0d59e27542b121bef3231f6a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
   renderers:
   - {fileID: 137562815665822614}
   - {fileID: 137999563193517504}
+  deflt: {fileID: 2100000, guid: 926d0e4e01d43a4419cec6cba46d5628, type: 2}
+  blue: {fileID: 2100000, guid: dd10ebf27464e6f4aaad0e68e1c5792a, type: 2}
+  lBlue: {fileID: 2100000, guid: 20b375a0d8d284b428af57a8ebad45b4, type: 2}
+  green: {fileID: 2100000, guid: 092ed0d51c8771e4e94f01836fb6839e, type: 2}
+  purple: {fileID: 2100000, guid: 7729c81abd3435644b77b4bd4c01a86e, type: 2}
+  orange: {fileID: 2100000, guid: 006c416d510d5a24dbd64e084323da44, type: 2}
+  red: {fileID: 2100000, guid: 8fef2b695de65fc40adb98ac663680f5, type: 2}
+  pink: {fileID: 2100000, guid: 70c3cba688a87aa4f926deed10899339, type: 2}
+  yellow: {fileID: 2100000, guid: 32ac20927606bf64a9c8de91684ca60a, type: 2}
 --- !u!1 &1472999894096598
 GameObject:
   m_ObjectHideFlags: 0
