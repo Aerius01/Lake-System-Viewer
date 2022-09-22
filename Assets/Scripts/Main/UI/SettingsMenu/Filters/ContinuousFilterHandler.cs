@@ -14,10 +14,7 @@ public class ContinuousFilterHandler : MonoBehaviour
     
     private int counter = 0;
 
-    private void Awake()
-    {
-        Main.fishDictAssembled += this.SetScales;
-    }
+    private void Awake() { Main.fishDictAssembled += this.SetScales; }
 
     private void Start()
     {

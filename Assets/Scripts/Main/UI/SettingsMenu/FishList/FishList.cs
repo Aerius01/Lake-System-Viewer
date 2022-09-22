@@ -5,9 +5,12 @@ using TMPro;
 public class FishList : MonoBehaviour
 {
     private float listSize;
+    private bool listPopulated = false;
 
     private List<SpeciesBox> speciesList;
     [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
+
+    private void Awake() { Main.fishDictAssembled += this.PopulateList; }
 
     public void PopulateList()
     {
@@ -47,30 +50,35 @@ public class FishList : MonoBehaviour
                 box.AddFish(fish, fishBox);
             }
         }
+
+        listPopulated = true;
     }
 
     private void FixedUpdate()
     {
-        listSize = 0f;
-        foreach (SpeciesBox speciesBox in speciesList)
+        if (listPopulated)
         {
-            listSize += speciesBox.open ? speciesBox.contentSize : 60f;
-            foreach (FishBox fishBox in speciesBox.components)
+            listSize = 0f;
+            foreach (SpeciesBox speciesBox in speciesList)
             {
-                if (fishBox.fish.fishShouldExist)
+                listSize += speciesBox.open ? speciesBox.contentSize : 60f;
+                foreach (FishBox fishBox in speciesBox.components)
                 {
-                    fishBox.UpdateText();
-                    if (fishBox.greyedOut) { fishBox.RestoreColor(); }
-                }
-                else
-                {
-                    fishBox.UpdateText(active:false);
-                    if (!fishBox.greyedOut) { fishBox.Greyout(); }
+                    if (fishBox.fish.fishShouldExist)
+                    {
+                        fishBox.UpdateText();
+                        if (fishBox.greyedOut) { fishBox.RestoreColor(); }
+                    }
+                    else
+                    {
+                        fishBox.UpdateText(active:false);
+                        if (!fishBox.greyedOut) { fishBox.Greyout(); }
+                    }
                 }
             }
-        }
 
-        RectTransform recter = this.GetComponent<RectTransform>();
-        recter.sizeDelta += new Vector2(0f, listSize - recter.rect.height);
+            RectTransform recter = this.GetComponent<RectTransform>();
+            recter.sizeDelta += new Vector2(0f, listSize - recter.rect.height);
+        }
     }
 }

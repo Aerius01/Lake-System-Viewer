@@ -15,6 +15,7 @@ public class FishUtils : MonoBehaviour
     public bool depthLineActive {get { return depthLine.activeSelf; }} 
     public bool trailActive {get { return trail.activeSelf; }} 
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
+    public Color fishColor { get { return renderers[0].material.color; } } 
 
     private void Awake()
     {
@@ -83,10 +84,33 @@ public class FishUtils : MonoBehaviour
     public void setNewText(string val) { textElement.text = val; }
 
     // Color-handling
-    public void ResetColor() { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = deflt; } }
+    public void ResetColor() 
+    { 
+        for (int i = 0; i < renderers.Length; i++) { renderers[i].material = deflt; }
+
+        // Fish trail color
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(green.color, 0.0f), new GradientColorKey(Color.white, 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(1f, 0.0f), new GradientAlphaKey(0f, 1.0f) }
+        );
+        trail.GetComponent<TrailRenderer>().colorGradient = gradient;
+
+        // Fish depth line color
+        gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(green.color, 0.0f), new GradientColorKey(green.color, 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(1f, 0.0f), new GradientAlphaKey(1f, 1.0f) }
+        );
+        depthLine.GetComponent<LineRenderer>().colorGradient = gradient;
+    }
+
     public void SetFishColor(string color)
     {
-        if (color == "blue") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = blue; } }
+        bool defaultColor = false;
+
+        // Actual fish color
+        if (color == "blue") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = blue; };  }
         else if (color == "lBlue") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = lBlue; } }
         else if (color == "green") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = green; } }
         else if (color == "purple") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = purple; } }
@@ -94,8 +118,24 @@ public class FishUtils : MonoBehaviour
         else if (color == "pink") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = pink; } }
         else if (color == "red") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = red; } }
         else if (color == "yellow") { for (int i = 0; i < renderers.Length; i++) { renderers[i].material = yellow; } }
-        else ResetColor();
-    }
+        else { ResetColor(); defaultColor = true; };
 
-    public Color GetFishColor() { return renderers[0].material.color; }
+        Color trailColor = defaultColor ? green.color : this.fishColor;
+
+        // Fish trail color
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(trailColor, 0.0f), new GradientColorKey(Color.white, 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(1f, 0.0f), new GradientAlphaKey(0f, 1.0f) }
+        );
+        trail.GetComponent<TrailRenderer>().colorGradient = gradient;
+
+        // Fish depth line color
+        gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(trailColor, 0.0f), new GradientColorKey(trailColor, 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(1f, 0.0f), new GradientAlphaKey(1f, 1.0f) }
+        );
+        depthLine.GetComponent<LineRenderer>().colorGradient = gradient;
+    }
 }

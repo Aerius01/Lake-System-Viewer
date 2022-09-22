@@ -1,14 +1,15 @@
 using Npgsql;
 using UnityEngine;
 using System;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 
 public class DatabaseConnection
 {
     private static Dictionary<string, double> GISCoords;
-    // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=1000;ConnectionIdleLifetime=10";
-    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
+    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=30";
+    // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
 
     static DatabaseConnection()  
     {      
@@ -45,11 +46,6 @@ public class DatabaseConnection
                 AND p.x IS NOT NULL
                 AND p.y IS NOT NULL
                 AND p.z IS NOT NULL))
-            AND p.id IS NOT NULL
-            AND p.timestamp IS NOT NULL
-            AND p.x IS NOT NULL
-            AND p.y IS NOT NULL
-            AND p.z IS NOT NULL
             ORDER BY p.timestamp", fishID, strTime);
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
@@ -83,7 +79,6 @@ public class DatabaseConnection
 
             connection.Close(); 
         }
-
         return returnPacket;
     }
 
@@ -99,8 +94,9 @@ public class DatabaseConnection
         inner join positions
             on fish.id = positions.id
         where fish.id is not null
-            and positions.z is not null
-            and (fish.id = 2033 or fish.id = 2037)";
+            and positions.z is not null";
+        // limit 100";
+            // and (fish.id = 2033 or fish.id = 2037)";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -131,9 +127,9 @@ public class DatabaseConnection
         return idList;
     }
 
-    public static FishPacket GetFishMetadata(int fishID)
+
+    private NpgsqlBatchCommand NewBatchCommand(int key)
     {
-        FishPacket returnPacket = null;
         string sql = string.Format(
             @"SELECT f.id,  f.species, s.name, f.tl, f.weight, f.sex, f.comment, min(p.timestamp) as minTime, max(p.timestamp) as maxTime
             FROM FISH f 
@@ -141,93 +137,109 @@ public class DatabaseConnection
             left join positions p on f.id = p.id
             where f.id = {0}
             and s.name != 'Beacon' and p.timestamp is not null
-            group by f.id,  f.species, s.name, f.tl, f.weight, f.sex, f.comment", fishID);
+            group by f.id, f.species, s.name, f.tl, f.weight, f.sex, f.comment", key);
         
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        return new NpgsqlBatchCommand(sql);
+    }
+
+    public async Task<Dictionary<int, FishPacket>> GetFishMetadata(List<int> keyList)
+    {
+        Dictionary<int, FishPacket> returnDict = new Dictionary<int, FishPacket>();
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            await connection.OpenAsync();
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            NpgsqlBatch batch = new NpgsqlBatch(connection);
+            foreach (int key in keyList) { batch.BatchCommands.Add(NewBatchCommand(key)); }
+
+            await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
             {
-                // No fish metadata could be recovered
-                if (!rdr.HasRows) { rdr.Close(); connection.Close(); return returnPacket; }
-
-                while (rdr.Read())
+                for (int i=0; i < keyList.Count; i++)
                 {
-                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-
-                    string captureType = null;
-                    var entry = rdr.GetValue(rdr.GetOrdinal("comment"));
-                    if (!DBNull.Value.Equals(entry))
+                    // No fish metadata could be recovered
+                    if (!rdr.HasRows) { rdr.NextResult(); }
+                    else
                     {
-                        try
+                        while (await rdr.ReadAsync())
                         {
-                            captureType = Convert.ToString(entry); 
-                            if (String.IsNullOrEmpty(captureType)) captureType = null;
-                        }
-                        catch { Debug.Log("Metadata conversion fail: capture type"); }
-                    }    
+                            int id = rdr.GetInt32(rdr.GetOrdinal("id"));
 
-                    int? length = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("tl"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { length = Convert.ToInt32(entry); }
-                        catch { Debug.Log("Metadata conversion fail: length"); }
-                    }     
+                            string captureType = null;
+                            var entry = rdr.GetValue(rdr.GetOrdinal("comment"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try
+                                {
+                                    captureType = Convert.ToString(entry); 
+                                    if (String.IsNullOrEmpty(captureType)) captureType = null;
+                                }
+                                catch { Debug.Log("Metadata conversion fail: capture type"); }
+                            }    
 
-                    int? speciesCode = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("species"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { speciesCode = Convert.ToInt32(entry); }
-                        catch { Debug.Log("Metadata conversion fail: species code"); }
-                    } 
+                            int? length = null;
+                            entry = rdr.GetValue(rdr.GetOrdinal("tl"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { length = Convert.ToInt32(entry); }
+                                catch { Debug.Log("Metadata conversion fail: length"); }
+                            }     
 
-                    int? weight = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("weight"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { weight = Convert.ToInt32(entry); }
-                        catch { Debug.Log("Metadata conversion fail: weight"); }
-                    } 
+                            int? speciesCode = null;
+                            entry = rdr.GetValue(rdr.GetOrdinal("species"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { speciesCode = Convert.ToInt32(entry); }
+                                catch { Debug.Log("Metadata conversion fail: species code"); }
+                            } 
 
-                    string speciesName = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("name"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try
-                        {
-                            speciesName = Convert.ToString(entry); 
-                            if (String.IsNullOrEmpty(speciesName)) speciesName = null;
-                        }
-                        catch { Debug.Log("Metadata conversion fail: species name"); }
-                    } 
+                            int? weight = null;
+                            entry = rdr.GetValue(rdr.GetOrdinal("weight"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { weight = Convert.ToInt32(entry); }
+                                catch { Debug.Log("Metadata conversion fail: weight"); }
+                            } 
 
-                    bool? male = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("sex"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        string tempString = Convert.ToString(entry);
-                        if (tempString.Contains('m')) male = true;
-                        else if (tempString.Contains('f')) male = false;
+                            string speciesName = null;
+                            entry = rdr.GetValue(rdr.GetOrdinal("name"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try
+                                {
+                                    speciesName = Convert.ToString(entry); 
+                                    if (String.IsNullOrEmpty(speciesName)) speciesName = null;
+                                }
+                                catch { Debug.Log("Metadata conversion fail: species name"); }
+                            } 
+
+                            bool? male = null;
+                            entry = rdr.GetValue(rdr.GetOrdinal("sex"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                string tempString = Convert.ToString(entry);
+                                if (tempString.Contains('m')) male = true;
+                                else if (tempString.Contains('f')) male = false;
+                            }
+                            
+                            // Nullity handled by SQL query
+                            DateTime earliestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("minTime"));
+                            DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
+
+                            FishPacket thisPacket = new FishPacket(id, captureType, length, speciesCode, weight, speciesName, male, earliestTimestamp, latestTimestamp);
+                            returnDict[id] = thisPacket;
+                        };
                     }
-                    
-                    // Nullity handled by SQL query
-                    DateTime earliestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("minTime"));
-                    DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
 
-                    returnPacket = new FishPacket(id, captureType, length, speciesCode, weight, speciesName, male, earliestTimestamp, latestTimestamp);
-                };
+                    rdr.NextResult();
+                }
 
-                rdr.Close();
+                await rdr.CloseAsync();
             }
 
-            connection.Close();
+            await connection.CloseAsync();
         }
 
-        return returnPacket;
+        return returnDict;
     }
 
     public static WeatherPacket GetWeatherData()

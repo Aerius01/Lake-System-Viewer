@@ -9,7 +9,7 @@ public class PassiveFade : MonoBehaviour
     private Coroutine coroutine;
     private CanvasGroup canvasGroup;
     private bool routineRunning;
-    private float timer, fadeTime = 3f;
+    private float timer, fadeTime = 5f;
 
     private void Start()
     {
@@ -20,7 +20,7 @@ public class PassiveFade : MonoBehaviour
 
     private void Update()
     {
-        if (Input.mousePosition != lastMousePosition || Input.GetMouseButtonDown(0))
+        if (Input.mousePosition != lastMousePosition || (Input.anyKey && !Input.GetKey("w") && !Input.GetKey("a") && !Input.GetKey("s") && !Input.GetKey("d") && !Input.GetKey("q") && !Input.GetKey("e")))
         {
             // Bring the UI object back to full opacity
             timer = 0f;

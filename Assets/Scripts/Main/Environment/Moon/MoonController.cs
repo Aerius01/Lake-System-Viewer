@@ -17,15 +17,8 @@ public class MoonController : MonoBehaviour
     private float moonPhase;
 
     // Properties
-    public float phase
-    {
-        get {return moonPhase;}
-    }
-
-    public float moonAlpha
-    {
-        get {return moonMaterial.GetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7");}
-    }
+    public float phase { get {return moonPhase;} }
+    public float moonAlpha { get {return moonMaterial.GetFloat("Vector1_46109bf20a484c2caf68bdeec6ce74a7");} }
 
     private void Start()
     {
@@ -197,21 +190,9 @@ public class MoonController : MonoBehaviour
         // Have the moon fade if it is between the mesh and the camera
     }
 
-    private double deg_to_rad(double degrees)
-    {
-        return (degrees * (Math.PI/180));
-    }
-    
-    private double rad_to_deg(double radians)
-    {
-        return (radians * (180/Math.PI));
-    }
-
-    private double ToJulianDate(DateTime date)
-    {
-        return date.ToOADate() + 2415018.5;
-    }
-
+    private double deg_to_rad(double degrees) { return (degrees * (Math.PI/180)); }
+    private double rad_to_deg(double radians) { return (radians * (180/Math.PI)); }
+    private double ToJulianDate(DateTime date) { return date.ToOADate() + 2415018.5; }
     private double mod(double x, double m) { return (x%m + m)%m; }
 
     private void CalculateNewMoonPos()
@@ -314,18 +295,9 @@ public class MoonController : MonoBehaviour
         double currentSum = 0f;
         for (int i = 0; i < periodicLatArray.GetLength(0); i++)
         {
-            if (Math.Abs(periodicLatArray[i, 1]) == 1)
-            {
-                periodicLatArray[i, 5] = periodicLatArray[i, 4] * e;
-            }
-            else if (Math.Abs(periodicLatArray[i, 1]) == 2)
-            {
-                periodicLatArray[i, 5] = periodicLatArray[i, 4] * Math.Pow(e, 2);
-            }
-            else
-            {
-                periodicLatArray[i, 5] = periodicLatArray[i, 4];
-            };
+            if (Math.Abs(periodicLatArray[i, 1]) == 1) { periodicLatArray[i, 5] = periodicLatArray[i, 4] * e; }
+            else if (Math.Abs(periodicLatArray[i, 1]) == 2) { periodicLatArray[i, 5] = periodicLatArray[i, 4] * Math.Pow(e, 2); }
+            else { periodicLatArray[i, 5] = periodicLatArray[i, 4]; };
 
             periodicLatArray[i, 6] = periodicLatArray[i, 5] * Math.Sin((periodicLatArray[i, 0] * D
                 + periodicLatArray[i, 1] * M + periodicLatArray[i, 2] * M_a + periodicLatArray[i, 3] * F));
@@ -341,18 +313,9 @@ public class MoonController : MonoBehaviour
         double currentSum = 0f;
         for (int i = 0; i < periodicLongArray.GetLength(0); i++)
         {
-            if (Math.Abs(periodicLongArray[i, 1]) == 1)
-            {
-                periodicLongArray[i, 5] = periodicLongArray[i, 4] * e;
-            }
-            else if (Math.Abs(periodicLongArray[i, 1]) == 2)
-            {
-                periodicLongArray[i, 5] = periodicLongArray[i, 4] * Math.Pow(e, 2);
-            }
-            else
-            {
-                periodicLongArray[i, 5] = periodicLongArray[i, 4];
-            };
+            if (Math.Abs(periodicLongArray[i, 1]) == 1) { periodicLongArray[i, 5] = periodicLongArray[i, 4] * e; }
+            else if (Math.Abs(periodicLongArray[i, 1]) == 2) { periodicLongArray[i, 5] = periodicLongArray[i, 4] * Math.Pow(e, 2); }
+            else { periodicLongArray[i, 5] = periodicLongArray[i, 4]; };
 
             periodicLongArray[i, 6] = periodicLongArray[i, 5] * Math.Sin((periodicLongArray[i, 0] * D
                 + periodicLongArray[i, 1] * M + periodicLongArray[i, 2] * M_a + periodicLongArray[i, 3] * F));

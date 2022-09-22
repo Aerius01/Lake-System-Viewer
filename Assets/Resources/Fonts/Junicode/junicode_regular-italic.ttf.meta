@@ -1,0 +1,25 @@
+fileFormatVersion: 2
+guid: 1afac86c75d7393429a6defcbc2eb36a
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Junicode
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 99a0b9da670378f43a5c49bb5c4ce81b, type: 3}
+  - {fileID: 12800000, guid: d956cb95ec50c6847aab29ee49c6d172, type: 3}
+  - {fileID: 12800000, guid: a4f1e7cd585caa84698b325fe6e00907, type: 3}
+  - {fileID: 12800000, guid: 625c1b1dbf4b46c43a0a64ea94ae4536, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,0 +1,237 @@
+
+  FONTLOG: Aileron
+
+  --------------------------------------------
+  Aileron Thin Italic
+  --------------------------------------------
+
+  This file provides detailed information on the Aileron font 
+  Software.
+  This information should be distributed along with the 
+  Aileron font and any derivative works.
+  
+  Aileron Font Information
+  
+  Aileron is a neogrotesque typeface made by Sora Sagano. The 
+  design is close to Helvetica, but conceptually it has 
+  become rather close to the Univers. Based upon the multiple 
+  master principle, available weights include eight steps 
+  from UltraLight to Black.
+  
+  ChangeLog
+  
+  22 Jan 2015 (Christoph Haag)
+- adjusted OS/2 weight class
+  
+  9 Jan 2015 (Christoph Haag) Aileron 1.103
+- created fontforge sources as base to work on GNU/Linux
+- added FONTLOG to .sfdir
+- Mastered Font from Fontforge SFDIR to 
+  UFO,OTF,TTF,EOT,WOFF,SVG
+  
+  20 Aug 2014 (Sora Sagano) Aileron 1.102
+- Initial release
+  
+  Acknowledgements
+  
+  If you make modifications be sure to add your name (N), 
+  email (E), web-address (if you have one) (W) and 
+  description (D). This list is in alphabetical order.
+  
+  N: Christoph Haag
+  E: christoph@lafkon.net
+  W: www.lafkon.net
+  D: Transformer
+  
+  N: Sora Sagano
+  E: sagano@dotcolon.net
+  W: www.dotcolon.net
+  D: Designer
+
+
+  --------------------------------------------
+  Aileron UltraLight
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Thin
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Heavy
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron UltraLight Italic
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron SemiBold Italic
+  --------------------------------------------
+
+  This file provides detailed information on the Aileron font 
+  Software.
+  This information should be distributed along with the 
+  Aileron font and any derivative works.
+  
+  Aileron Font Information
+  
+  Aileron is a neogrotesque typeface made by Sora Sagano. The 
+  design is close to Helvetica, but conceptually it has 
+  become rather close to the Univers. Based upon the multiple 
+  master principle, available weights include eight steps 
+  from UltraLight to Black.
+  
+  ChangeLog
+  
+  9 Jan 2015 (Christoph Haag) Aileron 1.103
+- created fontforge sources as base to work on GNU/Linux
+- added FONTLOG to .sfdir
+- Mastered Font from Fontforge SFDIR to 
+  UFO,OTF,TTF,EOT,WOFF,SVG
+  
+  20 Aug 2014 (Sora Sagano) Aileron 1.102
+- Initial release
+  
+  Acknowledgements
+  
+  If you make modifications be sure to add your name (N), 
+  email (E), web-address (if you have one) (W) and 
+  description (D). This list is in alphabetical order.
+  
+  N: Christoph Haag
+  E: christoph@lafkon.net
+  W: www.lafkon.net
+  D: Transformer
+  
+  N: Sora Sagano
+  E: sagano@dotcolon.net
+  W: www.dotcolon.net
+  D: Designer
+
+
+  --------------------------------------------
+  Aileron Black Italic
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Regular
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Bold Italic
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Black
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron SemiBold
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Light
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Heavy Italic
+  --------------------------------------------
+
+  This file provides detailed information on the Aileron font 
+  Software.
+  This information should be distributed along with the 
+  Aileron font and any derivative works.
+  
+  Aileron Font Information
+  
+  Aileron is a neogrotesque typeface made by Sora Sagano. The 
+  design is close to Helvetica, but conceptually it has 
+  become rather close to the Univers. Based upon the multiple 
+  master principle, available weights include eight steps 
+  from UltraLight to Black.
+  
+  ChangeLog
+  
+  22 Jan 2015 (Christoph Haag)
+- adjusted OS/2 weight class
+  
+  9 Jan 2015 (Christoph Haag) Aileron 1.103
+- created fontforge sources as base to work on GNU/Linux
+- added FONTLOG to .sfdir
+- Mastered Font from Fontforge SFDIR to 
+  UFO,OTF,TTF,EOT,WOFF,SVG
+  
+  20 Aug 2014 (Sora Sagano) Aileron 1.102
+- Initial release
+  
+  Acknowledgements
+  
+  If you make modifications be sure to add your name (N), 
+  email (E), web-address (if you have one) (W) and 
+  description (D). This list is in alphabetical order.
+  
+  N: Christoph Haag
+  E: christoph@lafkon.net
+  W: www.lafkon.net
+  D: Transformer
+  
+  N: Sora Sagano
+  E: sagano@dotcolon.net
+  W: www.dotcolon.net
+  D: Designer
+
+
+  --------------------------------------------
+  Aileron Bold
+  --------------------------------------------
+
+  This file provides detailed information on the Aileron font 
+  Software.
+  This information should be distributed along with the 
+  Aileron font and any derivative works.
+  
+  Aileron Font Information
+  
+  Aileron is a neogrotesque typeface made by Sora Sagano. The 
+  design is close to Helvetica, but conceptually it has 
+  become rather close to the Univers. Based upon the multiple 
+  master principle, available weights include eight steps 
+  from UltraLight to Black.
+  
+  ChangeLog
+  
+  9 Jan 2015 (Christoph Haag) Aileron 1.103
+- created fontforge sources as base to work on GNU/Linux
+- added FONTLOG to .sfdir
+- Mastered Font from Fontforge SFDIR to 
+  UFO,OTF,TTF,EOT,WOFF,SVG
+  
+  20 Aug 2014 (Sora Sagano) Aileron 1.102
+- Initial release
+  
+  Acknowledgements
+  
+  If you make modifications be sure to add your name (N), 
+  email (E), web-address (if you have one) (W) and 
+  description (D). This list is in alphabetical order.
+  
+  N: Christoph Haag
+  E: christoph@lafkon.net
+  W: www.lafkon.net
+  D: Transformer
+  
+  N: Sora Sagano
+  E: sagano@dotcolon.net
+  W: www.dotcolon.net
+  D: Designer
+
+
+  --------------------------------------------
+  Aileron Italic
+  --------------------------------------------
+  see above
+  --------------------------------------------
+  Aileron Light Italic
+  --------------------------------------------
+  see above

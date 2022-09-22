@@ -15,10 +15,7 @@ public class CategoricalFilterHandler : MonoBehaviour
     private List<Toggle> toggles;
     private int counter = 0;
 
-    private void Awake()
-    {
-        Main.fishDictAssembled += this.GetOptions;
-    }
+    private void Awake() { Main.fishDictAssembled += this.GetOptions; }
 
     private void Start()
     {
@@ -42,7 +39,11 @@ public class CategoricalFilterHandler : MonoBehaviour
 
             GameObject newToggle = Instantiate (togglePrefab, transform.position, transform.rotation) as GameObject;
             newToggle.transform.SetParent(rootTransform, false);
-            newToggle.transform.Find("Text").GetComponent<TextMeshProUGUI>().text = item;
+
+            TextMeshProUGUI textObject = newToggle.transform.Find("Text").GetComponent<TextMeshProUGUI>();
+            textObject.enableWordWrapping = false;
+            textObject.overflowMode = TextOverflowModes.Ellipsis;
+            textObject.text = item;
 
             toggles.Add(newToggle.GetComponent<Toggle>());
         }

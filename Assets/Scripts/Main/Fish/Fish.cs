@@ -35,7 +35,7 @@ public class Fish : MonoBehaviour
 
     // Utility class representing depth lines, tags, colors, etc
     private FishUtils utils;
-    public Color color { get { return this.utils.GetFishColor(); } }
+    public Color color { get { return this.utils.fishColor; } }
 
     // Fish specific data
     public int id {get; private set;}
@@ -109,12 +109,12 @@ public class Fish : MonoBehaviour
 
     public void UpdateFishScale(float newVal)
     {
-        Vector3 currentScale = this.fishObject.transform.localScale;
+        Vector3 currentScale = this.fishObject.transform.Find("ScaleDummy").transform.localScale;
         currentScale.x = currentScale.x * newVal / UserSettings.fishScalingFactor;
         currentScale.y = currentScale.y * newVal / UserSettings.fishScalingFactor;
         currentScale.z = currentScale.z * newVal / UserSettings.fishScalingFactor;
 
-        this.fishObject.transform.localScale = currentScale;
+        this.fishObject.transform.Find("ScaleDummy").transform.localScale = currentScale;
     }
 
     public void LookAtFish() { Camera.main.transform.LookAt(this.fishObject.transform); }
