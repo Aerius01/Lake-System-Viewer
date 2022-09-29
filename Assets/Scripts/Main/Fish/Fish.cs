@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 public class Fish : MonoBehaviour
@@ -12,16 +13,7 @@ public class Fish : MonoBehaviour
 
     // The actual object in-game
     public GameObject fishObject {get; private set;} = null;
-    public bool fishShouldExist
-    {
-        get
-        {
-            if ((DateTime.Compare(TimeManager.instance.currentTime, this.earliestTime) < 0 
-                || DateTime.Compare(TimeManager.instance.currentTime, this.latestTime) > 0) || this.spawnOverride || !FilterManager.PassesAllFilters(this))
-                return false;
-            else return true;
-        }
-    }
+
     public bool fishCurrentlyExists { get { return this.fishObject.activeSelf; } }
     public bool spawnOverride = false;
     
@@ -48,13 +40,13 @@ public class Fish : MonoBehaviour
     public DateTime earliestTime {get; private set;}
     public DateTime latestTime {get; private set;}
     private string canvasTextPart1, canvasTextPart2;
+    private PositionCache positionCache;
 
     // Changing information
     public Vector3 currentPosition {get {return this.fishObject.transform.position;} }
     public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor; } }
     private DataPacket[] currentPacket = null;
     private Thread fetchingThread;
-    private bool timeBounded { get { return this.currentPacket == null ? false : this.currentPacket[1] == null ? false : DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[0].timestamp) > 0 && DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket[1].timestamp) < 0; }}
    
     public void CreateFish(FishPacket packet, GameObject manager)
     {
@@ -80,6 +72,7 @@ public class Fish : MonoBehaviour
         this.fishObject.name = string.Format("{0}", this.id);
 
         this.utils = this.fishObject.GetComponent<FishUtils>();
+        this.positionCache = new PositionCache(this.id);
 
         if (this.length != null)
         {
@@ -98,14 +91,30 @@ public class Fish : MonoBehaviour
         this.fishObject.SetActive(false);
     }
 
+    public bool FishShouldExist(DateTime timestamp)
+    {
+        if ((DateTime.Compare(timestamp, this.earliestTime) < 0 
+            || DateTime.Compare(timestamp, this.latestTime) > 0) || this.spawnOverride || !FilterManager.PassesAllFilters(this))
+            return false;
+        else return true;
+    }
+
+    public bool Timebounded(DateTime timestamp)
+    {
+        return this.currentPacket == null ? false :
+            (
+                this.currentPacket[1] == null ? false :
+                (DateTime.Compare(timestamp, this.currentPacket[0].timestamp) > 0 && DateTime.Compare(timestamp, this.currentPacket[1].timestamp) < 0)
+            );
+    }
 
     public void Deactivate() { this.fishObject.SetActive(false); }
     public void Activate() { this.fishObject.SetActive(true); }
 
-    public void ActivateTag(bool activationStatus) { if (this.fishShouldExist) this.utils.ActivateTag(activationStatus); else this.utils.ActivateTag(false); }
-    public void ActivateDepthLine(bool activationStatus) { if (this.fishShouldExist) this.utils.ActivateDepthLine(activationStatus); else this.utils.ActivateDepthLine(false); }
-    public void ActivateTrail(bool activationStatus) { if (this.fishShouldExist) this.utils.ActivateTrail(activationStatus); else this.utils.ActivateTrail(false); }
-    public void ActivateThermoBob(bool activationStatus) { if (this.fishShouldExist) this.utils.ActivateThermoBob(activationStatus); else this.utils.ActivateThermoBob(false); }
+    public void ActivateTag(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateTag(activationStatus); else this.utils.ActivateTag(false); }
+    public void ActivateDepthLine(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateDepthLine(activationStatus); else this.utils.ActivateDepthLine(false); }
+    public void ActivateTrail(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateTrail(activationStatus); else this.utils.ActivateTrail(false); }
+    public void ActivateThermoBob(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateThermoBob(activationStatus); else this.utils.ActivateThermoBob(false); }
 
     public void UpdateFishScale(float newVal)
     {
@@ -129,24 +138,41 @@ public class Fish : MonoBehaviour
         this.utils.setNewText(fullText);
     }
 
+    public void UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly) { this.positionCache.AllocateNewPackets(newPackets, forwardOnly); }
+
     // need to modify SQL for min dist btw points --> handle cut-offs passively (UserSettings.cutoffDist)
-    public void UpdateFishPosition(bool scaleChange)
+    public void UpdateFishPosition(bool scaleChange, DateTime updateTime)
     {
-        // Create the thread if it doesn't exist to not break the subsequent if statement
-        if (this.fetchingThread == null) { this.fetchingThread = new Thread(new ThreadStart(this.ContactDB)); }
+        // Update normally if we're bounded (simple LERP)
+        // Timebounded() handles the currentPacket == null case
+        if (this.Timebounded(updateTime)) this.CalculatePositions(updateTime);
 
-        // Only update if the thread is not already running
-        if (this.fetchingThread.ThreadState == ThreadState.Stopped || this.fetchingThread.ThreadState == ThreadState.Unstarted)
-        {
-            // First runthrough condition. Successful query can never be null due to FishManager gatekeeping with this.fishShouldExist
-            if (this.currentPacket == null) { FetchNewBounds(); }
+        // Fetch a new set of packets and wait for update to circle back
+        // The IF gate prevents lining up multiple queries for the same data in 
+            // the event that the query takes longer than one update cycle
+        else if (!this.positionCache.querySent) lock(this.locker) this.currentPacket = this.positionCache.GetCachedBounds(updateTime);  
+        
 
-            // Check if we've changed boundary conditions
-            else if (!timeBounded || scaleChange) { FetchNewBounds(); }
 
-            // Update normally if we're bounded (simple LERP)
-            else if (timeBounded) { this.CalculatePositions(); }
-        }
+
+
+
+
+        // // Create the thread if it doesn't exist to not break the subsequent if statement
+        // if (this.fetchingThread == null) { this.fetchingThread = new Thread(new ThreadStart(this.ContactDB)); }
+
+        // // Only update if the thread is not already running
+        // if (this.fetchingThread.ThreadState == ThreadState.Stopped || this.fetchingThread.ThreadState == ThreadState.Unstarted)
+        // {
+        //     // First runthrough condition. Successful query can never be null due to FishManager gatekeeping with this.fishShouldExist
+        //     if (this.currentPacket == null) { FetchNewBounds(); }
+
+        //     // Check if we've changed boundary conditions
+        //     else if (!this.Timebounded(updateTime) || scaleChange) { FetchNewBounds(); }
+
+        //     // Update normally if we're bounded (simple LERP)
+        //     else if (this.Timebounded(updateTime)) { this.CalculatePositions(updateTime); }
+        // }
     }
 
     private void FetchNewBounds()
@@ -192,54 +218,70 @@ public class Fish : MonoBehaviour
         }
     }
 
-    private void CalculatePositions()
+    private void CalculatePositions(DateTime updateTime)
     {
         bool levelFish = false;
         this.startOrient = this.fishObject.transform.rotation;
-        float ratio = Convert.ToSingle((double)(TimeManager.instance.currentTime - this.currentPacket[0].timestamp).Ticks 
+        float ratio = Convert.ToSingle((double)(updateTime - this.currentPacket[0].timestamp).Ticks 
             / (double)(this.currentPacket[1].timestamp - this.currentPacket[0].timestamp).Ticks);
-        
+
+        Vector3 workingStartVector = new Vector3();
+        Vector3 workingEndVector = new Vector3();
+
         lock(this.locker)
         {
-            if (this.endPos - this.startPos == new Vector3(0f, 0f, 0f)) this.endOrient = this.fishObject.transform.rotation;
-            else this.endOrient = Quaternion.LookRotation(this.endPos - this.startPos, Vector3.up);
-
-            // Section to enhance fish rotation believability
-            if (Vector3.Magnitude(this.endPos - this.startPos) > 5f)
-            {
-                // longer distance, keep extreme angle but level off in final 20% of movement
-                if ((this.endOrient.eulerAngles.x > extremeFishAngle || this.endOrient.eulerAngles.x < -extremeFishAngle) && ratio >= 0.8)
-                {
-                    levelFish = true;
-
-                    Vector3 currentAngles = this.endOrient.eulerAngles;
-                    this.startOrient = this.fishObject.transform.rotation;
-
-                    if (this.endOrient.eulerAngles.x > extremeFishAngle) { currentAngles.x = extremeFishAngle; }
-                    else { currentAngles.x = -extremeFishAngle; }
-
-                    this.endOrient = Quaternion.Euler(currentAngles);
-                }
-            }
-            else
-            {
-                // shorter distance, remove extreme angles
-                if (this.endOrient.eulerAngles.x > extremeFishAngle || this.endOrient.eulerAngles.x < -extremeFishAngle)
-                {
-                    Vector3 currentAngles = this.endOrient.eulerAngles;
-                    this.startOrient = this.fishObject.transform.rotation;
-
-                    if (this.endOrient.eulerAngles.x > extremeFishAngle) { currentAngles.x = extremeFishAngle; }
-                    else { currentAngles.x = -extremeFishAngle; }
-
-                    this.endOrient = Quaternion.Euler(currentAngles);
-                }
-            }
-
-            // Update both position (LERP) and depth indicator line
-            Vector3 LinePoint = this.fishObject.transform.position = Vector3.Lerp(this.startPos, this.endPos, ratio);
-            this.utils.UpdateDepthIndicatorLine(LinePoint);
+            workingStartVector = this.currentPacket[0].pos;
+            workingEndVector = this.currentPacket[1].pos;
         }
+        
+        this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+                workingStartVector.z * UserSettings.verticalScalingFactor, 
+                LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+        ;
+
+        this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+                workingEndVector.z * UserSettings.verticalScalingFactor, 
+                LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+        ;
+
+        if (this.endPos - this.startPos == new Vector3(0f, 0f, 0f)) this.endOrient = this.fishObject.transform.rotation;
+        else this.endOrient = Quaternion.LookRotation(this.endPos - this.startPos, Vector3.up);
+
+        // Section to enhance fish rotation believability
+        if (Vector3.Magnitude(this.endPos - this.startPos) > 5f)
+        {
+            // longer distance, keep extreme angle but level off in final 20% of movement
+            if ((this.endOrient.eulerAngles.x > extremeFishAngle || this.endOrient.eulerAngles.x < -extremeFishAngle) && ratio >= 0.8)
+            {
+                levelFish = true;
+
+                Vector3 currentAngles = this.endOrient.eulerAngles;
+                this.startOrient = this.fishObject.transform.rotation;
+
+                if (this.endOrient.eulerAngles.x > extremeFishAngle) { currentAngles.x = extremeFishAngle; }
+                else { currentAngles.x = -extremeFishAngle; }
+
+                this.endOrient = Quaternion.Euler(currentAngles);
+            }
+        }
+        else
+        {
+            // shorter distance, remove extreme angles
+            if (this.endOrient.eulerAngles.x > extremeFishAngle || this.endOrient.eulerAngles.x < -extremeFishAngle)
+            {
+                Vector3 currentAngles = this.endOrient.eulerAngles;
+                this.startOrient = this.fishObject.transform.rotation;
+
+                if (this.endOrient.eulerAngles.x > extremeFishAngle) { currentAngles.x = extremeFishAngle; }
+                else { currentAngles.x = -extremeFishAngle; }
+
+                this.endOrient = Quaternion.Euler(currentAngles);
+            }
+        }
+
+        // Update both position (LERP) and depth indicator line
+        Vector3 LinePoint = this.fishObject.transform.position = Vector3.Lerp(this.startPos, this.endPos, ratio);
+        this.utils.UpdateDepthIndicatorLine(LinePoint);
 
         // SLERP according to required method. Map the final range [0.8, 1] to the range [0, 1]
         if (levelFish) { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(5 * (ratio - 0.8))); }

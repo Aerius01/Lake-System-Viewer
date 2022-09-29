@@ -35,36 +35,8 @@ public class FishManager
         listOfSexes = new List<string>();
         listOfCaptureTypes = new List<string>();
 
-        // SyncConstructor(managerObject);
         initialization = AsyncInitialize(managerObject);
     }
-
-    // private void SyncConstructor(GameObject managerObject)
-    // {
-    //     foreach (int key in DatabaseConnection.GetFishKeys())
-    //     {
-    //         // DateTime startTime = DateTime.Now;
-    //         FishPacket packet = DatabaseConnection.GetFishMetadata(key);
-    //         if (packet != null)
-    //         {
-    //             Fish newFish = managerObject.AddComponent<Fish>() as Fish;
-    //             newFish.CreateFish(packet, managerObject);
-    //             fishDict.Add(key, newFish);
-
-    //             // Extreme value assessments
-    //             if (DateTime.Compare(newFish.earliestTime, FishManager.earliestOverallTime) < 0) FishManager.earliestOverallTime = newFish.earliestTime;
-    //             if (DateTime.Compare(newFish.latestTime, FishManager.latestOverallTime) > 0) FishManager.latestOverallTime = newFish.latestTime;
-    //             minLength = newFish.length == null ? minLength : (int)newFish.length < minLength ? (int)newFish.length : minLength;
-    //             maxLength = newFish.length == null ? maxLength : (int)newFish.length > maxLength ? (int)newFish.length : maxLength;
-    //             minWeight = newFish.weight == null ? minWeight : (int)newFish.weight < minWeight ? (int)newFish.weight : minWeight;
-    //             maxWeight = newFish.weight == null ? maxWeight : (int)newFish.weight > maxWeight ? (int)newFish.weight : maxWeight;
-    //             if (!listOfSexes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.male?.ToString() ?? "") ? "Undefined" : (bool)newFish.male ? "Male" : "Female"))) { listOfSexes.Add(string.IsNullOrEmpty(newFish.male?.ToString() ?? "") ? "Undefined" : (bool)newFish.male ? "Male" : "Female"); }
-    //             if (!listOfCaptureTypes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.captureType?.ToString() ?? "") ? "Undefined" : newFish.captureType.ToString()))) { listOfCaptureTypes.Add(string.IsNullOrEmpty(newFish.captureType?.ToString() ?? "") ? "Undefined" : newFish.captureType.ToString()); }
-    //         }
-    //     }
-
-    //     TimeManager.instance.SetBoundingDates(FishManager.earliestOverallTime, FishManager.latestOverallTime);
-    // }
 
     public static List<List<T>> ChunkList<T>(IEnumerable<T> data, int size)
     {
@@ -87,7 +59,10 @@ public class FishManager
         List<Task<Dictionary<int, FishPacket>>> tasks = new List<Task<Dictionary<int, FishPacket>>>();
         List<int> listOfKeys = DatabaseConnection.GetFishKeys();
         listOfKeys.Sort();
-        List<List<int>> partialKeyLists = ChunkList(listOfKeys, (int)Mathf.Ceil(listOfKeys.Count / 30));
+
+        // Set so that there are 30 database queries running in parallel regardless as to number of fish
+        int chunkSize = (int)Mathf.Ceil(listOfKeys.Count / 30);
+        List<List<int>> partialKeyLists = ChunkList(listOfKeys, chunkSize < 1 ? 1 : chunkSize);
         
         // Break the list into chunks for batch SQL queries, and then parallelize processing
         foreach (List<int> partialList in partialKeyLists)
@@ -102,6 +77,7 @@ public class FishManager
         foreach (Task<Dictionary<int, FishPacket>> item in tasks) { if (item.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
         if (syncRunThrough) { Debug.Log("Sync runthrough condition"); return Task.FromResult( AsyncConstructor(tasks.Select(i => i.Result).ToArray(), managerObject) ); }
 
+        // Otherwise, async await all tasks before continuing to next step
         return AwaitFetching(tasks.ToArray());
     }
 
@@ -136,10 +112,10 @@ public class FishManager
         return true;
     }
 
-    public static void ActivateAllTags(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTag(activationStatus); } }
-    public static void ActivateAllDepths(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateDepthLine(activationStatus); } }
-    public static void ActivateAllTrails(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateTrail(activationStatus); } }
-    public static void ActivateAllThermoBobs(bool activationStatus) { foreach (Fish fish in fishDict.Values) { fish.ActivateThermoBob(activationStatus); } }
+    public static void ActivateAllTags(bool activationStatus, DateTime timestamp) { foreach (Fish fish in fishDict.Values) { fish.ActivateTag(activationStatus, timestamp); } }
+    public static void ActivateAllDepths(bool activationStatus, DateTime timestamp) { foreach (Fish fish in fishDict.Values) { fish.ActivateDepthLine(activationStatus, timestamp); } }
+    public static void ActivateAllTrails(bool activationStatus, DateTime timestamp) { foreach (Fish fish in fishDict.Values) { fish.ActivateTrail(activationStatus, timestamp); } }
+    public static void ActivateAllThermoBobs(bool activationStatus, DateTime timestamp) { foreach (Fish fish in fishDict.Values) { fish.ActivateThermoBob(activationStatus, timestamp); } }
     public static void ResetAllFishColor() { foreach (Fish fish in fishDict.Values) { fish.ResetFishColor(); } }
     public static void SetAllFishColor(string color) { foreach (Fish fish in fishDict.Values) { fish.SetFishColor(color); } }
 
@@ -149,22 +125,28 @@ public class FishManager
 
     public static void LookAtFish(int fishID) { fishDict[fishID].LookAtFish(); }
 
-    public void UpdateFish()
+    public async void UpdateFish()
     {
+        // Synchronize the time to be identical across the entire update time window
+        DateTime updateTime = TimeManager.instance.currentTime;
+
+        // Execute any queries that have been batched and are waiting
+        if (DatabaseConnection.queuedQueries && !DatabaseConnection.activeQuerying) await DatabaseConnection.RunQueuedPositionQueries();
+
         // localScaler prevents the scale change going into effect halfway through an update
         bool localScaler = vertScaleChange ? true : false;
 
         foreach (Fish currentFish in fishDict.Values)
         {
             // Check whether the fish should be currently spawned or not
-            if (!currentFish.fishShouldExist) { if (currentFish.fishCurrentlyExists) currentFish.Deactivate(); }
+            if (!currentFish.FishShouldExist(updateTime)) { if (currentFish.fishCurrentlyExists) currentFish.Deactivate(); }
             else
             {
                 // spawn the fish if it isn't already
                 if (!currentFish.fishCurrentlyExists) currentFish.Activate();
 
                 // Update position if already spawned
-                else currentFish.UpdateFishPosition(localScaler);
+                else currentFish.UpdateFishPosition(localScaler, updateTime);
             }
         }
 

@@ -3,7 +3,7 @@ public class UserSettings
     public static bool showFishTags
     {
         get {return _showFishTags;}
-        set {_showFishTags = value; FishManager.ActivateAllTags(value);}
+        set {_showFishTags = value; FishManager.ActivateAllTags(value, TimeManager.instance.currentTime);}
     }
     public static bool showFishDepthLines
     {
@@ -11,7 +11,7 @@ public class UserSettings
         set 
         {
             _showFishDepthLines = value;
-            FishManager.ActivateAllDepths(value);
+            FishManager.ActivateAllDepths(value, TimeManager.instance.currentTime);
             if (UserSettings.showFishDepthLines && UserSettings.showThermocline) { if (!UserSettings.showThermoBobs) UserSettings.showThermoBobs = true; }
             else { if (UserSettings.showThermoBobs) UserSettings.showThermoBobs = false; }
         }
@@ -19,7 +19,7 @@ public class UserSettings
     public static bool showFishTrails
     {
         get {return _showFishTrails;}
-        set {_showFishTrails = value; FishManager.ActivateAllTrails(value);}
+        set {_showFishTrails = value; FishManager.ActivateAllTrails(value, TimeManager.instance.currentTime);}
     }
     public static bool showThermocline 
     {
@@ -35,7 +35,7 @@ public class UserSettings
     public static bool showThermoBobs
     {
         get {return _showThermoBobs;}
-        set {_showThermoBobs = value; FishManager.ActivateAllThermoBobs(value);}
+        set {_showThermoBobs = value; FishManager.ActivateAllThermoBobs(value, TimeManager.instance.currentTime);}
     }
     public static bool showWindWeather 
     {

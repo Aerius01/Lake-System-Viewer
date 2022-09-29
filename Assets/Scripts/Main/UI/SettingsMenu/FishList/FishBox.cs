@@ -137,11 +137,11 @@ public class FishBox : ListBox
         }
     }
 
-    public void ActivateTag() { this.fish.ActivateTag(this.tagToggle.isOn); }
-    public void ActivateDepthLine() { this.fish.ActivateDepthLine(this.depthToggle.isOn); }
-    public void ActivateTrail() { this.fish.ActivateTrail(this.trailToggle.isOn); }
+    public void ActivateTag() { this.fish.ActivateTag(this.tagToggle.isOn, TimeManager.instance.currentTime); }
+    public void ActivateDepthLine() { this.fish.ActivateDepthLine(this.depthToggle.isOn, TimeManager.instance.currentTime); }
+    public void ActivateTrail() { this.fish.ActivateTrail(this.trailToggle.isOn, TimeManager.instance.currentTime); }
 
-    public void ToggleTag(bool active) { if (fish.fishShouldExist) this.tagToggle.isOn = active; }
-    public void ToggleDepthLine(bool active) { if (fish.fishShouldExist) this.depthToggle.isOn = active; }
-    public void ToggleTrail(bool active) { if (fish.fishShouldExist) this.trailToggle.isOn = active; }
+    public void ToggleTag(bool active) { if (fish.FishShouldExist(TimeManager.instance.currentTime)) this.tagToggle.isOn = active; }
+    public void ToggleDepthLine(bool active) { if (fish.FishShouldExist(TimeManager.instance.currentTime)) this.depthToggle.isOn = active; }
+    public void ToggleTrail(bool active) { if (fish.FishShouldExist(TimeManager.instance.currentTime)) this.trailToggle.isOn = active; }
 }

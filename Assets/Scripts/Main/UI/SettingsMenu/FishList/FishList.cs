@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using TMPro;
+using System;
 
 public class FishList : MonoBehaviour
 {
@@ -56,6 +56,9 @@ public class FishList : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // Harmonize time across entire update time window
+        DateTime updateTime = TimeManager.instance.currentTime;
+
         if (listPopulated)
         {
             listSize = 0f;
@@ -64,7 +67,7 @@ public class FishList : MonoBehaviour
                 listSize += speciesBox.open ? speciesBox.contentSize : 60f;
                 foreach (FishBox fishBox in speciesBox.components)
                 {
-                    if (fishBox.fish.fishShouldExist)
+                    if (fishBox.fish.FishShouldExist(updateTime))
                     {
                         fishBox.UpdateText();
                         if (fishBox.greyedOut) { fishBox.RestoreColor(); }
