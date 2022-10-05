@@ -17,10 +17,10 @@ public class Fish : MonoBehaviour
     public bool fishCurrentlyExists { get { return this.fishObject.activeSelf; } }
     public bool spawnOverride = false;
     
-    public bool canvasActive {get { return utils.canvas.activeSelf; }} 
-    public bool depthLineActive {get { return utils.depthLine.activeSelf; }} 
-    public bool trailActive {get { return utils.trail.activeSelf; }} 
-    public bool thermoIndActive {get { return utils.thermoInd.activeSelf; }}
+    public bool canvasActive { get { return utils.canvas.activeSelf; } } 
+    public bool depthLineActive { get { return utils.depthLine.activeSelf; } } 
+    public bool trailActive { get { return utils.trail.activeSelf; } } 
+    public bool thermoIndActive { get { return utils.thermoInd.activeSelf; } }
     public float maxExtent { get { return utils.maxExtent; } }
     public Vector3 extents { get { return utils.extents; } }
 
@@ -46,7 +46,7 @@ public class Fish : MonoBehaviour
     public Vector3 currentPosition {get {return this.fishObject.transform.position;} }
     public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor; } }
     private DataPacket[] currentPacket = null;
-    private Thread fetchingThread;
+    // private Thread fetchingThread;
    
     public void CreateFish(FishPacket packet, GameObject manager)
     {
@@ -175,48 +175,48 @@ public class Fish : MonoBehaviour
         // }
     }
 
-    private void FetchNewBounds()
-    {
-        this.fetchingThread = new Thread(new ThreadStart(this.ContactDB));
-        this.fetchingThread.Start();
-    }
+    // private void FetchNewBounds()
+    // {
+    //     this.fetchingThread = new Thread(new ThreadStart(this.ContactDB));
+    //     this.fetchingThread.Start();
+    // }
 
-    private void ContactDB()
-    {
-        try
-        {
-            this.currentPacket = DatabaseConnection.GetFishPositions(this);
+    // private void ContactDB()
+    // {
+    //     try
+    //     {
+    //         this.currentPacket = DatabaseConnection.GetFishPositions(this);
 
-            // If we're past an extremity, don't bother (the object will be despawned by the FishManager)
-            if (this.currentPacket != null)
-            {
-                if (this.currentPacket[1] != null)
-                {
-                    Vector3 workingStartVector = this.currentPacket[0].pos;
-                    Vector3 workingEndVector = this.currentPacket[1].pos;
+    //         // If we're past an extremity, don't bother (the object will be despawned by the FishManager)
+    //         if (this.currentPacket != null)
+    //         {
+    //             if (this.currentPacket[1] != null)
+    //             {
+    //                 Vector3 workingStartVector = this.currentPacket[0].pos;
+    //                 Vector3 workingEndVector = this.currentPacket[1].pos;
 
-                    lock(this.locker)
-                    {
-                        this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                                workingStartVector.z * UserSettings.verticalScalingFactor, 
-                                LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-                        ;
+    //                 lock(this.locker)
+    //                 {
+    //                     this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+    //                             workingStartVector.z * UserSettings.verticalScalingFactor, 
+    //                             LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+    //                     ;
 
-                        this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                                workingEndVector.z * UserSettings.verticalScalingFactor, 
-                                LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-                        ;
-                    }
-                }
-                else { this.currentPacket = null; }
-            }
-        }
-        catch (Npgsql.NpgsqlOperationInProgressException)
-        {
-            this.currentPacket = null;
-            Debug.Log(string.Format("ID: {0}; DB Operation already in progress", this.id));
-        }
-    }
+    //                     this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+    //                             workingEndVector.z * UserSettings.verticalScalingFactor, 
+    //                             LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+    //                     ;
+    //                 }
+    //             }
+    //             else { this.currentPacket = null; }
+    //         }
+    //     }
+    //     catch (Npgsql.NpgsqlOperationInProgressException)
+    //     {
+    //         this.currentPacket = null;
+    //         Debug.Log(string.Format("ID: {0}; DB Operation already in progress", this.id));
+    //     }
+    // }
 
     private void CalculatePositions(DateTime updateTime)
     {

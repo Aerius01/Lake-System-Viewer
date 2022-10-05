@@ -181,7 +181,7 @@ public class ThermoclineDOMain : MonoBehaviour
         // Find peaks function made by hand instead of GIT version
 
         List<ThermoReading> refinedList = new List<ThermoReading>();
-        foreach (ThermoReading reading in refinedList)
+        foreach (ThermoReading reading in currentPacket.readings)
         { if (reading.density != null) refinedList.Add(reading); }
 
         // If max is null, then min is also null, only need to check one

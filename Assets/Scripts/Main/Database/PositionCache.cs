@@ -29,7 +29,7 @@ public class PositionCache
         {
             if (DateTime.Compare(earliestTimestamp, timestamp) > 0 || DateTime.Compare(timestamp, latestTimestamp) >= 0)
             {
-                Debug.Log(string.Format("{0}: Position cache full requery", this.fishID));
+                // Debug.Log(string.Format("{0}: Position cache full requery", this.fishID));
                 // We are outside the current range
                 backwardCache = new List<DataPacket>();
                 forwardCache = new List<DataPacket>();
@@ -40,7 +40,7 @@ public class PositionCache
             }
             else if (DateTime.Compare(this.forwardCache[0].timestamp, timestamp) <= 0 && DateTime.Compare(timestamp, latestTimestamp) < 0)
             {
-                Debug.Log(string.Format("{0}: Position cache future packets", this.fishID));
+                // Debug.Log(string.Format("{0}: Position cache future packets", this.fishID));
 
                 // Operate in future packets
                 int currentIndex = forwardCache.BinarySearch(new DataPacket(0, timestamp, 0f, 0f, 0f), new TimestampComparer());
@@ -54,8 +54,8 @@ public class PositionCache
                         try { backwardCache.Add(forwardCache[0]); }
                         catch (ArgumentOutOfRangeException e)
                         { 
-                            Debug.Log(e.Message);
-                            Debug.Log(string.Format("BITWISE INDEX: {0}; i: {1}; forwardCache len: {2} ", ~currentIndex, i, forwardCache.Count));
+                            // Debug.Log(e.Message);
+                            // Debug.Log(string.Format("BITWISE INDEX: {0}; i: {1}; forwardCache len: {2} ", ~currentIndex, i, forwardCache.Count));
                         }
                         forwardCache.RemoveAt(0);
                     }
@@ -72,7 +72,7 @@ public class PositionCache
             }
             else if (DateTime.Compare(earliestTimestamp, timestamp) <= 0 && DateTime.Compare(timestamp, this.backwardCache[^1].timestamp) < 0)
             {
-                Debug.Log(string.Format("{0}: Position cache previous packets", this.fishID));
+                // Debug.Log(string.Format("{0}: Position cache previous packets", this.fishID));
                 // If the timestamp is exactly equal to the last TS in backwardCache, then no changes to the lists are necessary
                 // Operate in previous packets
                 int currentIndex = backwardCache.BinarySearch(new DataPacket(0, timestamp, 0f, 0f, 0f), new TimestampComparer());
@@ -105,7 +105,7 @@ public class PositionCache
 
     public void AllocateNewPackets(List<DataPacket> listPackets, bool forwardOnly)
     {
-        Debug.Log(string.Format("{0}: Allocating new packets", this.fishID));
+        // Debug.Log(string.Format("{0}: Allocating new packets", this.fishID));
         if (forwardOnly) lock(this.locker) { foreach (DataPacket packet in listPackets) this.forwardCache.Add(packet); }
         else
         {
@@ -132,7 +132,7 @@ public class PositionCache
             }
         }
 
-        Debug.Log(string.Format("backward: {0}; forward: {1}", backwardCache.Count, forwardCache.Count));
+        // Debug.Log(string.Format("backward: {0}; forward: {1}", backwardCache.Count, forwardCache.Count));
         this.querySent = false;
     }
 }

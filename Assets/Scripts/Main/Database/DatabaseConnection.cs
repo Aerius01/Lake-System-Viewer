@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 public class DatabaseConnection
 {
-    private static Dictionary<string, double> GISCoords;
+    // private static Dictionary<string, double> GISCoords;
     private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=30";
     // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
     private static NpgsqlBatch queuedForwardPositionQueries, queuedDoubleSidedQueries;
@@ -18,12 +18,12 @@ public class DatabaseConnection
 
     static DatabaseConnection()  
     {      
-        DatabaseConnection.GISCoords = new Dictionary<string, double>() {
-            {"MinLong", (double) 3404493.13224369},
-            {"MaxLong", (double) 3405269.13224369},
-            {"MinLat", (double) 5872333.13262316},
-            {"MaxLat", (double) 5872869.13262316}
-        };
+        // DatabaseConnection.GISCoords = new Dictionary<string, double>() {
+        //     {"MinLong", (double) 3404493.13224369},
+        //     {"MaxLong", (double) 3405269.13224369},
+        //     {"MinLat", (double) 5872333.13262316},
+        //     {"MaxLat", (double) 5872869.13262316}
+        // };
 
         queuedForwardPositionQueries = new NpgsqlBatch();
         queuedDoubleSidedQueries = new NpgsqlBatch();
@@ -32,7 +32,7 @@ public class DatabaseConnection
     private static NpgsqlBatchCommand NewPositionBatchCommand(int key, DateTime timestamp, bool forwardOnly)
     {
         string sql = "";
-        Debug.Log(string.Format("{0}: Creating batch query", key));
+        // Debug.Log(string.Format("{0}: Creating batch query", key));
 
         if (forwardOnly)
         {
@@ -42,7 +42,7 @@ public class DatabaseConnection
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
                     FROM 
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions p 
+                        FROM positions_local p 
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
@@ -62,7 +62,7 @@ public class DatabaseConnection
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
                     FROM 
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions p 
+                        FROM positions_local p 
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
@@ -78,7 +78,7 @@ public class DatabaseConnection
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
                     FROM 
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions p 
+                        FROM positions_local p 
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
@@ -89,13 +89,13 @@ public class DatabaseConnection
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
                     LIMIT 100) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
         }
-        
+
         return new NpgsqlBatchCommand(sql);
     }
 
     public static void QueuePositionBatchCommand(int id, DateTime lastListTime, bool forwardOnly=true)
     {
-        Debug.Log(string.Format("{0}: Queueing batch query", id));
+        // Debug.Log(string.Format("{0}: Queueing batch query", id));
         if (forwardOnly) queuedForwardPositionQueries.BatchCommands.Add(NewPositionBatchCommand(id, lastListTime, forwardOnly));
         else queuedDoubleSidedQueries.BatchCommands.Add(NewPositionBatchCommand(id, lastListTime, forwardOnly));
     }
@@ -107,7 +107,7 @@ public class DatabaseConnection
         {
             if (!(currentBatcher.BatchCommands.Count == 0))
             {
-                Debug.Log("Running batch queries");
+                // Debug.Log("Running batch queries");
                 await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
                 {
                     await connection.OpenAsync();
@@ -123,7 +123,7 @@ public class DatabaseConnection
                     {
                         for (int i=0; i < batch.BatchCommands.Count; i++)
                         {
-                            Debug.Log(string.Format("Command {0}: Reading...", i));
+                            // Debug.Log(string.Format("Command {0}: Reading...", i));
 
                             // No position data could be recovered
                             if (!rdr.HasRows) { rdr.NextResult(); }
@@ -138,12 +138,12 @@ public class DatabaseConnection
 
                                     float x = 0f;
                                     var entry = rdr.GetValue(rdr.GetOrdinal("x"));
-                                    try { x = DatabaseConnection.ConvertLong(Convert.ToSingle(entry)); }
+                                    try { x = Convert.ToSingle(entry); }
                                     catch { Debug.Log("Position conversion fail: x"); }
 
                                     float y = 0f;
                                     entry = rdr.GetValue(rdr.GetOrdinal("y"));
-                                    try { y = LocalMeshData.rowCount - DatabaseConnection.ConvertLat(Convert.ToSingle(entry)); }
+                                    try { y = LocalMeshData.rowCount - Convert.ToSingle(entry); }
                                     catch { Debug.Log("Position conversion fail: y"); }
 
 
@@ -177,66 +177,66 @@ public class DatabaseConnection
     }
 
 
-    public static DataPacket[] GetFishPositions(Fish fish)
-    {
-        // https://stackoverflow.com/questions/8145479/can-constructors-be-async
-        DataPacket[] returnPacket = new DataPacket[2];
-        int fishID = fish.id;
-        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
-        // 2015-10-16 03:10:46
+    // public static DataPacket[] GetFishPositions(Fish fish)
+    // {
+    //     // https://stackoverflow.com/questions/8145479/can-constructors-be-async
+    //     DataPacket[] returnPacket = new DataPacket[2];
+    //     int fishID = fish.id;
+    //     string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+    //     // 2015-10-16 03:10:46
 
-        string sql = string.Format(
-            @"SELECT p.id, p.timestamp, p.x, p.y, p.z
-            FROM positions p 
-            where
-            p.id = {0}
-            AND (p.timestamp = (select max(timestamp) from positions p where timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
-                AND id = {0} 
-                AND p.timestamp IS NOT NULL
-                AND p.x IS NOT NULL
-                AND p.y IS NOT NULL
-                AND p.z IS NOT NULL)
-            OR p.timestamp = (select min(timestamp) from positions p where timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS') 
-                AND id = {0}
-                AND p.timestamp IS NOT NULL
-                AND p.x IS NOT NULL
-                AND p.y IS NOT NULL
-                AND p.z IS NOT NULL))
-            ORDER BY p.timestamp", fishID, strTime);
+    //     string sql = string.Format(
+    //         @"SELECT p.id, p.timestamp, p.x, p.y, p.z
+    //         FROM positions p 
+    //         where
+    //         p.id = {0}
+    //         AND (p.timestamp = (select max(timestamp) from positions p where timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
+    //             AND id = {0} 
+    //             AND p.timestamp IS NOT NULL
+    //             AND p.x IS NOT NULL
+    //             AND p.y IS NOT NULL
+    //             AND p.z IS NOT NULL)
+    //         OR p.timestamp = (select min(timestamp) from positions p where timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS') 
+    //             AND id = {0}
+    //             AND p.timestamp IS NOT NULL
+    //             AND p.x IS NOT NULL
+    //             AND p.y IS NOT NULL
+    //             AND p.z IS NOT NULL))
+    //         ORDER BY p.timestamp", fishID, strTime);
 
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
-        {
-            connection.Open(); 
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+    //     using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+    //     {
+    //         connection.Open(); 
+    //         NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            int i = 0;
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
-            {
-                if (!rdr.HasRows)
-                {
-                    // ERROR HANDLING
-                    Debug.Log("there's no data");
-                }
+    //         int i = 0;
+    //         using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+    //         {
+    //             if (!rdr.HasRows)
+    //             {
+    //                 // ERROR HANDLING
+    //                 Debug.Log("there's no data");
+    //             }
 
-                while (rdr.Read())
-                {
-                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-                    DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
-                    float x = DatabaseConnection.ConvertLong(rdr.GetValue(rdr.GetOrdinal("x")));
-                    float y = LocalMeshData.rowCount - DatabaseConnection.ConvertLat(rdr.GetValue(rdr.GetOrdinal("y")));
-                    float z = - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("z")));
+    //             while (rdr.Read())
+    //             {
+    //                 int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+    //                 DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+    //                 float x = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("x")));
+    //                 float y = LocalMeshData.rowCount - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("y")));
+    //                 float z = - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("z")));
 
-                    returnPacket[i] = new DataPacket(id, timestamp, x, y, z);
-                    i++;
-                };
+    //                 returnPacket[i] = new DataPacket(id, timestamp, x, y, z);
+    //                 i++;
+    //             };
 
-                rdr.Close();
-            }
+    //             rdr.Close();
+    //         }
 
-            connection.Close(); 
-        }
-        return returnPacket;
-    }
+    //         connection.Close(); 
+    //     }
+    //     return returnPacket;
+    // }
 
     public static List<int> GetFishKeys()
     {
@@ -250,8 +250,8 @@ public class DatabaseConnection
             on fish.id = positions.id
         where fish.id is not null
             and positions.z is not null
-            and (fish.id = 2033 or fish.id = 2037)";
-        // limit 30";
+        limit 30";
+            // and (fish.id = 2033 or fish.id = 2037)";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -557,27 +557,20 @@ public class DatabaseConnection
         DateTime? nextTimestamp = null;
 
         string sql = string.Format(
-        @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
-        FROM weatherstation
-        where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+        @"SELECT timestamp,
+            depth,
+            temperature,
+            oxygen,
+            (select min(timestamp) from thermocline where timestamp >= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+                AND timestamp IS NOT null
+                and (temperature is not null
+                    or oxygen is not null)) next_timestamp
+        FROM thermocline
+        where timestamp = (select max(timestamp) from thermocline where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
             AND timestamp IS NOT null
-            and (windspeed is not null
-                or winddirection is not null
-                or temperature is not null
-                or humidity is not null
-                or airpressure is not null
-                or precipitation is not null))
-        or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
-            AND timestamp IS NOT null
-            and (windspeed is not null
-                or winddirection is not null
-                or temperature is not null
-                or humidity is not null
-                or airpressure is not null
-                or precipitation is not null))
-        AND timestamp IS NOT null 
-        order by timestamp
-        limit 1", strTime);
+            and (temperature is not null
+                or oxygen is not null))
+        order by timestamp", strTime);
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -597,21 +590,21 @@ public class DatabaseConnection
                     if (!DBNull.Value.Equals(entry))
                     {
                         try { nextTimestamp = Convert.ToDateTime(entry); }
-                        catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
+                        catch { Debug.Log("Thermocline data conversion fail: nextTimestamp"); }
                     }   
 
                     // Never null by the architecture of the DB
                     float depth = float.MaxValue;
                     entry = rdr.GetValue(rdr.GetOrdinal("depth"));
                     try { depth = Convert.ToSingle(entry); }
-                    catch { Debug.Log("Weather data conversion fail: depth"); }
+                    catch { Debug.Log("Thermocline data conversion fail: depth"); }
 
                     float? temperature = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
                     if (!DBNull.Value.Equals(entry))
                     {
                         try { temperature = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Weather data conversion fail: temperature"); }
+                        catch { Debug.Log("Thermocline data conversion fail: temperature"); }
                     }   
 
                     float? oxygen = null;
@@ -619,7 +612,7 @@ public class DatabaseConnection
                     if (!DBNull.Value.Equals(entry))
                     {
                         try { oxygen = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Weather data conversion fail: oxygen"); }
+                        catch { Debug.Log("Thermocline data conversion fail: oxygen"); }
                     }  
 
                     ThermoReading reading = new ThermoReading(depth, temperature, oxygen);
@@ -689,23 +682,23 @@ public class DatabaseConnection
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
     }
 
-    private static float ConvertLat(object latObject)
-    {
-        double lat = Convert.ToDouble(latObject);
-        if (lat > DatabaseConnection.GISCoords["MaxLat"] || lat < DatabaseConnection.GISCoords["MinLat"])
-        { throw new FormatException("The provided latitude is outside the range of the bounding box"); }
+    // private static float ConvertLat(object latObject)
+    // {
+    //     double lat = Convert.ToDouble(latObject);
+    //     if (lat > DatabaseConnection.GISCoords["MaxLat"] || lat < DatabaseConnection.GISCoords["MinLat"])
+    //     { throw new FormatException("The provided latitude is outside the range of the bounding box"); }
 
-        return (float)((LocalMeshData.rowCount) * ((lat - DatabaseConnection.GISCoords["MinLat"]) / (DatabaseConnection.GISCoords["MaxLat"] - DatabaseConnection.GISCoords["MinLat"])));
-    }
+    //     return (float)((LocalMeshData.rowCount) * ((lat - DatabaseConnection.GISCoords["MinLat"]) / (DatabaseConnection.GISCoords["MaxLat"] - DatabaseConnection.GISCoords["MinLat"])));
+    // }
 
-    private static float ConvertLong(object longObject)
-    {
-        string stringLong = "3" + Convert.ToString(longObject);
-        double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
+    // private static float ConvertLong(object longObject)
+    // {
+    //     string stringLong = "3" + Convert.ToString(longObject);
+    //     double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
 
-        if (doubleLong > DatabaseConnection.GISCoords["MaxLong"] || doubleLong < DatabaseConnection.GISCoords["MinLong"])
-        { throw new FormatException("The provided longitude is outside the range of the bounding box"); }
+    //     if (doubleLong > DatabaseConnection.GISCoords["MaxLong"] || doubleLong < DatabaseConnection.GISCoords["MinLong"])
+    //     { throw new FormatException("The provided longitude is outside the range of the bounding box"); }
 
-        return (float)((LocalMeshData.columnCount) * ((doubleLong - DatabaseConnection.GISCoords["MinLong"]) / (DatabaseConnection.GISCoords["MaxLong"] - DatabaseConnection.GISCoords["MinLong"])));
-    }
+    //     return (float)((LocalMeshData.columnCount) * ((doubleLong - DatabaseConnection.GISCoords["MinLong"]) / (DatabaseConnection.GISCoords["MaxLong"] - DatabaseConnection.GISCoords["MinLong"])));
+    // }
 }

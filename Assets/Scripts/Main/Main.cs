@@ -66,7 +66,7 @@ public class Main : MonoBehaviour
             fishManager.UpdateFish();
             sunController.AdjustSunPosition();
             moonController.AdjustMoonPosition();
-            // ThermoclineDOMain.instance.UpdateThermoclineDOMain();
+            ThermoclineDOMain.instance.UpdateThermoclineDOMain();
             WindWeatherMain.instance.UpdateWindWeather(); 
         }
     }
