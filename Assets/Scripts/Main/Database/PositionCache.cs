@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System.Threading.Tasks;
 
 public class PositionCache
 {
@@ -9,7 +10,6 @@ public class PositionCache
     private DateTime latestTimestamp { get { return this.forwardCache.Any() ? this.forwardCache[^1].timestamp : DateTime.MinValue; } }
     public int fishID { get; private set; }
 
-    public bool morePackets { get { lock(this.locker) return this.forwardCache.Any(); } }
     public bool querySent { get; private set; }
 
     private List<DataPacket> backwardCache, forwardCache;
@@ -31,9 +31,6 @@ public class PositionCache
             {
                 // Debug.Log(string.Format("{0}: Position cache full requery", this.fishID));
                 // We are outside the current range
-                backwardCache = new List<DataPacket>();
-                forwardCache = new List<DataPacket>();
-
                 DatabaseConnection.QueuePositionBatchCommand(this.fishID, timestamp, forwardOnly:false);
                 this.querySent = true;
                 return null;
@@ -51,12 +48,7 @@ public class PositionCache
                     for (int i=0; i < ~currentIndex; i++)
                     {
                         if (backwardCache.Count >= 100) backwardCache.RemoveAt(0);
-                        try { backwardCache.Add(forwardCache[0]); }
-                        catch (ArgumentOutOfRangeException e)
-                        { 
-                            // Debug.Log(e.Message);
-                            // Debug.Log(string.Format("BITWISE INDEX: {0}; i: {1}; forwardCache len: {2} ", ~currentIndex, i, forwardCache.Count));
-                        }
+                        backwardCache.Add(forwardCache[0]);
                         forwardCache.RemoveAt(0);
                     }
                 }
@@ -103,7 +95,7 @@ public class PositionCache
         }
     }
 
-    public void AllocateNewPackets(List<DataPacket> listPackets, bool forwardOnly)
+    public Task AllocateNewPackets(List<DataPacket> listPackets, bool forwardOnly)
     {
         // Debug.Log(string.Format("{0}: Allocating new packets", this.fishID));
         if (forwardOnly) lock(this.locker) { foreach (DataPacket packet in listPackets) this.forwardCache.Add(packet); }
@@ -113,7 +105,10 @@ public class PositionCache
 
             lock(this.locker)
             {    
-                // Allocate packets based on the split. The lists are already empty if we've run a double-sided query so populating is straightforward
+                backwardCache = new List<DataPacket>();
+                forwardCache = new List<DataPacket>();
+
+                // Allocate packets based on the split
                 if (splitIndex < 0)           
                 {
                     // if we're already outside of the current time range, place one packet into forwardCache to reinitiate the querying process
@@ -134,6 +129,13 @@ public class PositionCache
 
         // Debug.Log(string.Format("backward: {0}; forward: {1}", backwardCache.Count, forwardCache.Count));
         this.querySent = false;
+        return Task.CompletedTask;
+    }
+
+    public void FullRequery(DateTime updateTime)
+    { 
+        DatabaseConnection.QueuePositionBatchCommand(this.fishID, updateTime, forwardOnly:false);
+        this.querySent = true;
     }
 }
 

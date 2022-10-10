@@ -22,7 +22,7 @@ public class Main : MonoBehaviour
     private FishList fishList;
     private DataProcessor processor;
     [SerializeField]
-    private TextAsset meshDataCSV, positionDataCSV, fishDataCSV, thermoclineDataCSV, weatherDataCSV, ysiDataCSV;
+    private TextAsset meshDataCSV;
 
     [SerializeField]
     private Texture2D NDVI;
@@ -37,9 +37,7 @@ public class Main : MonoBehaviour
     {       
         finishedStartup = false;
         Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
-            {"meshData", meshDataCSV},
-            {"positionData", positionDataCSV},
-            {"thermoclineData", thermoclineDataCSV},
+            {"meshData", meshDataCSV}
         };
 
         processor = new DataProcessor(textAssetDict, NDVI);

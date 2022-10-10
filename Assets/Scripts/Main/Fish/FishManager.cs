@@ -21,6 +21,10 @@ public class FishManager
 
     public static Task<bool> initialization { get; private set; }
 
+    // Async
+    private static Task queryTask;
+    private static List<TaskStatus> activeQueryingStatuses = new List<TaskStatus> {TaskStatus.Running, TaskStatus.WaitingForActivation, TaskStatus.WaitingForChildrenToComplete, TaskStatus.WaitingToRun};
+
     public FishManager(GameObject managerObject)
     {
         fishDict = new Dictionary<int, Fish>();
@@ -38,16 +42,6 @@ public class FishManager
         initialization = AsyncInitialize(managerObject);
     }
 
-    public static List<List<T>> ChunkList<T>(IEnumerable<T> data, int size)
-    {
-        // https://www.programing.io/c-chunk-list-or-enumerable-to-smaller-list-of-lists.html
-        return data
-        .Select((x, i) => new { Index = i, Value = x })
-        .GroupBy(x => x.Index / size)
-        .Select(x => x.Select(v => v.Value).ToList())
-        .ToList();
-    }
-
     private Task<bool> AsyncInitialize(GameObject managerObject)
     {
         // Framework dafuer:
@@ -62,7 +56,7 @@ public class FishManager
 
         // Set so that there are 30 database queries running in parallel regardless as to number of fish
         int chunkSize = (int)Mathf.Ceil(listOfKeys.Count / 30);
-        List<List<int>> partialKeyLists = ChunkList(listOfKeys, chunkSize < 1 ? 1 : chunkSize);
+        List<List<int>> partialKeyLists = Tools.ChunkList(listOfKeys, chunkSize < 1 ? 1 : chunkSize);
         
         // Break the list into chunks for batch SQL queries, and then parallelize processing
         foreach (List<int> partialList in partialKeyLists)
@@ -122,16 +116,17 @@ public class FishManager
     public static void ChangeVerticalScale() { vertScaleChange = true; } // ascribed to the event handled by EventSystemManager.cs
     public static void ChangeFishScale(float newVal) // ascribed to the event handled by EventSystemManager.cs
     { foreach (Fish fish in fishDict.Values) { fish.UpdateFishScale(newVal); } }
+    public static void CutoffAdjustment() { foreach (Fish fish in fishDict.Values) { if (fish.FishShouldExist(TimeManager.instance.currentTime)) fish.RequeryCache(TimeManager.instance.currentTime); } }
 
     public static void LookAtFish(int fishID) { fishDict[fishID].LookAtFish(); }
 
-    public async void UpdateFish()
+    public void UpdateFish()
     {
         // Synchronize the time to be identical across the entire update time window
         DateTime updateTime = TimeManager.instance.currentTime;
 
-        // Execute any queries that have been batched and are waiting
-        if (DatabaseConnection.queuedQueries && !DatabaseConnection.activeQuerying) await DatabaseConnection.RunQueuedPositionQueries();
+        // Execute any queries that have been batched and are waiting if not already querying
+        if (DatabaseConnection.queuedQueries && (queryTask == null || !activeQueryingStatuses.Contains(queryTask.Status))) queryTask = DatabaseConnection.BatchAndRunPositionQueries();
 
         // localScaler prevents the scale change going into effect halfway through an update
         bool localScaler = vertScaleChange ? true : false;

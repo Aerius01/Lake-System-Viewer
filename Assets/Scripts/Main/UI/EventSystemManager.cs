@@ -121,5 +121,6 @@ public class EventSystemManager : MonoBehaviour
         }
 
         UserSettings.cutoffDist = userValue;
+        FishManager.CutoffAdjustment();
     }
 }

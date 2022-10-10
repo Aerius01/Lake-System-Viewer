@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 
 public class Fish : MonoBehaviour
 {   
@@ -138,7 +138,8 @@ public class Fish : MonoBehaviour
         this.utils.setNewText(fullText);
     }
 
-    public void UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly) { this.positionCache.AllocateNewPackets(newPackets, forwardOnly); }
+    public Task UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly) { this.positionCache.AllocateNewPackets(newPackets, forwardOnly); return Task.CompletedTask; }
+    public void RequeryCache(DateTime updateTime) { this.positionCache.FullRequery(updateTime); }
 
     // need to modify SQL for min dist btw points --> handle cut-offs passively (UserSettings.cutoffDist)
     public void UpdateFishPosition(bool scaleChange, DateTime updateTime)

@@ -8,235 +8,165 @@ using System.Collections.Generic;
 public class DatabaseConnection
 {
     // private static Dictionary<string, double> GISCoords;
-    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=30";
+    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300";
     // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
-    private static NpgsqlBatch queuedForwardPositionQueries, queuedDoubleSidedQueries;
+    private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
-
-    public static bool queuedQueries { get { return queuedForwardPositionQueries.BatchCommands.Count > 0 || queuedDoubleSidedQueries.BatchCommands.Count > 0; } }
-    public static bool activeQuerying { get; private set; }
+    public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
 
     static DatabaseConnection()  
     {      
-        // DatabaseConnection.GISCoords = new Dictionary<string, double>() {
-        //     {"MinLong", (double) 3404493.13224369},
-        //     {"MaxLong", (double) 3405269.13224369},
-        //     {"MinLat", (double) 5872333.13262316},
-        //     {"MaxLat", (double) 5872869.13262316}
-        // };
-
-        queuedForwardPositionQueries = new NpgsqlBatch();
-        queuedDoubleSidedQueries = new NpgsqlBatch();
-    }
-
-    private static NpgsqlBatchCommand NewPositionBatchCommand(int key, DateTime timestamp, bool forwardOnly)
-    {
-        string sql = "";
-        // Debug.Log(string.Format("{0}: Creating batch query", key));
-
-        if (forwardOnly)
-        {
-            // Get 100 data points in the future only
-            sql = string.Format(
-                @"SELECT * FROM 
-                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
-                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
-                        WHERE p.id = {0}
-                            AND p.timestamp IS NOT NULL
-                            AND p.x IS NOT NULL
-                            AND p.y IS NOT NULL
-                            AND p.z IS NOT null
-                            AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
-                        ORDER BY p.timestamp desc) q
-                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) a
-                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
-        }
-        else
-        {
-            // Get 100 data points on each side of the supplied time
-            sql = string.Format(
-                @"(SELECT * FROM 
-                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
-                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
-                        WHERE p.id = {0}
-                            AND p.timestamp IS NOT NULL
-                            AND p.x IS NOT NULL
-                            AND p.y IS NOT NULL
-                            AND p.z IS NOT null
-                            AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
-                        ORDER BY p.timestamp desc) q
-                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) a
-                ORDER BY a.timestamp)
-                UNION ALL
-                SELECT * FROM
-                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
-                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
-                        WHERE p.id = {0}
-                            AND p.timestamp IS NOT NULL
-                            AND p.x IS NOT NULL
-                            AND p.y IS NOT NULL
-                            AND p.z IS NOT null
-                            AND p.timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
-                        ORDER BY p.timestamp) q
-                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
-        }
-
-        return new NpgsqlBatchCommand(sql);
+        forwardBatch = new List<CommandWrapper>();
+        doubleSidedBatch = new List<CommandWrapper>();
     }
 
     public static void QueuePositionBatchCommand(int id, DateTime lastListTime, bool forwardOnly=true)
     {
-        // Debug.Log(string.Format("{0}: Queueing batch query", id));
-        if (forwardOnly) queuedForwardPositionQueries.BatchCommands.Add(NewPositionBatchCommand(id, lastListTime, forwardOnly));
-        else queuedDoubleSidedQueries.BatchCommands.Add(NewPositionBatchCommand(id, lastListTime, forwardOnly));
+        lock(DatabaseConnection.locker)
+        {
+            // Ensure that each ID has at most only a single query lined up
+            if (!forwardOnly) 
+            {
+                if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() != null) doubleSidedBatch.RemoveAt(doubleSidedBatch.IndexOf(doubleSidedBatch.Where(i => i.id == id).FirstOrDefault()));
+                doubleSidedBatch.Add(new CommandWrapper(id, lastListTime, forwardOnly));
+            }
+            else
+            {
+                // If a full requery is in motion (double-sided), no need to run the forward-only query
+                if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() == null)
+                {
+                    if (forwardBatch.Where(i => i.id == id).FirstOrDefault() != null) forwardBatch.RemoveAt(forwardBatch.IndexOf(forwardBatch.Where(i => i.id == id).FirstOrDefault()));
+                    forwardBatch.Add(new CommandWrapper(id, lastListTime, forwardOnly));
+                }
+            } 
+        }
     }
 
-    public async static Task<bool> RunQueuedPositionQueries()
+    public static async Task BatchAndRunPositionQueries()
     {
-        activeQuerying = true;
-        foreach (NpgsqlBatch currentBatcher in new List<NpgsqlBatch> { queuedForwardPositionQueries, queuedDoubleSidedQueries })
+        List<Task> tasks = new List<Task>();
+
+        // Parallelize forward queries
+        if (DatabaseConnection.forwardBatch.Any())
         {
-            if (!(currentBatcher.BatchCommands.Count == 0))
+            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
+            Debug.Log(string.Format("Splitting {0} forward query/ies into chunks of size {1}", forwardBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
+
+            lock(DatabaseConnection.locker)
             {
-                // Debug.Log("Running batch queries");
-                await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
-                {
-                    await connection.OpenAsync();
+                partialBatchLists = Tools.ChunkList(DatabaseConnection.forwardBatch, chunkSize < 1 ? 1 : chunkSize);
+                DatabaseConnection.forwardBatch = new List<CommandWrapper>();
+            }
 
-                    NpgsqlBatch batch = new NpgsqlBatch(connection);
-                    for (int i = currentBatcher.BatchCommands.Count - 1; i >= 0; i--)
-                    {
-                        batch.BatchCommands.Add(currentBatcher.BatchCommands[i]);
-                        currentBatcher.BatchCommands.RemoveAt(i);
-                    }
+            foreach (List<CommandWrapper> partialList in partialBatchLists)
+            {
+                NpgsqlBatch partialBatch = new NpgsqlBatch();
+                foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
 
-                    await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
-                    {
-                        for (int i=0; i < batch.BatchCommands.Count; i++)
-                        {
-                            // Debug.Log(string.Format("Command {0}: Reading...", i));
-
-                            // No position data could be recovered
-                            if (!rdr.HasRows) { rdr.NextResult(); }
-                            else
-                            {
-                                List<DataPacket> returnPackets = new List<DataPacket>();
-                                while (await rdr.ReadAsync())
-                                {
-                                    // Nullity handled by SQL query
-                                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-                                    DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
-
-                                    float x = 0f;
-                                    var entry = rdr.GetValue(rdr.GetOrdinal("x"));
-                                    try { x = Convert.ToSingle(entry); }
-                                    catch { Debug.Log("Position conversion fail: x"); }
-
-                                    float y = 0f;
-                                    entry = rdr.GetValue(rdr.GetOrdinal("y"));
-                                    try { y = LocalMeshData.rowCount - Convert.ToSingle(entry); }
-                                    catch { Debug.Log("Position conversion fail: y"); }
-
-
-                                    float z = 0f;
-                                    entry = rdr.GetValue(rdr.GetOrdinal("z"));
-                                    try { z = - Convert.ToSingle(entry); }
-                                    catch { Debug.Log("Position conversion fail: z"); }
-
-                                    DataPacket thisPacket = new DataPacket(id, timestamp, x, y, z);
-                                    returnPackets.Add(thisPacket);
-                                };
-
-                                // Task that is completely independent of next iteration
-                                FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, batch == queuedForwardPositionQueries ? true : false);
-                            }
-
-                            rdr.NextResult();
-                        }
-
-                        await rdr.CloseAsync();
-                    }
-
-                    Debug.Log("Closed connection");
-                    await connection.CloseAsync();
-                }
+                Task runner = RunQueuedPositionQueries(partialBatch);
+                tasks.Add(runner);
             }
         }
-        activeQuerying = false;
+        
+        // Parallelize double-sided queries
+        if (DatabaseConnection.doubleSidedBatch.Any())
+        {
+            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
+            Debug.Log(string.Format("Splitting {0} double-sided query/ies into chunks of size {1}", doubleSidedBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
-        return true;
+            lock(DatabaseConnection.locker)
+            {
+                partialBatchLists = Tools.ChunkList(DatabaseConnection.doubleSidedBatch, chunkSize < 1 ? 1 : chunkSize);
+                DatabaseConnection.doubleSidedBatch = new List<CommandWrapper>();
+            }
+
+            foreach (List<CommandWrapper> partialList in partialBatchLists)
+            {
+                NpgsqlBatch partialBatch = new NpgsqlBatch();
+                foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
+
+                Task runner = RunQueuedPositionQueries(partialBatch, false);
+                tasks.Add(runner);
+            }
+        }
+
+        // Synch fall-back condition (all tasks finished immediately)
+        bool syncRunThrough = true;
+        foreach (Task task in tasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
+
+        if (!syncRunThrough) { await Task.WhenAll(tasks.ToArray()); }
+
+        Debug.Log("All partial query tasks complete");
+    } 
+
+    public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, bool forwardOnly=true)
+    {
+        List<Task> tasks = new List<Task>();
+
+        // Debug.Log("Running batch queries");
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            await connection.OpenAsync();
+
+            NpgsqlBatch batch = new NpgsqlBatch(connection);
+            foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command); 
+
+            await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
+            {
+                for (int i=0; i < batch.BatchCommands.Count; i++)
+                {
+                    // Debug.Log(string.Format("Command {0}: Reading...", i));
+
+                    // No position data could be recovered
+                    if (!rdr.HasRows) { rdr.NextResult(); }
+                    else
+                    {
+                        List<DataPacket> returnPackets = new List<DataPacket>();
+                        while (await rdr.ReadAsync())
+                        {
+                            // Nullity handled by SQL query
+                            int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+                            DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                            float x = 0f;
+                            var entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                            try { x = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Position conversion fail: x"); }
+
+                            float y = 0f;
+                            entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                            try { y = LocalMeshData.rowCount - Convert.ToSingle(entry); }
+                            catch { Debug.Log("Position conversion fail: y"); }
+
+
+                            float z = 0f;
+                            entry = rdr.GetValue(rdr.GetOrdinal("z"));
+                            try { z = - Convert.ToSingle(entry); }
+                            catch { Debug.Log("Position conversion fail: z"); }
+
+                            DataPacket thisPacket = new DataPacket(id, timestamp, x, y, z);
+                            returnPackets.Add(thisPacket);
+                        };
+
+                        // Task that is completely independent of next iteration
+                        Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly);
+                        tasks.Add(task);
+                    }
+
+                    rdr.NextResult();
+                }
+
+                await rdr.CloseAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+        
+        // Ensure all fish caches are updated
+        await Task.WhenAll(tasks.ToArray());
     }
-
-
-    // public static DataPacket[] GetFishPositions(Fish fish)
-    // {
-    //     // https://stackoverflow.com/questions/8145479/can-constructors-be-async
-    //     DataPacket[] returnPacket = new DataPacket[2];
-    //     int fishID = fish.id;
-    //     string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
-    //     // 2015-10-16 03:10:46
-
-    //     string sql = string.Format(
-    //         @"SELECT p.id, p.timestamp, p.x, p.y, p.z
-    //         FROM positions p 
-    //         where
-    //         p.id = {0}
-    //         AND (p.timestamp = (select max(timestamp) from positions p where timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
-    //             AND id = {0} 
-    //             AND p.timestamp IS NOT NULL
-    //             AND p.x IS NOT NULL
-    //             AND p.y IS NOT NULL
-    //             AND p.z IS NOT NULL)
-    //         OR p.timestamp = (select min(timestamp) from positions p where timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS') 
-    //             AND id = {0}
-    //             AND p.timestamp IS NOT NULL
-    //             AND p.x IS NOT NULL
-    //             AND p.y IS NOT NULL
-    //             AND p.z IS NOT NULL))
-    //         ORDER BY p.timestamp", fishID, strTime);
-
-    //     using (NpgsqlConnection connection = new NpgsqlConnection(connString))
-    //     {
-    //         connection.Open(); 
-    //         NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-    //         int i = 0;
-    //         using (NpgsqlDataReader rdr = cmd.ExecuteReader())
-    //         {
-    //             if (!rdr.HasRows)
-    //             {
-    //                 // ERROR HANDLING
-    //                 Debug.Log("there's no data");
-    //             }
-
-    //             while (rdr.Read())
-    //             {
-    //                 int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-    //                 DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
-    //                 float x = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("x")));
-    //                 float y = LocalMeshData.rowCount - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("y")));
-    //                 float z = - Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("z")));
-
-    //                 returnPacket[i] = new DataPacket(id, timestamp, x, y, z);
-    //                 i++;
-    //             };
-
-    //             rdr.Close();
-    //         }
-
-    //         connection.Close(); 
-    //     }
-    //     return returnPacket;
-    // }
 
     public static List<int> GetFishKeys()
     {
@@ -246,11 +176,11 @@ public class DatabaseConnection
         string sql = 
         @"select distinct fish.id
         from fish
-        inner join positions
-            on fish.id = positions.id
+        inner join positions_local
+            on fish.id = positions_local.id
         where fish.id is not null
-            and positions.z is not null
-        limit 30";
+            and positions_local.z is not null";
+        // limit 30";
             // and (fish.id = 2033 or fish.id = 2037)";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
@@ -289,7 +219,7 @@ public class DatabaseConnection
             @"SELECT f.id,  f.species, s.name, f.tl, f.weight, f.sex, f.comment, min(p.timestamp) as minTime, max(p.timestamp) as maxTime
             FROM FISH f 
             left join species s ON f.species = s.ID 
-            left join positions p on f.id = p.id
+            left join positions_local p on f.id = p.id
             where f.id = {0}
             and s.name != 'Beacon' and p.timestamp is not null
             group by f.id, f.species, s.name, f.tl, f.weight, f.sex, f.comment", key);
@@ -681,24 +611,85 @@ public class DatabaseConnection
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
     }
+}
 
-    // private static float ConvertLat(object latObject)
-    // {
-    //     double lat = Convert.ToDouble(latObject);
-    //     if (lat > DatabaseConnection.GISCoords["MaxLat"] || lat < DatabaseConnection.GISCoords["MinLat"])
-    //     { throw new FormatException("The provided latitude is outside the range of the bounding box"); }
+// SUPPORT CLASS
+public class CommandWrapper
+{
+    public int id { get; set; }
+    public DateTime queryTime { get; set; }
+    public bool forwardOnly { get; set; }
+    public NpgsqlBatchCommand sql { get; set; }
 
-    //     return (float)((LocalMeshData.rowCount) * ((lat - DatabaseConnection.GISCoords["MinLat"]) / (DatabaseConnection.GISCoords["MaxLat"] - DatabaseConnection.GISCoords["MinLat"])));
-    // }
+    public CommandWrapper(int id, DateTime queryTime, bool forwardOnly)
+    {
+        this.id = id;
+        this.queryTime = queryTime;
+        this.forwardOnly = forwardOnly;
+        this.sql = NewPositionBatchCommand(id, queryTime, forwardOnly);
+    }
 
-    // private static float ConvertLong(object longObject)
-    // {
-    //     string stringLong = "3" + Convert.ToString(longObject);
-    //     double doubleLong = double.Parse(stringLong.Replace("\"", "").Trim());
+    private static NpgsqlBatchCommand NewPositionBatchCommand(int key, DateTime timestamp, bool forwardOnly)
+    {
+        string sql = "";
+        // Debug.Log(string.Format("{0}: Creating batch query", key));
 
-    //     if (doubleLong > DatabaseConnection.GISCoords["MaxLong"] || doubleLong < DatabaseConnection.GISCoords["MinLong"])
-    //     { throw new FormatException("The provided longitude is outside the range of the bounding box"); }
+        if (forwardOnly)
+        {
+            // Get 100 data points in the future only
+            sql = string.Format(
+                @"SELECT * FROM 
+                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
+                    FROM 
+                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
+                        FROM positions_local p 
+                        WHERE p.id = {0}
+                            AND p.timestamp IS NOT NULL
+                            AND p.x IS NOT NULL
+                            AND p.y IS NOT NULL
+                            AND p.z IS NOT null
+                            AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
+                        ORDER BY p.timestamp desc) q
+                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
+                    LIMIT 100) a
+                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
+        }
+        else
+        {
+            // Get 100 data points on each side of the supplied time
+            sql = string.Format(
+                @"(SELECT * FROM 
+                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
+                    FROM 
+                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
+                        FROM positions_local p 
+                        WHERE p.id = {0}
+                            AND p.timestamp IS NOT NULL
+                            AND p.x IS NOT NULL
+                            AND p.y IS NOT NULL
+                            AND p.z IS NOT null
+                            AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
+                        ORDER BY p.timestamp desc) q
+                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
+                    LIMIT 100) a
+                ORDER BY a.timestamp)
+                UNION ALL
+                SELECT * FROM
+                    (SELECT q.id, q.timestamp, q.x, q.y, q.z
+                    FROM 
+                        (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
+                        FROM positions_local p 
+                        WHERE p.id = {0}
+                            AND p.timestamp IS NOT NULL
+                            AND p.x IS NOT NULL
+                            AND p.y IS NOT NULL
+                            AND p.z IS NOT null
+                            AND p.timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
+                        ORDER BY p.timestamp) q
+                    WHERE (q.leading_distance > {2} or q.leading_distance is null)
+                    LIMIT 100) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
+        }
 
-    //     return (float)((LocalMeshData.columnCount) * ((doubleLong - DatabaseConnection.GISCoords["MinLong"]) / (DatabaseConnection.GISCoords["MaxLong"] - DatabaseConnection.GISCoords["MinLong"])));
-    // }
+        return new NpgsqlBatchCommand(sql);
+    }
 }
