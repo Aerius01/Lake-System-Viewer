@@ -6,7 +6,7 @@ using System;
 
 public class DataProcessor
 {
-    private LocalMeshData meshData;
+    // private LocalMeshData meshData;
     // private LocalPositionData positionData;
     // private LocalFishData fishData;
     // private LocalThermoclineData thermoclineData;
@@ -26,7 +26,7 @@ public class DataProcessor
         StringTable reader = new StringTable();
 
         // Parse all data sets into static classes
-        meshData = new LocalMeshData(reader.parseTable(textAssetDict["meshData"].ToString()), NDVI);
+        // meshData = new LocalMeshData(reader.parseTable(textAssetDict["meshData"].ToString()), NDVI);
         // positionData = new LocalPositionData(reader.parseTable(textAssetDict["positionData"].ToString()));
         // fishData = new LocalFishData(reader.parseTable(textAssetDict["fishData"].ToString()));
         // thermoclineData = new LocalThermoclineData(reader.parseTable(textAssetDict["thermoclineData"].ToString()));
@@ -35,88 +35,88 @@ public class DataProcessor
     }
 }
 
-public class LocalMeshData
-{
-    public static float maxDepth, minDepth, maxDiff, lakeDepthOffset = float.MinValue, ndviMax, ndviMin;
-    public static DataTable stringTable;
-    public static int rowCount, columnCount, resolution;
-    public static Vector3 meshCenter;
-    public static Texture2D NDVI;
-    public static Dictionary<string, int> cutoffs;
+// public class LocalMeshData
+// {
+//     public static float maxDepth, minDepth, maxDiff, lakeDepthOffset = float.MinValue, ndviMax, ndviMin;
+//     public static DataTable stringTable;
+//     public static int rowCount, columnCount, resolution;
+//     public static Vector3 meshCenter;
+//     public static Texture2D NDVI;
+//     public static Dictionary<string, int> cutoffs;
 
-    public LocalMeshData(DataTable table, Texture2D NDVI)
-    {
-        table.Rows[0].Delete();
-        table.Columns.RemoveAt(0);
-        table.AcceptChanges();
+//     public LocalMeshData(DataTable table, Texture2D NDVI)
+//     {
+//         table.Rows[0].Delete();
+//         table.Columns.RemoveAt(0);
+//         table.AcceptChanges();
 
-        stringTable = table;
-        LocalMeshData.NDVI = NDVI;
+//         stringTable = table;
+//         LocalMeshData.NDVI = NDVI;
 
-        float prevVal = 0f;
-        for (int row = 0; row < table.Rows.Count; row++)
-        {
-            for (int column = 0; column < table.Columns.Count; column++)
-            {
-                float value = float.Parse(table.Rows[row][column].ToString().Trim());
-                minDepth = Math.Min(minDepth, value);
-                maxDepth = Math.Max(maxDepth, value);
+//         float prevVal = 0f;
+//         for (int row = 0; row < table.Rows.Count; row++)
+//         {
+//             for (int column = 0; column < table.Columns.Count; column++)
+//             {
+//                 float value = float.Parse(table.Rows[row][column].ToString().Trim());
+//                 minDepth = Math.Min(minDepth, value);
+//                 maxDepth = Math.Max(maxDepth, value);
 
-                // Check if we're at a lake/surroundings boundary (cross-pattern check), then record gap
-                // cliff-like feature between ground and lake on the boundary
-                if (value == 0f && prevVal != 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, prevVal); } // left
-                else if (value != 0f && prevVal == 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // right
-                else if (row != 0 && float.Parse(table.Rows[row - 1][column].ToString().Trim()) == 0f && value != 0f)
-                { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // above
-                else if (row != table.Rows.Count - 1 && float.Parse(table.Rows[row + 1][column].ToString().Trim()) != 0f && value == 0f)
-                { lakeDepthOffset = Math.Max(lakeDepthOffset, float.Parse(table.Rows[row + 1][column].ToString().Trim())); } // below
-            }
-        }
+//                 Check if we're at a lake/surroundings boundary (cross-pattern check), then record gap
+//                 cliff-like feature between ground and lake on the boundary
+//                 if (value == 0f && prevVal != 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, prevVal); } // left
+//                 else if (value != 0f && prevVal == 0f) { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // right
+//                 else if (row != 0 && float.Parse(table.Rows[row - 1][column].ToString().Trim()) == 0f && value != 0f)
+//                 { lakeDepthOffset = Math.Max(lakeDepthOffset, value); } // above
+//                 else if (row != table.Rows.Count - 1 && float.Parse(table.Rows[row + 1][column].ToString().Trim()) != 0f && value == 0f)
+//                 { lakeDepthOffset = Math.Max(lakeDepthOffset, float.Parse(table.Rows[row + 1][column].ToString().Trim())); } // below
+//             }
+//         }
         
-        // Offset lake level based on minimum gap
-        lakeDepthOffset = Math.Abs(lakeDepthOffset);
-        minDepth += lakeDepthOffset;
-        maxDiff = Math.Abs(maxDepth - minDepth);
+//         Offset lake level based on minimum gap
+//         lakeDepthOffset = Math.Abs(lakeDepthOffset);
+//         minDepth += lakeDepthOffset;
+//         maxDiff = Math.Abs(maxDepth - minDepth);
 
-        // Determine lake location within larger mesh
-        rowCount = table.Rows.Count;
-        columnCount = table.Columns.Count;
+//         Determine lake location within larger mesh
+//         rowCount = table.Rows.Count;
+//         columnCount = table.Columns.Count;
 
-        // Get the resolution
-        int maxDim = Mathf.Max(rowCount, columnCount);
-        for (int i = 0; i < 12; i++)
-        {
-            if (Mathf.Pow(2, i) >= maxDim)
-            {
-                resolution = Mathf.RoundToInt(Mathf.Pow(2, i)) + 1;
-                break;
-            }
-        }
+//         Get the resolution
+//         int maxDim = Mathf.Max(rowCount, columnCount);
+//         for (int i = 0; i < 12; i++)
+//         {
+//             if (Mathf.Pow(2, i) >= maxDim)
+//             {
+//                 resolution = Mathf.RoundToInt(Mathf.Pow(2, i)) + 1;
+//                 break;
+//             }
+//         }
 
-        cutoffs = new Dictionary<string, int>
-        {
-            {"minHeight", Mathf.FloorToInt((resolution - rowCount) / 2)},
-            {"maxHeight", Mathf.FloorToInt((resolution - rowCount) / 2 + rowCount)},
-            {"minWidth", Mathf.FloorToInt((resolution - columnCount) / 2)},
-            {"maxWidth", Mathf.FloorToInt((resolution - columnCount) / 2 + columnCount)},
-        };
+//         cutoffs = new Dictionary<string, int>
+//         {
+//             {"minHeight", Mathf.FloorToInt((resolution - rowCount) / 2)},
+//             {"maxHeight", Mathf.FloorToInt((resolution - rowCount) / 2 + rowCount)},
+//             {"minWidth", Mathf.FloorToInt((resolution - columnCount) / 2)},
+//             {"maxWidth", Mathf.FloorToInt((resolution - columnCount) / 2 + columnCount)},
+//         };
 
-        meshCenter = new Vector3((cutoffs["minWidth"] + cutoffs["maxWidth"])/ 2, 0f, (cutoffs["minHeight"] + cutoffs["maxHeight"]) / 2);
+//         meshCenter = new Vector3((cutoffs["minWidth"] + cutoffs["maxWidth"])/ 2, 0f, (cutoffs["minHeight"] + cutoffs["maxHeight"]) / 2);
 
-        // Create NDVI table
-        ndviMax = float.MinValue;
-        ndviMin = float.MaxValue;
-        for (int i = 0; i < NDVI.height; i++)
-        {
-            for (int j = 0; j < NDVI.width; j++)
-            {
-                Color temp = NDVI.GetPixel(i, j);
-                ndviMax = Math.Max(temp.r, ndviMax);
-                ndviMin = Math.Min(temp.r, ndviMin);
-            }
-        }
-    }
-}
+//         Create NDVI table
+//         ndviMax = float.MinValue;
+//         ndviMin = float.MaxValue;
+//         for (int i = 0; i < NDVI.height; i++)
+//         {
+//             for (int j = 0; j < NDVI.width; j++)
+//             {
+//                 Color temp = NDVI.GetPixel(i, j);
+//                 ndviMax = Math.Max(temp.r, ndviMax);
+//                 ndviMin = Math.Min(temp.r, ndviMin);
+//             }
+//         }
+//     }
+// }
 
 // public class LocalPositionData
 // {

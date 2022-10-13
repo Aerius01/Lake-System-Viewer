@@ -1,5 +1,7 @@
 using UnityEngine;
 using TMPro;
+using System.Data;
+using System.Threading.Tasks;
 
 [RequireComponent(typeof(MeshFilter))]
 public class MeshManager : MonoBehaviour
@@ -18,31 +20,45 @@ public class MeshManager : MonoBehaviour
     }
     public GameObject waterObject;
     public Gradient gradient;
-
+    [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
 
-    public void SetUpMesh()
+    public async Task<bool> SetUpMesh()
     {   
-        mesh = new Mesh();
-        this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        DataTable meshTable = await DatabaseConnection.GetMeshMap();
 
-        resolution = LocalMeshData.resolution;
+        if(meshTable != null)
+        {
+            if(meshTable.Rows.Count > 0)
+            {
+                LocalMeshData meshData = new LocalMeshData(meshTable, NDVI);
 
-        CreateShape();
-        UpdateMesh();
+                mesh = new Mesh();
+                this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
+                mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
-        this.transform.eulerAngles = new Vector3(0f, 90f, 0f);
-        this.transform.position = new Vector3(0f, depthOffset, LocalMeshData.resolution);
-        this.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
+                resolution = LocalMeshData.resolution;
 
-        // Size & position water
-        Vector3 scale = waterObject.transform.localScale;
-        scale.Set((LocalMeshData.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1f, (LocalMeshData.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
-        waterObject.transform.position = LocalMeshData.meshCenter;
+                CreateShape();
+                UpdateMesh();
 
-        // Set the text in the settings menu
-        waterText.text = string.Format("{0}", waterObject.transform.position.y);
+                this.transform.eulerAngles = new Vector3(0f, 90f, 0f);
+                this.transform.position = new Vector3(0f, depthOffset, LocalMeshData.resolution);
+                this.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
+
+                // Size & position water
+                Vector3 scale = waterObject.transform.localScale;
+                scale.Set((LocalMeshData.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1f, (LocalMeshData.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
+                waterObject.transform.position = LocalMeshData.meshCenter;
+
+                // Set the text in the settings menu
+                waterText.text = string.Format("{0}", waterObject.transform.position.y);
+                
+                return true;
+            }
+            return false;
+        }
+        return false;
     }
 
     public void ReZeroMesh()
@@ -69,7 +85,7 @@ public class MeshManager : MonoBehaviour
                 {
                     if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
                     {
-                        float depthVal = float.Parse(LocalMeshData.stringTable.Rows[r - LocalMeshData.cutoffs["minHeight"]][c - LocalMeshData.cutoffs["minWidth"]].ToString());
+                        float depthVal = float.Parse(LocalMeshData.meshMap.Rows[r - LocalMeshData.cutoffs["minHeight"]][c - LocalMeshData.cutoffs["minWidth"]].ToString());
                         if (depthVal != 0f)
                         {
                             // Create list as though reading from bottom left to right and then up (to invert it)

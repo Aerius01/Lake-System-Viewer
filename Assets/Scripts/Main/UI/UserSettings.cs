@@ -1,3 +1,4 @@
+using UnityEngine;
 public class UserSettings
 {
     public static bool showFishTags
@@ -12,8 +13,6 @@ public class UserSettings
         {
             _showFishDepthLines = value;
             FishManager.ActivateAllDepths(value, TimeManager.instance.currentTime);
-            if (UserSettings.showFishDepthLines && UserSettings.showThermocline) { if (!UserSettings.showThermoBobs) UserSettings.showThermoBobs = true; }
-            else { if (UserSettings.showThermoBobs) UserSettings.showThermoBobs = false; }
         }
     }
     public static bool showFishTrails
@@ -28,14 +27,7 @@ public class UserSettings
         {
             _showThermocline = value; 
             ThermoclineDOMain.instance.ToggleThermocline();
-            if (UserSettings.showFishDepthLines && UserSettings.showThermocline) { if (!UserSettings.showThermoBobs) UserSettings.showThermoBobs = true; }
-            else { if (UserSettings.showThermoBobs) UserSettings.showThermoBobs = false; }
         }
-    }
-    public static bool showThermoBobs
-    {
-        get {return _showThermoBobs;}
-        set {_showThermoBobs = value; FishManager.ActivateAllThermoBobs(value, TimeManager.instance.currentTime);}
     }
     public static bool showWindWeather 
     {
@@ -52,7 +44,6 @@ public class UserSettings
     private static bool _showFishDepthLines;
     private static bool _showFishTrails;
     private static bool _showThermocline;
-    private static bool _showThermoBobs;
     private static bool _showWindWeather;
     private static bool _showSatelliteImage;
 

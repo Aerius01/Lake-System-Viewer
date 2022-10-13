@@ -45,12 +45,16 @@ public class FishUtils : MonoBehaviour
                 this.ToggleTag();
             }
         }
+
+        // Check if the thermobob should be spawned
+        if (this.depthLine.activeSelf && UserSettings.showThermocline) this.thermoInd.SetActive(true);
+        else this.thermoInd.SetActive(false);
     }
 
     public void ActivateTag(bool activationStatus) { canvas.SetActive(activationStatus); }
     public void ActivateDepthLine(bool activationStatus) { depthLine.SetActive(activationStatus); }
     public void ActivateTrail(bool activationStatus) { trail.SetActive(activationStatus); }
-    public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); }
+    public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); Debug.Log(activationStatus); }
 
     public void ToggleTag() { canvas.SetActive(!canvas.activeSelf); }
     public void ToggleDepthLine() { depthLine.SetActive(!depthLine.activeSelf); }
@@ -73,12 +77,9 @@ public class FishUtils : MonoBehaviour
 
         if (ThermoclineDOMain.currentThermoDepth != null)
         {
-            thermoInd.SetActive(true);
-
             LinePoint.y = (float)-ThermoclineDOMain.currentThermoDepth * UserSettings.verticalScalingFactor;
             thermoInd.transform.position = LinePoint;
         }
-        else { thermoInd.SetActive(false); }
     }
 
     public void setNewText(string val) { textElement.text = val; }

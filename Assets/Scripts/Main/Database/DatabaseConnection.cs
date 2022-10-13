@@ -1,6 +1,7 @@
 using Npgsql;
 using UnityEngine;
 using System;
+using System.Data;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
@@ -179,9 +180,9 @@ public class DatabaseConnection
         inner join positions_local
             on fish.id = positions_local.id
         where fish.id is not null
-            and positions_local.z is not null";
+            and positions_local.z is not null
+            and (fish.id = 2033 or fish.id = 2037)";
         // limit 30";
-            // and (fish.id = 2033 or fish.id = 2037)";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -610,6 +611,60 @@ public class DatabaseConnection
         }
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
+    }
+
+    public static async Task<DataTable> GetMeshMap()
+    {
+        DataTable meshTable = new DataTable();
+        string sql = "SELECT * FROM meshmap";
+
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            await connection.OpenAsync();
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            {
+                // No fish metadata could be recovered
+                if (!rdr.HasRows) { Debug.Log("Meshmap SQL query yielded empty dataset"); }
+                else
+                {
+                    int columnCount = rdr.FieldCount;
+                    int rowCount = 0;
+
+                    // Add the appropriate number of columns
+                    for (int i=0; i<columnCount; i++) { meshTable.Columns.Add(i.ToString(), typeof(float)); }
+                    
+                    while (await rdr.ReadAsync())
+                    {
+                        DataRow row = meshTable.NewRow();
+                        for (int i=0; i<columnCount; i++)
+                        {
+                            // Read and set the row value
+                            float value = 0f;
+                            var entry = rdr.GetValue(i);
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { value = Convert.ToSingle(entry); }
+                                catch { Debug.Log(string.Format("Meshmap column data conversion fail at row: {0}, column: {1}", rowCount, i)); }
+                            }  
+                            else value = float.MaxValue; // Make it visible
+
+                            row[i] = value;
+                        }
+
+                        // Add the entire row to the table
+                        meshTable.Rows.Add(row);
+                        rowCount++;
+                    };
+
+                    meshTable.AcceptChanges();
+                }
+                await rdr.CloseAsync();
+            }
+            await connection.CloseAsync();
+        }
+        return meshTable;
     }
 }
 

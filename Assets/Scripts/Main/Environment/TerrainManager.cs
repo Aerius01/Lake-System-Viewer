@@ -8,7 +8,7 @@ public class TerrainManager : MonoBehaviour
     private TerrainData terrainData;
     private float offset = 0.3f, nonOverlap = 0.5f;
 
-    private void Start()
+    public void Start()
     {
         terrainData = this.GetComponent<Terrain>().terrainData;
         resolution = LocalMeshData.resolution;
@@ -61,7 +61,7 @@ public class TerrainManager : MonoBehaviour
                 {
                     if (column >= LocalMeshData.cutoffs["minWidth"] && column < LocalMeshData.cutoffs["maxWidth"])
                     {
-                        float entryVal = -float.Parse(LocalMeshData.stringTable.Rows[row - LocalMeshData.cutoffs["minHeight"]][column - LocalMeshData.cutoffs["minWidth"]].ToString().Trim());
+                        float entryVal = -float.Parse(LocalMeshData.meshMap.Rows[row - LocalMeshData.cutoffs["minHeight"]][column - LocalMeshData.cutoffs["minWidth"]].ToString().Trim());
                         if (entryVal != 0f)
                         {
                             // Remap to offset range

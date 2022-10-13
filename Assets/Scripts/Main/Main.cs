@@ -10,49 +10,40 @@ public delegate void FishDictAssembled();
 
 public class Main : MonoBehaviour
 {
-    [SerializeField]
-    private FishManager fishManager;
-    [SerializeField]
-    private MeshManager meshManager;
-    [SerializeField]
-    private SunController sunController;
-    [SerializeField]
-    private MoonController moonController;
-    [SerializeField]
-    private FishList fishList;
-    private DataProcessor processor;
-    [SerializeField]
-    private TextAsset meshDataCSV;
-
-    [SerializeField]
-    private Texture2D NDVI;
-
-    [SerializeField]
-    private GameObject managerObject;
-    public static bool finishedStartup { get; private set; }
+    [SerializeField] private FishManager fishManager;
+    [SerializeField] private TerrainManager terrainManager;
+    [SerializeField] private MeshManager meshManager;
+    [SerializeField] private SunController sunController;
+    [SerializeField] private MoonController moonController;
+    [SerializeField] private FishList fishList;
+    [SerializeField] private TextAsset meshDataCSV;
+    [SerializeField] private GameObject managerObject;
+    private bool finishedStartup = false;
 
     public static event FishDictAssembled fishDictAssembled;
 
-    private void Awake()
-    {       
-        finishedStartup = false;
-        Dictionary<string, TextAsset> textAssetDict = new Dictionary<string, TextAsset> {
-            {"meshData", meshDataCSV}
-        };
-
-        processor = new DataProcessor(textAssetDict, NDVI);
-        processor.ReadData();
-    }
-
     private async void Start()
     {
-        meshManager.SetUpMesh();
+        List<Task> taskList = new List<Task>();
+
+        Task<bool> meshSetUp = meshManager.SetUpMesh();
         fishManager = new FishManager(managerObject);
+
+        if (await meshSetUp)
+        {
+            // Cannot parallelize due to Unity operations
+            ThermoclineDOMain.instance.StartThermo();
+        }
+        else
+        {
+            // error handling, mesh map fail
+        }
 
         if (await FishManager.initialization)
         {
             fishDictAssembled?.Invoke();
             TimeManager.instance.PlayButton();
+
             finishedStartup = true;
         }
     }

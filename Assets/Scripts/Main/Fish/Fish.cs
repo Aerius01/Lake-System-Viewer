@@ -141,7 +141,6 @@ public class Fish : MonoBehaviour
     public Task UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly) { this.positionCache.AllocateNewPackets(newPackets, forwardOnly); return Task.CompletedTask; }
     public void RequeryCache(DateTime updateTime) { this.positionCache.FullRequery(updateTime); }
 
-    // need to modify SQL for min dist btw points --> handle cut-offs passively (UserSettings.cutoffDist)
     public void UpdateFishPosition(bool scaleChange, DateTime updateTime)
     {
         // Update normally if we're bounded (simple LERP)
@@ -152,72 +151,7 @@ public class Fish : MonoBehaviour
         // The IF gate prevents lining up multiple queries for the same data in 
             // the event that the query takes longer than one update cycle
         else if (!this.positionCache.querySent) lock(this.locker) this.currentPacket = this.positionCache.GetCachedBounds(updateTime);  
-        
-
-
-
-
-
-
-        // // Create the thread if it doesn't exist to not break the subsequent if statement
-        // if (this.fetchingThread == null) { this.fetchingThread = new Thread(new ThreadStart(this.ContactDB)); }
-
-        // // Only update if the thread is not already running
-        // if (this.fetchingThread.ThreadState == ThreadState.Stopped || this.fetchingThread.ThreadState == ThreadState.Unstarted)
-        // {
-        //     // First runthrough condition. Successful query can never be null due to FishManager gatekeeping with this.fishShouldExist
-        //     if (this.currentPacket == null) { FetchNewBounds(); }
-
-        //     // Check if we've changed boundary conditions
-        //     else if (!this.Timebounded(updateTime) || scaleChange) { FetchNewBounds(); }
-
-        //     // Update normally if we're bounded (simple LERP)
-        //     else if (this.Timebounded(updateTime)) { this.CalculatePositions(updateTime); }
-        // }
     }
-
-    // private void FetchNewBounds()
-    // {
-    //     this.fetchingThread = new Thread(new ThreadStart(this.ContactDB));
-    //     this.fetchingThread.Start();
-    // }
-
-    // private void ContactDB()
-    // {
-    //     try
-    //     {
-    //         this.currentPacket = DatabaseConnection.GetFishPositions(this);
-
-    //         // If we're past an extremity, don't bother (the object will be despawned by the FishManager)
-    //         if (this.currentPacket != null)
-    //         {
-    //             if (this.currentPacket[1] != null)
-    //             {
-    //                 Vector3 workingStartVector = this.currentPacket[0].pos;
-    //                 Vector3 workingEndVector = this.currentPacket[1].pos;
-
-    //                 lock(this.locker)
-    //                 {
-    //                     this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-    //                             workingStartVector.z * UserSettings.verticalScalingFactor, 
-    //                             LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-    //                     ;
-
-    //                     this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-    //                             workingEndVector.z * UserSettings.verticalScalingFactor, 
-    //                             LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-    //                     ;
-    //                 }
-    //             }
-    //             else { this.currentPacket = null; }
-    //         }
-    //     }
-    //     catch (Npgsql.NpgsqlOperationInProgressException)
-    //     {
-    //         this.currentPacket = null;
-    //         Debug.Log(string.Format("ID: {0}; DB Operation already in progress", this.id));
-    //     }
-    // }
 
     private void CalculatePositions(DateTime updateTime)
     {
