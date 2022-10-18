@@ -2,32 +2,42 @@ using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 using UnityEngine.UI;
-using System.Linq;
 using System;
 
 public class CategoricalFilterHandler : MonoBehaviour
 {
-    [SerializeField] private bool sex;
+    [SerializeField] private bool _isSexHandler;
     [SerializeField] private TextMeshProUGUI header;
     [SerializeField] private GameObject togglePrefab;
     [SerializeField] private RectTransform contentPanel;
 
+    public float contentSize { get { return this.gameObject.GetComponent<RectTransform>().rect.height; } }
+
     private List<Toggle> toggles;
     private int counter = 0;
+    private float initialStartSize;
+    public bool isSexHandler { get { return _isSexHandler; } }
+    private List<CategoricalFilter> filterList;
 
-    private void Awake() { Main.fishDictAssembled += this.GetOptions; }
+    private void Awake()
+    {
+        Main.fishDictAssembled += this.GetOptions;
+        filterList = new List<CategoricalFilter>();
+        FilterManager.AddCatHandler(this);
+    }
 
     private void Start()
     {
-        if (this.sex) { this.header.text = "Sex"; }
+        if (this.isSexHandler) { this.header.text = "Sex"; }
         else { this.header.text = "Capture Type"; }
 
         contentPanel.position = new Vector3(0,0,0);
+        initialStartSize = this.contentSize;
     }
 
     private void GetOptions()
     {
-        List<string> optionsList = sex ? FishManager.listOfSexes : FishManager.listOfCaptureTypes;
+        List<string> optionsList = isSexHandler ? FishManager.listOfSexes : FishManager.listOfCaptureTypes;
 
         // Populate the toggle list with discovered options
         int toggleCount = 0;
@@ -51,6 +61,19 @@ public class CategoricalFilterHandler : MonoBehaviour
         RectTransform rect = this.GetComponent<RectTransform>();
         float diff = (75 + toggleCount * 35 + (toggleCount - 1) * 10 + 30 + 15) - rect.rect.height;
         rect.sizeDelta += new Vector2(0, diff);
+
+        this.contentPanel.sizeDelta += new Vector2(0, this.contentSize - this.initialStartSize);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(this.contentPanel);
+    }
+
+    public bool PassesFilters(Fish fish)
+    {
+        foreach (CategoricalFilter filter in filterList)
+        {
+            if (filter.PassesFilter(fish)) { continue; }
+            else return false;
+        }
+        return true;
     }
 
     public void ApplyFilter()
@@ -60,19 +83,19 @@ public class CategoricalFilterHandler : MonoBehaviour
         List<string> chosenOptions = new List<string>();
         foreach (Toggle toggle in toggles) { if (toggle.isOn) { chosenOptions.Add(toggle.transform.Find("Text").GetComponent<TextMeshProUGUI>().text); } }
 
-        if (this.sex) { this.header.text =  string.Format("Sex ({0})", counter); }
+        if (this.isSexHandler) { this.header.text =  string.Format("Sex ({0})", counter); }
         else { this.header.text = string.Format("Capture Type ({0})", counter); }
 
-        FilterManager.AddCatFilter(new CategoricalFilter(chosenOptions, this.sex));
+        filterList.Add(new CategoricalFilter(chosenOptions, this.isSexHandler));
     }
 
     public void ClearFilter()
     {
         this.counter = 0;
+        FilterBar.instance.DeleteCat(this.isSexHandler);
+        filterList = new List<CategoricalFilter>();
 
-        FilterManager.ClearFilters(typeof(CategoricalFilter), this.sex);
-
-        if (this.sex) { this.header.text = "Sex"; }
+        if (this.isSexHandler) { this.header.text = "Sex"; }
         else { this.header.text = "Capture Type"; }
     }
 }

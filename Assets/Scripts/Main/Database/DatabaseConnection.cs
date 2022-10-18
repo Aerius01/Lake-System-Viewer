@@ -8,12 +8,11 @@ using System.Collections.Generic;
 
 public class DatabaseConnection
 {
-    // private static Dictionary<string, double> GISCoords;
     private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300";
-    // private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=false";
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
+    private static bool? smallSample = true;
 
     static DatabaseConnection()  
     {      
@@ -180,9 +179,18 @@ public class DatabaseConnection
         inner join positions_local
             on fish.id = positions_local.id
         where fish.id is not null
-            and positions_local.z is not null
-            and (fish.id = 2033 or fish.id = 2037)";
-        // limit 30";
+            and positions_local.z is not null";
+
+        if (DatabaseConnection.smallSample == true)
+        {
+            string addon = " and (fish.id = 2033 or fish.id = 2037)";
+            sql = sql + addon;
+        }  
+        else if (DatabaseConnection.smallSample == false)
+        {
+            string addon = " limit 30";
+            sql = sql + addon;
+        }    
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
