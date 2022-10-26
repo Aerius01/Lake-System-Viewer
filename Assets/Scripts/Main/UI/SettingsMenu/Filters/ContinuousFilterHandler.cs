@@ -1,12 +1,10 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 using System.Collections.Generic;
 
 public class ContinuousFilterHandler : MonoBehaviour
 {
     [SerializeField] private bool _isLengthHandler;
-    [SerializeField] private Button applyButton;
     [SerializeField] private TwoEndedSlider slider;
     [SerializeField] private TextMeshProUGUI header;
 
@@ -43,6 +41,7 @@ public class ContinuousFilterHandler : MonoBehaviour
         return true;
     }
 
+    // Called by in-game button
     public void ApplyFilter()
     {
         filterList.Add(new ContinuousFilter(slider.currentMax, slider.currentMin, slider.inverted, this.isLengthHandler));
@@ -52,6 +51,7 @@ public class ContinuousFilterHandler : MonoBehaviour
         else { this.header.text = string.Format("Weight ({0})", counter); }
     }
 
+    // Called by in-game button
     public void ClearFilter()
     {
         this.counter = 0;

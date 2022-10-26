@@ -12,8 +12,10 @@ public class DatabaseConnection
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
-    private static bool? smallSample = true;
-
+    private static bool? smallSample = false;
+    // true: 2033 & 2037
+    // false: 30 fish
+    // null: all fish
     static DatabaseConnection()  
     {      
         forwardBatch = new List<CommandWrapper>();
@@ -173,13 +175,15 @@ public class DatabaseConnection
         DateTime startTime = DateTime.Now;
 
         List<int> idList = new List<int>();
-        string sql = 
-        @"select distinct fish.id
-        from fish
-        inner join positions_local
-            on fish.id = positions_local.id
-        where fish.id is not null
-            and positions_local.z is not null";
+        // string sql = 
+        // @"select distinct fish.id
+        // from fish
+        // inner join positions_local
+        //     on fish.id = positions_local.id
+        // where fish.id is not null
+        //     and positions_local.z is not null";
+
+        string sql = "select distinct fish.id from fish where fish.id is not null";
 
         if (DatabaseConnection.smallSample == true)
         {

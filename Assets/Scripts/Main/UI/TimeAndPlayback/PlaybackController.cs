@@ -8,7 +8,7 @@ public class PlaybackController : MonoBehaviour
 {
     private static TextMeshProUGUI timeDisplayText;
     private Slider timeControlSlider;
-    private static Single totalTicks;
+    public static double totalTicks { get; private set; }
     private bool sliderSelected;
 
     private void Awake()

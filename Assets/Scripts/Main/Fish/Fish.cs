@@ -21,8 +21,7 @@ public class Fish : MonoBehaviour
     public bool depthLineActive { get { return utils.depthLine.activeSelf; } } 
     public bool trailActive { get { return utils.trail.activeSelf; } } 
     public bool thermoIndActive { get { return utils.thermoInd.activeSelf; } }
-    public float maxExtent { get { return utils.maxExtent; } }
-    public Vector3 extents { get { return utils.extents; } }
+    public float baseExtent { get { return utils.baseExtent; } }
 
 
     // Utility class representing depth lines, tags, colors, etc
@@ -72,21 +71,9 @@ public class Fish : MonoBehaviour
         this.fishObject.name = string.Format("{0}", this.id);
 
         this.utils = this.fishObject.GetComponent<FishUtils>();
+        this.utils.Setup();
+        this.UpdateFishScale();
         this.positionCache = new PositionCache(this.id);
-
-        if (this.length != null)
-        {
-            GameObject scaleDummy = this.fishObject.transform.Find("ScaleDummy").gameObject;
-            BoxCollider collider = scaleDummy.GetComponent<BoxCollider>();
-
-            string name = speciesAccountedFor ? this.speciesName.ToLower() : "roach";
-
-            float requiredScale = (float)this.length / 1000f / this.maxExtent * UserSettings.fishScalingFactor;
-            scaleDummy.transform.localScale = new Vector3(requiredScale, requiredScale, requiredScale);
-
-            // Adjust collider size
-            collider.size = this.extents * 1.2f;
-        }
 
         this.fishObject.SetActive(false);
     }
@@ -115,16 +102,7 @@ public class Fish : MonoBehaviour
     public void ActivateDepthLine(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateDepthLine(activationStatus); else this.utils.ActivateDepthLine(false); }
     public void ActivateTrail(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateTrail(activationStatus); else this.utils.ActivateTrail(false); }
     public void ActivateThermoBob(bool activationStatus, DateTime timestamp) { if (this.FishShouldExist(timestamp)) this.utils.ActivateThermoBob(activationStatus); else this.utils.ActivateThermoBob(false); }
-
-    public void UpdateFishScale(float newVal)
-    {
-        Vector3 currentScale = this.fishObject.transform.Find("ScaleDummy").transform.localScale;
-        currentScale.x = currentScale.x * newVal / UserSettings.fishScalingFactor;
-        currentScale.y = currentScale.y * newVal / UserSettings.fishScalingFactor;
-        currentScale.z = currentScale.z * newVal / UserSettings.fishScalingFactor;
-
-        this.fishObject.transform.Find("ScaleDummy").transform.localScale = currentScale;
-    }
+    public void UpdateFishScale() { this.utils.UpdateFishScale(UserSettings.fishScalingFactor, (float)(this.length == null ? 500 : this.length)); }
 
     public void LookAtFish() { Camera.main.transform.LookAt(this.fishObject.transform); }
 

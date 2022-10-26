@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 
-
-
 public static class Tools
 {
     public static List<List<T>> ChunkList<T>(IEnumerable<T> data, int size)

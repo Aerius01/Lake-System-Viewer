@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -100,12 +99,18 @@ public class FilterBar : MonoBehaviour
     public void DeleteCont(bool clearLength)
     {
         foreach (FiltersRow row in filterRows) { row.DeleteAllContinuousTiles(clearLength); }
+
+        // Raise flag, as game objects are only destroyed at the end of the current frame
+        // Cannot immediately continue in the current action frame
         triggerRecalculate = true;
     }
 
     public void DeleteCat(bool clearSex)
     {
         foreach (FiltersRow row in filterRows) { row.DeleteAllCategoricalTiles(clearSex); }
+
+        // Raise flag, as game objects are only destroyed at the end of the current frame
+        // Cannot immediately continue in the current action frame
         triggerRecalculate = true;
     }
 
@@ -121,7 +126,6 @@ public class FilterBar : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
         filterRows.Add(filterRow);
     }
-
 
     private void RecalculateRows()
     {

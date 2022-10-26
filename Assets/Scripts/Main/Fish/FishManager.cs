@@ -114,8 +114,8 @@ public class FishManager
     public static void SetAllFishColor(string color) { foreach (Fish fish in fishDict.Values) { fish.SetFishColor(color); } }
 
     public static void ChangeVerticalScale() { vertScaleChange = true; } // ascribed to the event handled by EventSystemManager.cs
-    public static void ChangeFishScale(float newVal) // ascribed to the event handled by EventSystemManager.cs
-    { foreach (Fish fish in fishDict.Values) { fish.UpdateFishScale(newVal); } }
+    public static void ChangeFishScale() // ascribed to the event handled by EventSystemManager.cs
+    { foreach (Fish fish in fishDict.Values) { fish.UpdateFishScale(); } }
     public static void CutoffAdjustment() { foreach (Fish fish in fishDict.Values) { if (fish.FishShouldExist(TimeManager.instance.currentTime)) fish.RequeryCache(TimeManager.instance.currentTime); } }
 
     public static void LookAtFish(int fishID) { fishDict[fishID].LookAtFish(); }

@@ -26,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 1027197313114240}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3027280140636524048}
@@ -329,7 +329,7 @@ Transform:
   m_GameObject: {fileID: 1512157912949984}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3027280140636524048}
@@ -1345,6 +1345,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3027280140636524048}
   - component: {fileID: 1511784551527240146}
+  - component: {fileID: 2211557273713908798}
   m_Layer: 0
   m_Name: ScaleDummy
   m_TagString: Untagged
@@ -1383,6 +1384,35 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.42, y: 0.84, z: 2.44}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2211557273713908798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9066214461733043176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Delegates:
+  - eventID: 4
+    callback:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 8317440540398063149}
+          m_TargetAssemblyTypeName: FishUtils, Assembly-CSharp
+          m_MethodName: ColliderHit
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
 --- !u!1 &9186489371911368330
 GameObject:
   m_ObjectHideFlags: 0

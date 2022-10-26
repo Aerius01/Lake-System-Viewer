@@ -3,7 +3,7 @@ using UnityEngine;
 using TMPro;
 
 public delegate void AlertScaleChange();
-public delegate void FishScaleChange(float newVal);
+public delegate void FishScaleChange();
 public delegate void WaterLevelChangeEvent();
 
 public class EventSystemManager : MonoBehaviour
@@ -17,6 +17,7 @@ public class EventSystemManager : MonoBehaviour
 
     [SerializeField]
     private Toggle tagToggle, depthLineToggle, trailToggle, thermoToggle, windWeatherToggle, satelliteToggle;
+    [SerializeField] private GraphicRaycaster gr;
 
     public static event AlertScaleChange scaleChangeEvent;
     public static event FishScaleChange fishScaleEvent;
@@ -100,14 +101,12 @@ public class EventSystemManager : MonoBehaviour
         if (scaleValue <= 0)
         {
             // we only want positive scaling factors
-            scaleValue = 5f;
+            scaleValue = 1f;
             scalingFactorInput.text = string.Format("{0}", scaleValue);
         }
 
-        // Need to invoke the event first to use the old scale for relative
-        // // scaling in the Fish UpdateScale method
-        fishScaleEvent?.Invoke(scaleValue);
         UserSettings.fishScalingFactor = scaleValue;
+        fishScaleEvent?.Invoke();
     }
 
     public void AdjustCutoff()

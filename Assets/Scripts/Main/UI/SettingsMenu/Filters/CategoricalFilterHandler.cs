@@ -76,6 +76,7 @@ public class CategoricalFilterHandler : MonoBehaviour
         return true;
     }
 
+    // Called by in-game button
     public void ApplyFilter()
     {
         this.counter += 1;
@@ -89,6 +90,7 @@ public class CategoricalFilterHandler : MonoBehaviour
         filterList.Add(new CategoricalFilter(chosenOptions, this.isSexHandler));
     }
 
+    // Called by in-game button
     public void ClearFilter()
     {
         this.counter = 0;

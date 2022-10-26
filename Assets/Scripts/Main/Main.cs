@@ -1,9 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.Collections;
-using UnityEngine.UI;
 using System.Threading.Tasks;
-using System;
 
 
 public delegate void FishDictAssembled();
@@ -11,12 +8,9 @@ public delegate void FishDictAssembled();
 public class Main : MonoBehaviour
 {
     [SerializeField] private FishManager fishManager;
-    [SerializeField] private TerrainManager terrainManager;
     [SerializeField] private MeshManager meshManager;
     [SerializeField] private SunController sunController;
     [SerializeField] private MoonController moonController;
-    [SerializeField] private FishList fishList;
-    [SerializeField] private TextAsset meshDataCSV;
     [SerializeField] private GameObject managerObject;
     private bool finishedStartup = false;
 
@@ -29,11 +23,7 @@ public class Main : MonoBehaviour
         Task<bool> meshSetUp = meshManager.SetUpMesh();
         fishManager = new FishManager(managerObject);
 
-        if (await meshSetUp)
-        {
-            // Cannot parallelize due to Unity operations
-            ThermoclineDOMain.instance.StartThermo();
-        }
+        if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations
         else
         {
             // error handling, mesh map fail

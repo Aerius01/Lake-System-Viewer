@@ -5,8 +5,6 @@ using TMPro;
 
 public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
 {
-    private float interval = 0.3f;
-    private int tap;
     private Coroutine moveCamera;
     private bool zoomDisabled;
 
@@ -16,25 +14,7 @@ public class ButtonClickHandler : MonoBehaviour, IPointerClickHandler
         { if (this.moveCamera != null) { StopCoroutine(this.moveCamera); } }
     }
 
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        if (!zoomDisabled)
-        {
-            tap++;
-            if (tap == 1) { StartCoroutine(DoubleTapInterval()); }
-        }
-    }
-    
-    private IEnumerator DoubleTapInterval()
-    {
-        for (float i = 0; i < interval; i += 0.02f)
-        {
-            if (tap > 1) { this.moveCamera = StartCoroutine(FocusCamera()) as Coroutine; break; }
-            yield return new WaitForSeconds(0.02f);
-        }
-        
-        this.tap = 0;
-    }
+    public void OnPointerClick(PointerEventData eventData) { if (!zoomDisabled) { if (eventData.clickCount == 2) this.moveCamera = StartCoroutine(FocusCamera()) as Coroutine; } }
 
     private IEnumerator FocusCamera()
     {

@@ -1,21 +1,38 @@
 using UnityEngine;
 using TMPro;
 
-public class FishUtils : MonoBehaviour
+public class FishUtils : MonoBehaviour 
 {
     public GameObject canvas, depthLine, trail, thermoInd;
     [SerializeField] private Renderer[] renderers;
     [SerializeField] private Material deflt, blue, lBlue, green, purple, orange, red, pink, yellow;
+    private BoxCollider boxCollider;
+    private GameObject scaleDummy;
 
     private TextMeshProUGUI textElement;
+    public float baseExtent { get; private set; }
 
-    public float maxExtent { get { return Mathf.Max(renderers[0].bounds.extents.x, renderers[0].bounds.extents.y, renderers[0].bounds.extents.z); } }
-    public Vector3 extents { get { return renderers[0].bounds.extents; } }
     public bool canvasActive {get { return canvas.activeSelf; }} 
     public bool depthLineActive {get { return depthLine.activeSelf; }} 
     public bool trailActive {get { return trail.activeSelf; }} 
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
     public Color fishColor { get { return renderers[0].material.color; } } 
+
+    public void Setup()
+    {
+        this.scaleDummy = this.transform.Find("ScaleDummy").gameObject;
+        this.boxCollider = this.scaleDummy.GetComponent<BoxCollider>();
+        this.baseExtent = Mathf.Max(renderers[0].localBounds.extents.x, renderers[0].localBounds.extents.y, renderers[0].localBounds.extents.z);
+    }
+
+    public void UpdateFishScale(float newVal, float length)
+    {
+        float scalingFactor = length / 1000f / this.baseExtent * newVal;
+        this.scaleDummy.transform.localScale = new Vector3(scalingFactor, scalingFactor, scalingFactor);
+
+        // Extents represent only half the size
+        this.boxCollider.size = renderers[0].localBounds.extents * 2;
+    }
 
     private void Awake()
     {
@@ -31,21 +48,11 @@ public class FishUtils : MonoBehaviour
         if (UserSettings.showThermocline) ActivateThermoBob(true);
     }
 
+    // Called via Event Trigger component on the ScaleDummy child object of the fish
+    public void ColliderHit() { if (!CanvasRaycast.hoveringOverUI) this.ToggleTag(); }
+
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            RaycastHit hit;
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-            BoxCollider collider = this.transform.Find("ScaleDummy").GetComponent<BoxCollider>();
-             
-            if (collider.Raycast(ray, out hit, 999999f))
-            {
-                this.ToggleTag();
-            }
-        }
-
         // Check if the thermobob should be spawned
         if (this.depthLine.activeSelf && UserSettings.showThermocline) this.thermoInd.SetActive(true);
         else this.thermoInd.SetActive(false);
