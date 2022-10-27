@@ -12,7 +12,7 @@ public class DatabaseConnection
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
-    private static bool? smallSample = false;
+    private static bool? smallSample = true;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish

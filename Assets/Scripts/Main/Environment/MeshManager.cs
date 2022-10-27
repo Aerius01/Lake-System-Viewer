@@ -12,14 +12,9 @@ public class MeshManager : MonoBehaviour
     private Vector3[] vertices;
     private Vector2[] uv;
     private int resolution;
-    private float _depthOffset = 0.2f;
-    public float depthOffset
-    {
-        get{ return _depthOffset; }
-        private set { _depthOffset = value; }
-    }
+    private float depthOffset = 0.2f;
     public GameObject waterObject;
-    public Gradient gradient;
+    [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
 
@@ -74,8 +69,6 @@ public class MeshManager : MonoBehaviour
         int totalQuads = (resolution - 1) * (resolution - 1);
 
         vertices = new Vector3[totalVertices];
-        float maxDepth = float.MaxValue;
-        float minDepth = float.MinValue;
 
         for (int r = 0; r < resolution; r++)
         {
@@ -94,10 +87,6 @@ public class MeshManager : MonoBehaviour
                                 depthVal - depthOffset,
                                 resolution - (resolution - c)
                             );
-
-                            // Depth entries are negative values
-                            if (depthVal < maxDepth) maxDepth = depthVal;
-                            if (depthVal > minDepth) minDepth = depthVal;
                         }
                         else
                         {
@@ -140,7 +129,7 @@ public class MeshManager : MonoBehaviour
 		for (int i = 0, y = 0; y < resolution; y++) {
 			for (int x = 0; x < resolution; x++, i++) {
 				uv[i] = new Vector2((float)x / resolution, (float)y / resolution);
-                colors[i] = gradient.Evaluate(Mathf.InverseLerp(minDepth, maxDepth, vertices[i].y));
+                colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y));
 			}
 		}
 
@@ -170,5 +159,23 @@ public class MeshManager : MonoBehaviour
         mesh.triangles = triangles;
         mesh.uv = uv;
         mesh.RecalculateNormals();
+    }
+
+    public void UpdateMeshColor()
+    {
+        GradientPicker.Create(this.gradient, "Choose the sphere's color!", SetGradient, GradientFinished);
+    }
+
+    private void SetGradient(Gradient currentGradient)
+    {
+        Debug.Log("You set a Gradient with " + currentGradient.colorKeys.Length + " Color keys");
+    }
+
+    private void GradientFinished(Gradient finishedGradient)
+    {
+        Debug.Log("You chose a Gradient with " + finishedGradient.colorKeys.Length + " Color keys");
+        this.gradient = finishedGradient;
+       
+        for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); mesh.colors = colors; }
     }
 }

@@ -23,7 +23,7 @@ public class Main : MonoBehaviour
         Task<bool> meshSetUp = meshManager.SetUpMesh();
         fishManager = new FishManager(managerObject);
 
-        if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations
+        if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations 
         else
         {
             // error handling, mesh map fail
