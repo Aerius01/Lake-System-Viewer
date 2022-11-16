@@ -18,7 +18,7 @@ public class GradientPickerExample : MonoBehaviour
     }
     public void ChooseGradientButtonClick()
     {
-        GradientPicker.Create(myGradient, "Choose the sphere's color!", SetGradient, GradientFinished);
+        GradientPicker.Create(myGradient, GradientFinished);
     }
     private void SetGradient(Gradient currentGradient)
     {

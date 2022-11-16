@@ -8,7 +8,20 @@ public class TerrainManager : MonoBehaviour
     private TerrainData terrainData;
     private float offset = 0.3f, nonOverlap = 0.5f;
 
-    public void Start()
+    private static TerrainManager _instance;
+    [HideInInspector]
+    public static TerrainManager instance {get { return _instance; } set {_instance = value; }}
+
+    private void Awake()
+    {
+        // Destroy duplicates instances
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+
+        this.gameObject.SetActive(false);
+    }
+
+    public void SetUpTerrain()
     {
         terrainData = this.GetComponent<Terrain>().terrainData;
         resolution = LocalMeshData.resolution;

@@ -8,7 +8,6 @@ public delegate void FishDictAssembled();
 public class Main : MonoBehaviour
 {
     [SerializeField] private FishManager fishManager;
-    [SerializeField] private MeshManager meshManager;
     [SerializeField] private SunController sunController;
     [SerializeField] private MoonController moonController;
     [SerializeField] private GameObject managerObject;
@@ -20,7 +19,7 @@ public class Main : MonoBehaviour
     {
         List<Task> taskList = new List<Task>();
 
-        Task<bool> meshSetUp = meshManager.SetUpMesh();
+        Task<bool> meshSetUp = MeshManager.instance.SetUpMesh();
         fishManager = new FishManager(managerObject);
 
         if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations 

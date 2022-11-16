@@ -1,6 +1,9 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
+
 public class ColorPickerImported : MonoBehaviour
 {
     /// <summary>
@@ -26,9 +29,6 @@ public class ColorPickerImported : MonoBehaviour
     private static Color32 modifiedColor;
     private static HSV modifiedHsv;
 
-    //useAlpha bool
-    private static bool useA;
-
     private bool interact;
 
     // these can only work with the prefab and its children
@@ -37,8 +37,7 @@ public class ColorPickerImported : MonoBehaviour
     public Slider rComponent;
     public Slider gComponent;
     public Slider bComponent;
-    public Slider aComponent;
-    public InputField hexaComponent;
+    public TMP_InputField hexaComponent;
     public RawImage colorComponent;
 
     private void Awake()
@@ -55,7 +54,6 @@ public class ColorPickerImported : MonoBehaviour
     /// <param name="message">Display message</param>
     /// <param name="onColorChanged">Event that gets called when the color gets modified</param>
     /// <param name="onColorSelected">Event that gets called when one of the buttons done or cancel get pressed</param>
-    /// <param name="useAlpha">When set to false the colors used don't have an alpha channel</param>
     /// <returns>
     /// False if the instance is already running
     /// </returns>
@@ -73,18 +71,32 @@ public class ColorPickerImported : MonoBehaviour
             modifiedColor = original;
             onCC = onColorChanged;
             onCS = onColorSelected;
-            useA = useAlpha;
             instance.gameObject.SetActive(true);
-            instance.transform.GetChild(0).GetChild(0).GetComponent<Text>().text = message;
-            instance.aComponent.gameObject.SetActive(useAlpha);
+            instance.transform.GetChild(0).GetChild(0).GetComponent<TextMeshProUGUI>().text = message;
             instance.RecalculateMenu(true);
-            instance.hexaComponent.placeholder.GetComponent<Text>().text = "RRGGBB" + (useAlpha ? "AA" : "");
+            instance.hexaComponent.placeholder.GetComponent<TextMeshProUGUI>().text = "RRGGBB";
             return true;
         }
         else
         {
             Done();
             return false;
+        }
+    }
+
+    private void Update()
+    {
+        // Cancel if clicking outside of the color picker
+        if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
+        {
+            if (ColorPickerImported.instance.gameObject.activeSelf)
+            {
+                bool clickedColorPicker = false;
+                foreach (RaycastResult result in CanvasRaycast.clickedUIElements)
+                { if (result.gameObject.name == ColorPickerImported.instance.gameObject.name) { clickedColorPicker = true; break; } }
+
+                if (!clickedColorPicker) ColorPickerImported.instance.CCancel(); 
+            }
         }
     }
 
@@ -101,16 +113,11 @@ public class ColorPickerImported : MonoBehaviour
             modifiedColor = modifiedHsv.ToColor();
         }
         rComponent.value = modifiedColor.r;
-        rComponent.transform.GetChild(3).GetComponent<InputField>().text = modifiedColor.r.ToString();
+        rComponent.transform.GetChild(3).GetComponent<TMP_InputField>().text = modifiedColor.r.ToString();
         gComponent.value = modifiedColor.g;
-        gComponent.transform.GetChild(3).GetComponent<InputField>().text = modifiedColor.g.ToString();
+        gComponent.transform.GetChild(3).GetComponent<TMP_InputField>().text = modifiedColor.g.ToString();
         bComponent.value = modifiedColor.b;
-        bComponent.transform.GetChild(3).GetComponent<InputField>().text = modifiedColor.b.ToString();
-        if (useA)
-        {
-            aComponent.value = modifiedColor.a;
-            aComponent.transform.GetChild(3).GetComponent<InputField>().text = modifiedColor.a.ToString();
-        }
+        bComponent.transform.GetChild(3).GetComponent<TMP_InputField>().text = modifiedColor.b.ToString();
         mainComponent.value = (float)modifiedHsv.H;
         rComponent.transform.GetChild(0).GetComponent<RawImage>().color = new Color32(255, modifiedColor.g, modifiedColor.b, 255);
         rComponent.transform.GetChild(0).GetChild(0).GetComponent<RawImage>().color = new Color32(0, modifiedColor.g, modifiedColor.b, 255);
@@ -118,11 +125,10 @@ public class ColorPickerImported : MonoBehaviour
         gComponent.transform.GetChild(0).GetChild(0).GetComponent<RawImage>().color = new Color32(modifiedColor.r, 0, modifiedColor.b, 255);
         bComponent.transform.GetChild(0).GetComponent<RawImage>().color = new Color32(modifiedColor.r, modifiedColor.g, 255, 255);
         bComponent.transform.GetChild(0).GetChild(0).GetComponent<RawImage>().color = new Color32(modifiedColor.r, modifiedColor.g, 0, 255);
-        if (useA) aComponent.transform.GetChild(0).GetChild(0).GetComponent<RawImage>().color = new Color32(modifiedColor.r, modifiedColor.g, modifiedColor.b, 255);
         positionIndicator.parent.GetChild(0).GetComponent<RawImage>().color = new HSV(modifiedHsv.H, 1d, 1d).ToColor();
         positionIndicator.anchorMin = new Vector2((float)modifiedHsv.S, (float)modifiedHsv.V);
         positionIndicator.anchorMax = positionIndicator.anchorMin;
-        hexaComponent.text = useA ? ColorUtility.ToHtmlStringRGBA(modifiedColor) : ColorUtility.ToHtmlStringRGB(modifiedColor);
+        hexaComponent.text = ColorUtility.ToHtmlStringRGB(modifiedColor);
         colorComponent.color = modifiedColor;
         onCC?.Invoke(modifiedColor);
         interact = true;
@@ -131,7 +137,8 @@ public class ColorPickerImported : MonoBehaviour
     //used by EventTrigger to calculate the chosen value in color box
     public void SetChooser()
     {
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(positionIndicator.parent as RectTransform, Input.mousePosition, GetComponentInParent<Canvas>().worldCamera, out Vector2 localpoint);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(positionIndicator.parent as RectTransform, Input.mousePosition, null, out Vector2 localpoint);
+        // RectTransformUtility.ScreenPointToLocalPointInRectangle(positionIndicator.parent as RectTransform, Input.mousePosition, GetComponentInParent<Canvas>().worldCamera, out Vector2 localpoint);
         localpoint = Rect.PointToNormalized((positionIndicator.parent as RectTransform).rect, localpoint);
         if (positionIndicator.anchorMin != localpoint)
         {
@@ -139,6 +146,7 @@ public class ColorPickerImported : MonoBehaviour
             positionIndicator.anchorMax = localpoint;
             modifiedHsv.S = localpoint.x;
             modifiedHsv.V = localpoint.y;
+
             RecalculateMenu(false);
         }
     }
@@ -162,12 +170,12 @@ public class ColorPickerImported : MonoBehaviour
             RecalculateMenu(true);
         }
     }
-    //gets r InputField value
-    public void SetR(string value)
+    //gets r TMP_InputField value
+    public void SetR()
     {
         if(interact)
         {
-            modifiedColor.r = (byte)Mathf.Clamp(int.Parse(value), 0, 255);
+            modifiedColor.r = (byte)Mathf.Clamp(int.Parse(rComponent.transform.GetComponentInChildren<TMP_InputField>().text), 0, 255);
             RecalculateMenu(true);
         }
     }
@@ -180,12 +188,13 @@ public class ColorPickerImported : MonoBehaviour
             RecalculateMenu(true);
         }
     }
-    //gets g InputField value
-    public void SetG(string value)
+    //gets g TMP_InputField value
+    public void SetG()
     {
         if (interact)
         {
-            modifiedColor.g = (byte)Mathf.Clamp(int.Parse(value), 0, 255);
+            
+            modifiedColor.g = (byte)Mathf.Clamp(int.Parse(gComponent.transform.GetComponentInChildren<TMP_InputField>().text), 0, 255);
             RecalculateMenu(true);
         }
     }
@@ -198,47 +207,30 @@ public class ColorPickerImported : MonoBehaviour
             RecalculateMenu(true);
         }
     }
-    //gets b InputField value
-    public void SetB(string value)
+    //gets b TMP_InputField value
+    public void SetB()
     {
         if (interact)
         {
-            modifiedColor.b = (byte)Mathf.Clamp(int.Parse(value), 0, 255);
+            modifiedColor.b = (byte)Mathf.Clamp(int.Parse(bComponent.transform.GetComponentInChildren<TMP_InputField>().text), 0, 255);
             RecalculateMenu(true);
         }
     }
-    //gets a Slider value
-    public void SetA(float value)
-    {
-        if (interact)
-        {
-            modifiedHsv.A = (byte)value;
-            RecalculateMenu(false);
-        }
-    }
-    //gets a InputField value
-    public void SetA(string value)
-    {
-        if (interact)
-        {
-            modifiedHsv.A = (byte)Mathf.Clamp(int.Parse(value), 0, 255);
-            RecalculateMenu(false);
-        }
-    }
-    //gets hexa InputField value
+
+    //gets hexa TMP_InputField value
     public void SetHexa(string value)
     {
         if (interact)
         {
             if (ColorUtility.TryParseHtmlString("#" + value, out Color c))
             {
-                if (!useA) c.a = 1;
+                c.a = 1;
                 modifiedColor = c;
                 RecalculateMenu(true);
             }
             else
             {
-                hexaComponent.text = useA ? ColorUtility.ToHtmlStringRGBA(modifiedColor) : ColorUtility.ToHtmlStringRGB(modifiedColor);
+                hexaComponent.text = ColorUtility.ToHtmlStringRGB(modifiedColor);
             }
         }
     }

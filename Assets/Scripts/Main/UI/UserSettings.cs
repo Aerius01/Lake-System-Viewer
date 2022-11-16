@@ -39,6 +39,16 @@ public class UserSettings
         get {return _showSatelliteImage;} 
         set {_showSatelliteImage = value; EnvironmentManager.ToggleSatelliteImage(value);}
     }
+    public static bool showContours 
+    {
+        get { return _showContours; } 
+        set { _showContours = value; MeshManager.instance.EvaluateContours(); }
+    }
+    public static bool showGradient 
+    {
+        get { return _showGradient; } 
+        set { _showGradient = value; MeshManager.instance.EvaluateGradient(); }
+    }
 
     private static bool _showFishTags;
     private static bool _showFishDepthLines;
@@ -46,6 +56,8 @@ public class UserSettings
     private static bool _showThermocline;
     private static bool _showWindWeather;
     private static bool _showSatelliteImage;
+    private static bool _showContours;
+    private static bool _showGradient;
 
     public static float verticalScalingFactor = 3f;
     public static float fishScalingFactor = 1f;

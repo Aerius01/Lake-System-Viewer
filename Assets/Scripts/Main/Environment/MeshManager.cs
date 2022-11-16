@@ -14,9 +14,34 @@ public class MeshManager : MonoBehaviour
     private int resolution;
     private float depthOffset = 0.2f;
     public GameObject waterObject;
+
+    private (float, float)[] contourBoundaries;
+
     [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
+
+    private static MeshManager _instance;
+    [HideInInspector]
+    public static MeshManager instance {get { return _instance; } set {_instance = value; }}
+
+    private void Awake()
+    {
+        // Destroy duplicates instances
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+    }
+
+    private void CalculateContourBounds()
+    {
+        // Contour operations; There are 10 partitions and 11 thresholds.
+        this.contourBoundaries = new (float, float)[10]; // (min, max)
+        float increment = LocalMeshData.maxDiff / 10f;
+        float tolerance = 0.07f;
+
+        // The 11th threshold is the flat plane at depth == 0, do not fill it in
+        for (int i = 0; i < 10; i++) this.contourBoundaries[i] = new (LocalMeshData.minDepth + increment * i - tolerance, LocalMeshData.minDepth + increment * i + tolerance);
+    }
 
     public async Task<bool> SetUpMesh()
     {   
@@ -34,6 +59,7 @@ public class MeshManager : MonoBehaviour
 
                 resolution = LocalMeshData.resolution;
 
+                this.CalculateContourBounds();
                 CreateShape();
                 UpdateMesh();
 
@@ -48,7 +74,11 @@ public class MeshManager : MonoBehaviour
 
                 // Set the text in the settings menu
                 waterText.text = string.Format("{0}", waterObject.transform.position.y);
-                
+
+                // Create gradient for height map toggling
+                GradientPicker.Create(this.gradient, GradientFinished);
+
+                TerrainManager.instance.SetUpTerrain();
                 return true;
             }
             return false;
@@ -122,16 +152,28 @@ public class MeshManager : MonoBehaviour
             }
         }
 
+        // // Perlin noise for investigation of smoothness
+        // for (int i = 0, y = 0; y < this.resolution; y++)
+        // {
+        //     for (int x = 0; x < this.resolution; x++, i++)
+        //     {
+        //         float xCoord = ((float)x / (float)this.resolution);
+        //         float yCoord = ((float)y / (float)this.resolution);
+        //         this.vertices[i].y = - Mathf.PerlinNoise(xCoord * 20f, yCoord * 20f) * LocalMeshData.maxDiff;
+        //     }
+        // }
+
         // Set the UVs & colors
         uv = new Vector2[totalVertices];
-        colors = new Color[totalVertices];
+        this.colors = new Color[totalVertices];
 
 		for (int i = 0, y = 0; y < resolution; y++) {
 			for (int x = 0; x < resolution; x++, i++) {
 				uv[i] = new Vector2((float)x / resolution, (float)y / resolution);
-                colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y));
 			}
 		}
+
+        UserSettings.showContours = true; // Also executes EvaluateContours()
 
         triangles = new int [totalQuads * 6];
         for (int vert = 0, tris = 0, z = 0; z < resolution - 1; z++)
@@ -155,20 +197,10 @@ public class MeshManager : MonoBehaviour
     {
         mesh.Clear();
         mesh.vertices = vertices;
-        mesh.colors = colors;
+        mesh.colors = this.colors;
         mesh.triangles = triangles;
         mesh.uv = uv;
         mesh.RecalculateNormals();
-    }
-
-    public void UpdateMeshColor()
-    {
-        GradientPicker.Create(this.gradient, "Choose the sphere's color!", SetGradient, GradientFinished);
-    }
-
-    private void SetGradient(Gradient currentGradient)
-    {
-        Debug.Log("You set a Gradient with " + currentGradient.colorKeys.Length + " Color keys");
     }
 
     private void GradientFinished(Gradient finishedGradient)
@@ -176,6 +208,54 @@ public class MeshManager : MonoBehaviour
         Debug.Log("You chose a Gradient with " + finishedGradient.colorKeys.Length + " Color keys");
         this.gradient = finishedGradient;
        
-        for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); mesh.colors = colors; }
+        for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); }
+        mesh.colors = this.colors;
+    }
+
+    // Called by toggle in Lakebed Topography menu
+    public void EvaluateGradient()
+    {
+        if (UserSettings.showGradient)
+        {
+            for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); }
+            this.UpdateMesh();
+        }
+    }
+
+    // Called by toggle in Lakebed Topography menu
+    // IMPORTANT: The Doellnsee contours are discontinuous because the heightmap is discontinuous
+    public void EvaluateContours(bool apply=true)
+    {
+        if (UserSettings.showContours)
+        {
+            // Create color maps
+            Color lakeBedColor = new Color(125f/255f, 90f/255f, 65f/255f);
+            Color[] contourColors = new Color[10];
+            for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f));
+
+            // Apply based on depths
+            for (int i = 0, y = 0; y < this.resolution; y++)
+            {
+                for (int x = 0; x < this.resolution; x++, i++)
+                {
+                    bool colorApplied = false;
+                    int counter = 0;
+                    foreach((float, float) bounds in this.contourBoundaries)
+                    {
+                        if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
+                        {
+                            colorApplied = true;
+                            this.colors[i] = contourColors[counter];
+                            break;
+                        }
+                        counter++;
+                    }
+                    
+                    if (!colorApplied) this.colors[i] = lakeBedColor;
+                }
+            }
+
+            if (apply) this.UpdateMesh();
+        }
     }
 }
