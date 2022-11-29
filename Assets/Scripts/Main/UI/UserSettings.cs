@@ -42,12 +42,17 @@ public class UserSettings
     public static bool showContours 
     {
         get { return _showContours; } 
-        set { _showContours = value; MeshManager.instance.EvaluateContours(); }
+        set { _showContours = value; MeshManager.instance.EvaluateContours(graded:gradedContours); }
     }
     public static bool showGradient 
     {
         get { return _showGradient; } 
         set { _showGradient = value; MeshManager.instance.EvaluateGradient(); }
+    }
+    public static bool gradedContours 
+    {
+        get { return _gradedContours; } 
+        set { _gradedContours = value; MeshManager.instance.EvaluateContours(graded:gradedContours); }
     }
 
     private static bool _showFishTags;
@@ -58,6 +63,7 @@ public class UserSettings
     private static bool _showSatelliteImage;
     private static bool _showContours;
     private static bool _showGradient;
+    private static bool _gradedContours;
 
     public static float verticalScalingFactor = 3f;
     public static float fishScalingFactor = 1f;

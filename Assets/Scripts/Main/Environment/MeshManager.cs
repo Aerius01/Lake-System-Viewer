@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Data;
 using System.Threading.Tasks;
@@ -16,10 +17,12 @@ public class MeshManager : MonoBehaviour
     public GameObject waterObject;
 
     private (float, float)[] contourBoundaries;
+    private int numberOfContourPartitions = 10;
 
     [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
+    [SerializeField] private Slider weightSlider;
 
     private static MeshManager _instance;
     [HideInInspector]
@@ -30,14 +33,15 @@ public class MeshManager : MonoBehaviour
         // Destroy duplicates instances
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+
+        weightSlider.normalizedValue = 0.07f;
     }
 
-    private void CalculateContourBounds()
+    private void CalculateContourBounds(float tolerance=0.07f)
     {
         // Contour operations; There are 10 partitions and 11 thresholds.
-        this.contourBoundaries = new (float, float)[10]; // (min, max)
-        float increment = LocalMeshData.maxDiff / 10f;
-        float tolerance = 0.07f;
+        this.contourBoundaries = new (float, float)[MeshManager.instance.numberOfContourPartitions]; // (min, max)
+        float increment = LocalMeshData.maxDiff / (float)MeshManager.instance.numberOfContourPartitions;
 
         // The 11th threshold is the flat plane at depth == 0, do not fill it in
         for (int i = 0; i < 10; i++) this.contourBoundaries[i] = new (LocalMeshData.minDepth + increment * i - tolerance, LocalMeshData.minDepth + increment * i + tolerance);
@@ -215,6 +219,7 @@ public class MeshManager : MonoBehaviour
     // Called by toggle in Lakebed Topography menu
     public void EvaluateGradient()
     {
+        // deactivate contour options
         if (UserSettings.showGradient)
         {
             for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); }
@@ -224,38 +229,48 @@ public class MeshManager : MonoBehaviour
 
     // Called by toggle in Lakebed Topography menu
     // IMPORTANT: The Doellnsee contours are discontinuous because the heightmap is discontinuous
-    public void EvaluateContours(bool apply=true)
+    public void EvaluateContours(bool apply=true, bool graded=false)
     {
         if (UserSettings.showContours)
         {
             // Create color maps
             Color lakeBedColor = new Color(125f/255f, 90f/255f, 65f/255f);
             Color[] contourColors = new Color[10];
-            for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f));
+            if (graded) for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f));
+            else for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f, 1f, 1f);
 
             // Apply based on depths
             for (int i = 0, y = 0; y < this.resolution; y++)
             {
                 for (int x = 0; x < this.resolution; x++, i++)
                 {
-                    bool colorApplied = false;
-                    int counter = 0;
-                    foreach((float, float) bounds in this.contourBoundaries)
-                    {
-                        if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
+                        bool colorApplied = false;
+                        int counter = 0;
+                        foreach((float, float) bounds in this.contourBoundaries)
                         {
-                            colorApplied = true;
-                            this.colors[i] = contourColors[counter];
-                            break;
+                            if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
+                            {
+                                colorApplied = true;
+                                this.colors[i] = contourColors[counter];
+                                break;
+                            }
+                            counter++;
                         }
-                        counter++;
+                        
+                        if (!colorApplied) this.colors[i] = lakeBedColor;
                     }
-                    
-                    if (!colorApplied) this.colors[i] = lakeBedColor;
-                }
             }
 
             if (apply) this.UpdateMesh();
         }
+    }
+
+    public void ContourWeightSlider()
+    {
+        float relativeTolerance = MeshManager.instance.weightSlider.normalizedValue;
+        float absoluteTolerance = LocalMeshData.maxDiff / (float)MeshManager.instance.numberOfContourPartitions * relativeTolerance / 2f;
+
+        this.CalculateContourBounds(absoluteTolerance);
+        this.EvaluateContours(graded:UserSettings.gradedContours);
     }
 }
