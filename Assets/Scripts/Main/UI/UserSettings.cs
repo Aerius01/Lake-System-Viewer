@@ -54,6 +54,12 @@ public class UserSettings
         get { return _gradedContours; } 
         set { _gradedContours = value; MeshManager.instance.EvaluateContours(graded:gradedContours); }
     }
+    public static bool macrophyteMaps 
+    {
+        get { return _macrophyteMaps; } 
+        set { _macrophyteMaps = value; MacromapManager.ToggleMaps(); }
+    }
+
 
     private static bool _showFishTags;
     private static bool _showFishDepthLines;
@@ -64,6 +70,7 @@ public class UserSettings
     private static bool _showContours;
     private static bool _showGradient;
     private static bool _gradedContours;
+    private static bool _macrophyteMaps;
 
     public static float verticalScalingFactor = 3f;
     public static float fishScalingFactor = 1f;

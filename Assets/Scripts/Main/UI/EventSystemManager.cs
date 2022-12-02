@@ -16,7 +16,7 @@ public class EventSystemManager : MonoBehaviour
     private EnvironmentManager environmentManager;
 
     [SerializeField]
-    private Toggle tagToggle, depthLineToggle, trailToggle, thermoToggle, windWeatherToggle, satelliteToggle, contourToggle, gradientToggle, gradedCLineToggle;
+    private Toggle tagToggle, depthLineToggle, trailToggle, thermoToggle, windWeatherToggle, satelliteToggle, contourToggle, gradientToggle, gradedCLineToggle, macrophyteMapToggle;
     [SerializeField] private GraphicRaycaster gr;
 
     public static event AlertScaleChange scaleChangeEvent;
@@ -53,6 +53,7 @@ public class EventSystemManager : MonoBehaviour
     public void ContourToggle() { UserSettings.showContours = contourToggle.isOn ? true : false; }
     public void GradientToggle() { UserSettings.showGradient = gradientToggle.isOn ? true : false; }
     public void GradedContourLineToggle() { UserSettings.gradedContours = gradedCLineToggle.isOn ? true : false; }
+    public void MacrophyteMapToggle() { UserSettings.macrophyteMaps = macrophyteMapToggle.isOn ? true : false; }
 
     public void AdjustWaterHeight()
     {

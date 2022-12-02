@@ -126,9 +126,16 @@ public class Fish : MonoBehaviour
         if (this.Timebounded(updateTime)) this.CalculatePositions(updateTime);
 
         // Fetch a new set of packets and wait for update to circle back
-        // The IF gate prevents lining up multiple queries for the same data in 
-            // the event that the query takes longer than one update cycle
-        else if (!this.positionCache.querySent) lock(this.locker) this.currentPacket = this.positionCache.GetCachedBounds(updateTime);  
+        // The IF gate prevents lining up multiple queries for very similar data in 
+            // the event that the query takes longer than several update cycles.
+            // The frequency is evaluated as 2s in real time, or 3h in simulated game time.
+            // If the fish has no query already queued with DatabaseConnection, the IF gate is void
+            // DatabaseConnection's queryer keeps only the most recent query per fish ID
+        else if ((DateTime.Now - this.positionCache.latestLiveQueryRequest).TotalSeconds > 2f ||
+            (TimeManager.instance.currentTime - this.positionCache.latestIngameQueryRequest).TotalHours > 3f) 
+            {
+                lock(this.locker) this.currentPacket = this.positionCache.GetCachedBounds(updateTime);
+            }  
     }
 
     private void CalculatePositions(DateTime updateTime)

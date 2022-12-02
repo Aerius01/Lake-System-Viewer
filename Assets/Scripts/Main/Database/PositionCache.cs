@@ -6,11 +6,15 @@ using System.Threading.Tasks;
 
 public class PositionCache
 {
+    private static int requeryLowerLimit = 100;
+    public static int batchSize = 300;
+
     private DateTime earliestTimestamp { get { return this.backwardCache.Any() ? this.backwardCache[0].timestamp : this.forwardCache.Any() ? this.forwardCache[0].timestamp : DateTime.MaxValue; } }
     private DateTime latestTimestamp { get { return this.forwardCache.Any() ? this.forwardCache[^1].timestamp : DateTime.MinValue; } }
     public int fishID { get; private set; }
 
-    public bool querySent { get; private set; }
+    public DateTime latestLiveQueryRequest { get; private set; }
+    public DateTime latestIngameQueryRequest { get; private set; }
 
     private List<DataPacket> backwardCache, forwardCache;
     private readonly object locker = new object();
@@ -18,7 +22,8 @@ public class PositionCache
     public PositionCache(int fishID)
     {
         this.fishID = fishID;
-        this.querySent = false;
+        this.latestLiveQueryRequest = DateTime.MinValue;
+        this.latestIngameQueryRequest = DateTime.MinValue;
         this.backwardCache = new List<DataPacket>();
         this.forwardCache = new List<DataPacket>();
     }
@@ -32,14 +37,15 @@ public class PositionCache
                 // Debug.Log(string.Format("{0}: Position cache full requery", this.fishID));
                 // We are outside the current range
                 DatabaseConnection.QueuePositionBatchCommand(this.fishID, timestamp, forwardOnly:false);
-                this.querySent = true;
+                this.latestLiveQueryRequest = DateTime.Now;
+                this.latestIngameQueryRequest = TimeManager.instance.currentTime;
                 return null;
             }
             else if (DateTime.Compare(this.forwardCache[0].timestamp, timestamp) <= 0 && DateTime.Compare(timestamp, latestTimestamp) < 0)
             {
                 // Debug.Log(string.Format("{0}: Position cache future packets", this.fishID));
 
-                // Operate in future packets
+                // Operate in future cached packets
                 int currentIndex = forwardCache.BinarySearch(new DataPacket(0, timestamp, 0f, 0f, 0f), new TimestampComparer());
 
                 // Recalibrate lists, culling previous entries
@@ -47,7 +53,7 @@ public class PositionCache
                 {
                     for (int i=0; i < ~currentIndex; i++)
                     {
-                        if (backwardCache.Count >= 100) backwardCache.RemoveAt(0);
+                        if (backwardCache.Count >= PositionCache.requeryLowerLimit) backwardCache.RemoveAt(0);
                         backwardCache.Add(forwardCache[0]);
                         forwardCache.RemoveAt(0);
                     }
@@ -66,7 +72,7 @@ public class PositionCache
             {
                 // Debug.Log(string.Format("{0}: Position cache previous packets", this.fishID));
                 // If the timestamp is exactly equal to the last TS in backwardCache, then no changes to the lists are necessary
-                // Operate in previous packets
+                // Operate in past cached packets
                 int currentIndex = backwardCache.BinarySearch(new DataPacket(0, timestamp, 0f, 0f, 0f), new TimestampComparer());
 
                 // Recalibrate lists, without culling future entries (we'll likely use them again)
@@ -89,7 +95,7 @@ public class PositionCache
             }
 
             // Queue another forward query to keep the cache full if the list is dwindling
-            if (forwardCache.Count < 20) DatabaseConnection.QueuePositionBatchCommand(this.fishID, forwardCache[^1].timestamp);
+            if (forwardCache.Count < PositionCache.requeryLowerLimit) DatabaseConnection.QueuePositionBatchCommand(this.fishID, forwardCache[^1].timestamp);
 
             return new DataPacket[] { backwardCache[^1], forwardCache[0] };
         }
@@ -128,14 +134,16 @@ public class PositionCache
         }
 
         // Debug.Log(string.Format("backward: {0}; forward: {1}", backwardCache.Count, forwardCache.Count));
-        this.querySent = false;
+        this.latestLiveQueryRequest = DateTime.MinValue;
+        this.latestIngameQueryRequest = DateTime.MinValue;
         return Task.CompletedTask;
     }
 
     public void FullRequery(DateTime updateTime)
     { 
         DatabaseConnection.QueuePositionBatchCommand(this.fishID, updateTime, forwardOnly:false);
-        this.querySent = true;
+        this.latestLiveQueryRequest = DateTime.Now;
+        this.latestIngameQueryRequest = TimeManager.instance.currentTime;
     }
 }
 

@@ -8,11 +8,12 @@ using System.Collections.Generic;
 
 public class DatabaseConnection
 {
+    private static int counter = 0;
     private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300";
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
-    private static bool? smallSample = true;
+    private static bool? smallSample = false;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -22,45 +23,56 @@ public class DatabaseConnection
         doubleSidedBatch = new List<CommandWrapper>();
     }
 
-    public static void QueuePositionBatchCommand(int id, DateTime lastListTime, bool forwardOnly=true)
+    public static void QueuePositionBatchCommand(int id, DateTime queryRootTimestamp, bool forwardOnly=true)
     {
+        // Ensure that each ID has at most only a single query lined up
         lock(DatabaseConnection.locker)
         {
-            // Ensure that each ID has at most only a single query lined up
             if (!forwardOnly) 
             {
+                // Remove the previously lined up query and add it with the updated time
                 if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() != null) doubleSidedBatch.RemoveAt(doubleSidedBatch.IndexOf(doubleSidedBatch.Where(i => i.id == id).FirstOrDefault()));
-                doubleSidedBatch.Add(new CommandWrapper(id, lastListTime, forwardOnly));
+                doubleSidedBatch.Add(new CommandWrapper(id, queryRootTimestamp, forwardOnly));
+
+                // If the same fish has a query in the forward only queue, remove it
+                if (forwardBatch.Where(i => i.id == id).FirstOrDefault() != null) forwardBatch.RemoveAt(forwardBatch.IndexOf(forwardBatch.Where(i => i.id == id).FirstOrDefault()));
             }
             else
             {
-                // If a full requery is in motion (double-sided), no need to run the forward-only query
-                if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() == null)
-                {
-                    if (forwardBatch.Where(i => i.id == id).FirstOrDefault() != null) forwardBatch.RemoveAt(forwardBatch.IndexOf(forwardBatch.Where(i => i.id == id).FirstOrDefault()));
-                    forwardBatch.Add(new CommandWrapper(id, lastListTime, forwardOnly));
-                }
+                // Remove the previously lined up query and add it with the updated time
+                if (forwardBatch.Where(i => i.id == id).FirstOrDefault() != null) forwardBatch.RemoveAt(forwardBatch.IndexOf(forwardBatch.Where(i => i.id == id).FirstOrDefault()));
+                forwardBatch.Add(new CommandWrapper(id, queryRootTimestamp, forwardOnly));
+
+                // If the same fish has a query in the double-sided queue, remove it
+                if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() != null) doubleSidedBatch.RemoveAt(doubleSidedBatch.IndexOf(doubleSidedBatch.Where(i => i.id == id).FirstOrDefault()));
             } 
         }
     }
 
+
     public static async Task BatchAndRunPositionQueries()
     {
+        int thisIteration = DatabaseConnection.counter;
+        DatabaseConnection.counter++;
+
+        BufferTimer bufferTimer = Buffer.InitializeTimer();
         List<Task> tasks = new List<Task>();
 
         // Parallelize forward queries
         if (DatabaseConnection.forwardBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
-            Debug.Log(string.Format("Splitting {0} forward query/ies into chunks of size {1}", forwardBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            // Debug.Log(string.Format("Splitting {0} forward query/ies into chunks of size {1}", forwardBatch.Count, chunkSize < 1 ? 1 : chunkSize));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
+            // Chunk all the queries into batches, and then reset the query collection container
             lock(DatabaseConnection.locker)
             {
                 partialBatchLists = Tools.ChunkList(DatabaseConnection.forwardBatch, chunkSize < 1 ? 1 : chunkSize);
                 DatabaseConnection.forwardBatch = new List<CommandWrapper>();
             }
 
+            // Wrap each batch query in a task and catalogue that task
             foreach (List<CommandWrapper> partialList in partialBatchLists)
             {
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
@@ -75,15 +87,17 @@ public class DatabaseConnection
         if (DatabaseConnection.doubleSidedBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
-            Debug.Log(string.Format("Splitting {0} double-sided query/ies into chunks of size {1}", doubleSidedBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            // Debug.Log(string.Format("Splitting {0} double-sided query/ies into chunks of size {1}", doubleSidedBatch.Count, chunkSize < 1 ? 1 : chunkSize));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
+            // Chunk all the queries into batches, and then reset the query collection container
             lock(DatabaseConnection.locker)
             {
                 partialBatchLists = Tools.ChunkList(DatabaseConnection.doubleSidedBatch, chunkSize < 1 ? 1 : chunkSize);
                 DatabaseConnection.doubleSidedBatch = new List<CommandWrapper>();
             }
 
+            // Wrap each batch query in a task and catalogue that task
             foreach (List<CommandWrapper> partialList in partialBatchLists)
             {
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
@@ -94,20 +108,30 @@ public class DatabaseConnection
             }
         }
 
-        // Synch fall-back condition (all tasks finished immediately)
+        // Synch fall-back condition (in case all tasks finish immediately)
         bool syncRunThrough = true;
         foreach (Task task in tasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
 
-        if (!syncRunThrough) { await Task.WhenAll(tasks.ToArray()); }
 
-        Debug.Log("All partial query tasks complete");
+        if (!syncRunThrough)
+        {
+            // TODO: Create a static queue of all completionTasks, process them in order and cancel outdated ones as necessary
+            // Each fish's position cache can only line up one query anyways
+            Debug.Log(string.Format("Starting Task.Whenall {0}", thisIteration));
+            Task completionTask = Task.WhenAll(tasks.ToArray());
+            await completionTask;
+            Debug.Log(string.Format("Ending pull {0}", thisIteration));
+        }
+
+        bufferTimer.StopTiming();
+        // Debug.Log("All partial query tasks complete");
     } 
 
     public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, bool forwardOnly=true)
     {
+        // Actually execute the batch query
         List<Task> tasks = new List<Task>();
 
-        // Debug.Log("Running batch queries");
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
             await connection.OpenAsync();
@@ -245,7 +269,23 @@ public class DatabaseConnection
         Dictionary<int, FishPacket> returnDict = new Dictionary<int, FishPacket>();
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
+            if (connection.State != ConnectionState.Open)
+            {
+                // This connection tends to have problems. Attempt to re-open the connection if it fails
+                int runningCount = 0;
+                while (runningCount < 30)
+                {
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException e) { Debug.Log(e.Message); }
+
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        if (runningCount > 0) Debug.Log(string.Format("Opened failed connection on trial: {0}", runningCount));
+                        break;
+                    }
+                    runningCount++;
+                }
+            }
 
             NpgsqlBatch batch = new NpgsqlBatch(connection);
             foreach (int key in keyList) { batch.BatchCommands.Add(NewMetadataBatchCommand(key)); }
@@ -334,7 +374,12 @@ public class DatabaseConnection
                 await rdr.CloseAsync();
             }
 
-            await connection.CloseAsync();
+            try { await connection.CloseAsync(); }
+            catch (NpgsqlException e)
+            {
+                Debug.Log("Catching the exception on other end");
+                Debug.Log(e.Message);
+            }
         }
 
         return returnDict;
@@ -678,9 +723,133 @@ public class DatabaseConnection
         }
         return meshTable;
     }
+
+    public static DateTime MacromapPolygonsEarliestDate()
+    {
+        DateTime timestamp = DateTime.MaxValue;
+        string sql = "select min(timestamp) from macromap_polygons_local";
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows) { Debug.Log("Problem getting earliest polygon macromap date"); }
+                while (rdr.Read()) { timestamp = rdr.GetDateTime(rdr.GetOrdinal("min")); }
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        return timestamp;
+    }
+
+    public static PolygonPacket GetMacromapPolygons()
+    {
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+        // Inits
+        DateTime timestamp = DateTime.MaxValue;
+        DateTime? nextTimestamp = null;
+        PolygonPacket returnPacket = null;
+
+        string sql = string.Format(
+        @"SELECT mp.timestamp,
+            mp.poly_id,
+            mp.lower,
+            mp.upper,
+            mp.x,
+            mp.y,
+            (select min(timestamp) from macromap_polygons_local where timestamp >= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+                and x is not null
+                and y is not null
+                and poly_id is not null
+                and lower is not null
+                and upper is not null) next_timestamp
+        FROM macromap_polygons_local mp
+        where mp.timestamp = (select max(timestamp) from macromap_polygons_local where mp.timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            and x is not null
+            and y is not null
+            and poly_id is not null
+            and lower is not null
+            and upper is not null)
+        order by mp.timestamp", strTime);
+
+        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            connection.Open(); 
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            {
+                if (!rdr.HasRows)
+                {
+                    Debug.Log("polygon SQL query yielded empty dataset");
+
+                    // Query for earliest TS and make dummy return packet with accurate next_timestamp
+                    // TODO: query failure returns DateTime.MaxValue, error handle if earliestTS is this value
+                    DateTime earliestTS = DatabaseConnection.MacromapPolygonsEarliestDate();
+                    return new PolygonPacket(null, earliestTS);
+                }
+
+                while (rdr.Read())
+                {
+                    timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                    nextTimestamp = null;
+                    var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                    if (!DBNull.Value.Equals(entry))
+                    {
+                        try { nextTimestamp = Convert.ToDateTime(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: nextTimestamp"); }
+                    }   
+
+                    // Never null by the architecture of the query
+                    int polyID = 0;
+                    entry = rdr.GetValue(rdr.GetOrdinal("poly_id"));
+                    try { polyID = Convert.ToInt32(entry); }
+                    catch { Debug.Log("Polygonal macromap data conversion fail: poly_ID"); }
+
+                    int lower = 0;
+                    entry = rdr.GetValue(rdr.GetOrdinal("lower"));
+                    try { lower = Convert.ToInt32(entry); }
+                    catch { Debug.Log("Polygonal macromap data conversion fail: lower"); }
+
+                    int upper = 0;
+                    entry = rdr.GetValue(rdr.GetOrdinal("upper"));
+                    try { upper = Convert.ToInt32(entry); }
+                    catch { Debug.Log("Polygonal macromap data conversion fail: upper"); }
+
+                    float x = 0;
+                    entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                    try { x = Convert.ToSingle(entry); }
+                    catch { Debug.Log("Polygonal macromap data conversion fail: x"); }
+
+                    float y = 0;
+                    entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                    try { y = Convert.ToSingle(entry); }
+                    catch { Debug.Log("Polygonal macromap data conversion fail: y"); }
+
+                    // Send off to MacromapPolygon to process
+                    if (returnPacket == null) { returnPacket = new PolygonPacket(timestamp, nextTimestamp); }
+                    returnPacket.CataloguePacket(polyID, lower, upper, x, y);
+                };
+
+                rdr.Close();
+            }
+
+            connection.Close(); 
+        }
+
+        return returnPacket;
+    }
 }
 
-// SUPPORT CLASS
+// SUPPORT CLASSES
 public class CommandWrapper
 {
     public int id { get; set; }
@@ -703,7 +872,7 @@ public class CommandWrapper
 
         if (forwardOnly)
         {
-            // Get 100 data points in the future only
+            // Get PositionCache.batchSize (=300) data points in the future only
             sql = string.Format(
                 @"SELECT * FROM 
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
@@ -718,12 +887,12 @@ public class CommandWrapper
                             AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
                         ORDER BY p.timestamp desc) q
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) a
-                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
+                    LIMIT {3}) a
+                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist, PositionCache.batchSize);
         }
         else
         {
-            // Get 100 data points on each side of the supplied time
+            // Get PositionCache.batchSize (=300) data points on each side of the supplied time
             sql = string.Format(
                 @"(SELECT * FROM 
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
@@ -738,7 +907,7 @@ public class CommandWrapper
                             AND p.timestamp <= TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
                         ORDER BY p.timestamp desc) q
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) a
+                    LIMIT {3}) a
                 ORDER BY a.timestamp)
                 UNION ALL
                 SELECT * FROM
@@ -754,7 +923,7 @@ public class CommandWrapper
                             AND p.timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
                         ORDER BY p.timestamp) q
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT 100) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist);
+                    LIMIT {3}) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist, PositionCache.batchSize);
         }
 
         return new NpgsqlBatchCommand(sql);

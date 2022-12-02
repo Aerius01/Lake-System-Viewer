@@ -17,23 +17,29 @@ public class Main : MonoBehaviour
 
     private async void Start()
     {
+        LoadingScreen.Activate();
         List<Task> taskList = new List<Task>();
 
         Task<bool> meshSetUp = MeshManager.instance.SetUpMesh();
         fishManager = new FishManager(managerObject);
 
+        LoadingScreen.Text("Waiting on heightmap data...");
         if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations 
         else
         {
             // error handling, mesh map fail
         }
 
+        LoadingScreen.Text("Waiting on fish repository...");
         if (await FishManager.initialization)
         {
+            MacromapManager.InitializeMacrophyteMaps();
+
             fishDictAssembled?.Invoke();
             TimeManager.instance.PlayButton();
 
             finishedStartup = true;
+            LoadingScreen.Deactivate();
         }
     }
 
@@ -46,6 +52,7 @@ public class Main : MonoBehaviour
             moonController.AdjustMoonPosition();
             ThermoclineDOMain.instance.UpdateThermoclineDOMain();
             WindWeatherMain.instance.UpdateWindWeather(); 
+            MacromapManager.UpdateMaps();
         }
     }
 }
