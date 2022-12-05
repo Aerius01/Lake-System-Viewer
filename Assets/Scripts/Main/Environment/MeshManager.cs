@@ -212,17 +212,40 @@ public class MeshManager : MonoBehaviour
         Debug.Log("You chose a Gradient with " + finishedGradient.colorKeys.Length + " Color keys");
         this.gradient = finishedGradient;
        
-        for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); }
+        for (int i = 0, y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++, i++)
+            {
+                this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y));
+
+                // Apply macrophyte color mix
+                if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                {
+                    if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                }
+            }
+        }
         mesh.colors = this.colors;
     }
 
     // Called by toggle in Lakebed Topography menu
     public void EvaluateGradient()
     {
-        // deactivate contour options
         if (UserSettings.showGradient)
         {
-            for (int i = 0, y = 0; y < resolution; y++) { for (int x = 0; x < resolution; x++, i++) this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); }
+            for (int i = 0, y = 0; y < resolution; y++)
+            { 
+                for (int x = 0; x < resolution; x++, i++)
+                {
+                    this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); 
+
+                    // Apply macrophyte color mix
+                    if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                    {
+                        if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                    }
+                }
+            }
             this.UpdateMesh();
         }
     }
@@ -244,21 +267,28 @@ public class MeshManager : MonoBehaviour
             {
                 for (int x = 0; x < this.resolution; x++, i++)
                 {
-                        bool colorApplied = false;
-                        int counter = 0;
-                        foreach((float, float) bounds in this.contourBoundaries)
+                    bool colorApplied = false;
+                    int counter = 0;
+                    foreach((float, float) bounds in this.contourBoundaries)
+                    {
+                        if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
                         {
-                            if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
-                            {
-                                colorApplied = true;
-                                this.colors[i] = contourColors[counter];
-                                break;
-                            }
-                            counter++;
+                            colorApplied = true;
+                            this.colors[i] = contourColors[counter];
+                            break;
                         }
-                        
-                        if (!colorApplied) this.colors[i] = lakeBedColor;
+                        counter++;
                     }
+                    
+                    if (!colorApplied) this.colors[i] = lakeBedColor;
+                    
+                    // Apply macrophyte color mix
+                    if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                    {
+                        if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                        // if (MacromapManager.intensityMap[x, y] != 0f) if (i%(100f-MacromapManager.intensityMap[x, y] * 100f)<=0.05) this.colors[i] = new Color(0f, 1f, 0f);
+                    }
+                }
             }
 
             if (apply) this.UpdateMesh();

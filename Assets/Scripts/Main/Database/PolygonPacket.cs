@@ -38,4 +38,6 @@ public class PolygonPacket
 
         return returnPolygon;
     }
+
+    public void ProcessConvexHulls() { foreach (MacromapPolygon polygon in polygons) { polygon.SortPoints(); } }
 }

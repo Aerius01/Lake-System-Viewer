@@ -52,7 +52,7 @@ public class Main : MonoBehaviour
             moonController.AdjustMoonPosition();
             ThermoclineDOMain.instance.UpdateThermoclineDOMain();
             WindWeatherMain.instance.UpdateWindWeather(); 
-            MacromapManager.UpdateMaps();
+            Task task = MacromapManager.UpdateMaps();
         }
     }
 }

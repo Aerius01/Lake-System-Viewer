@@ -13,7 +13,7 @@ public class DatabaseConnection
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
-    private static bool? smallSample = false;
+    private static bool? smallSample = true;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -748,7 +748,7 @@ public class DatabaseConnection
         return timestamp;
     }
 
-    public static PolygonPacket GetMacromapPolygons()
+    public async static Task<PolygonPacket> GetMacromapPolygons()
     {
         string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -779,12 +779,12 @@ public class DatabaseConnection
             and upper is not null)
         order by mp.timestamp", strTime);
 
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            await connection.OpenAsync();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
                 if (!rdr.HasRows)
                 {
@@ -796,7 +796,7 @@ public class DatabaseConnection
                     return new PolygonPacket(null, earliestTS);
                 }
 
-                while (rdr.Read())
+                while (await rdr.ReadAsync())
                 {
                     timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
 
@@ -839,12 +839,13 @@ public class DatabaseConnection
                     returnPacket.CataloguePacket(polyID, lower, upper, x, y);
                 };
 
-                rdr.Close();
+                await rdr.CloseAsync();
             }
 
-            connection.Close(); 
+            await connection.CloseAsync(); 
         }
 
+        // returnPacket.ProcessConvexHulls();
         return returnPacket;
     }
 }

@@ -3,6 +3,9 @@ using UnityEngine.UI;
 
 public class ToggleGrouping : MonoBehaviour
 {
+    // Toggles that are grouped together cannot be simultaneously selected, but one must always be selected
+    // Activating one deactivates the others, and deactivating the active toggle activates the first in the group that isn't the deactivated toggle
+    
     [SerializeField] private Toggle[] toggles;
     private Toggle currentToggle;
 
