@@ -43,7 +43,7 @@ public class Main : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
+    private async void FixedUpdate()
     {
         if (finishedStartup)
         {
@@ -52,7 +52,7 @@ public class Main : MonoBehaviour
             moonController.AdjustMoonPosition();
             ThermoclineDOMain.instance.UpdateThermoclineDOMain();
             WindWeatherMain.instance.UpdateWindWeather(); 
-            Task task = MacromapManager.UpdateMaps();
+            await Task.Run(() => MacromapManager.UpdateMaps());
         }
     }
 }

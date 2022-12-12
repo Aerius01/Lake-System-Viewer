@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using System.Threading.Tasks;
+using System.Threading;
 
 public class PositionCache
 {
@@ -101,7 +102,7 @@ public class PositionCache
         }
     }
 
-    public Task AllocateNewPackets(List<DataPacket> listPackets, bool forwardOnly)
+    public Task AllocateNewPackets(List<DataPacket> listPackets, bool forwardOnly, CancellationToken token)
     {
         // Debug.Log(string.Format("{0}: Allocating new packets", this.fishID));
         if (forwardOnly) lock(this.locker) { foreach (DataPacket packet in listPackets) this.forwardCache.Add(packet); }
@@ -121,14 +122,30 @@ public class PositionCache
                     if (~splitIndex == listPackets.Count) this.forwardCache.Add(listPackets[0]);
                     else
                     {
-                        for (int i = 0; i < ~splitIndex; i++) this.backwardCache.Add(listPackets[i]);
-                        for (int i = ~splitIndex; i < listPackets.Count; i++) this.forwardCache.Add(listPackets[i]);
+                        for (int i = 0; i < ~splitIndex; i++)
+                        {
+                            if (token.IsCancellationRequested) break;
+                            else this.backwardCache.Add(listPackets[i]);
+                        }
+                        for (int i = ~splitIndex; i < listPackets.Count; i++)
+                        {
+                            if (token.IsCancellationRequested) break;
+                            else this.forwardCache.Add(listPackets[i]);
+                        }
                     }
                 }
                 else
                 {
-                    for (int i = 0; i <= splitIndex; i++) this.backwardCache.Add(listPackets[i]);
-                    for (int i = splitIndex + 1; i < listPackets.Count; i++) this.forwardCache.Add(listPackets[i]);
+                    for (int i = 0; i <= splitIndex; i++)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        else this.backwardCache.Add(listPackets[i]);
+                    }
+                    for (int i = splitIndex + 1; i < listPackets.Count; i++) 
+                    {
+                        if (token.IsCancellationRequested) break;
+                        else this.forwardCache.Add(listPackets[i]);
+                    }
                 }
             }
         }
@@ -136,6 +153,7 @@ public class PositionCache
         // Debug.Log(string.Format("backward: {0}; forward: {1}", backwardCache.Count, forwardCache.Count));
         this.latestLiveQueryRequest = DateTime.MinValue;
         this.latestIngameQueryRequest = DateTime.MinValue;
+
         return Task.CompletedTask;
     }
 

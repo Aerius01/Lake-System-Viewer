@@ -3,6 +3,7 @@ using UnityEngine;
 using System;
 using System.Data;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -13,7 +14,7 @@ public class DatabaseConnection
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
-    private static bool? smallSample = true;
+    private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -52,8 +53,14 @@ public class DatabaseConnection
 
     public static async Task BatchAndRunPositionQueries()
     {
+        // cancellation request is not terminating pull, it must be locked somewhere.
+        // look into throw on cancellation method, see where the hang-up is happening.
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(3000);
+
         int thisIteration = DatabaseConnection.counter;
         DatabaseConnection.counter++;
+        Debug.Log(string.Format("Pull: {0}", thisIteration));
 
         BufferTimer bufferTimer = Buffer.InitializeTimer();
         List<Task> tasks = new List<Task>();
@@ -62,6 +69,9 @@ public class DatabaseConnection
         if (DatabaseConnection.forwardBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
+
+            List<int> properties = DatabaseConnection.forwardBatch.Select(o => o.id).ToList();
+            Debug.Log(string.Format("Forward IDs: {0}; Split into {1} chunks", string.Join(", ", properties), chunkSize < 1 ? 1 : chunkSize));
             // Debug.Log(string.Format("Splitting {0} forward query/ies into chunks of size {1}", forwardBatch.Count, chunkSize < 1 ? 1 : chunkSize));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
@@ -78,7 +88,7 @@ public class DatabaseConnection
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
                 foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
 
-                Task runner = RunQueuedPositionQueries(partialBatch);
+                Task runner = RunQueuedPositionQueries(partialBatch, cts.Token);
                 tasks.Add(runner);
             }
         }
@@ -87,6 +97,8 @@ public class DatabaseConnection
         if (DatabaseConnection.doubleSidedBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
+            List<int> properties = DatabaseConnection.doubleSidedBatch.Select(o => o.id).ToList();
+            Debug.Log(string.Format("Double IDs: {0}; Split into {1} chunks", string.Join(", ", properties), chunkSize < 1 ? 1 : chunkSize));
             // Debug.Log(string.Format("Splitting {0} double-sided query/ies into chunks of size {1}", doubleSidedBatch.Count, chunkSize < 1 ? 1 : chunkSize));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
@@ -103,7 +115,7 @@ public class DatabaseConnection
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
                 foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
 
-                Task runner = RunQueuedPositionQueries(partialBatch, false);
+                Task runner = RunQueuedPositionQueries(partialBatch, cts.Token, false);
                 tasks.Add(runner);
             }
         }
@@ -117,17 +129,15 @@ public class DatabaseConnection
         {
             // TODO: Create a static queue of all completionTasks, process them in order and cancel outdated ones as necessary
             // Each fish's position cache can only line up one query anyways
-            Debug.Log(string.Format("Starting Task.Whenall {0}", thisIteration));
             Task completionTask = Task.WhenAll(tasks.ToArray());
             await completionTask;
             Debug.Log(string.Format("Ending pull {0}", thisIteration));
         }
 
         bufferTimer.StopTiming();
-        // Debug.Log("All partial query tasks complete");
     } 
 
-    public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, bool forwardOnly=true)
+    public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, CancellationToken token, bool forwardOnly=true)
     {
         // Actually execute the batch query
         List<Task> tasks = new List<Task>();
@@ -143,7 +153,7 @@ public class DatabaseConnection
             {
                 for (int i=0; i < batch.BatchCommands.Count; i++)
                 {
-                    // Debug.Log(string.Format("Command {0}: Reading...", i));
+                    if (token.IsCancellationRequested) break;
 
                     // No position data could be recovered
                     if (!rdr.HasRows) { rdr.NextResult(); }
@@ -177,7 +187,7 @@ public class DatabaseConnection
                         };
 
                         // Task that is completely independent of next iteration
-                        Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly);
+                        Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token);
                         tasks.Add(task);
                     }
 

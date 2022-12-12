@@ -5,7 +5,7 @@ public class FishUtils : MonoBehaviour
 {
     public GameObject canvas, depthLine, trail, thermoInd;
     [SerializeField] private Renderer[] renderers;
-    [SerializeField] private Material deflt, blue, lBlue, green, purple, orange, red, pink, yellow;
+    [SerializeField] private Material deflt, blue, lBlue, green, purple, orange, red, pink, yellow, occluded;
     private BoxCollider boxCollider;
     private GameObject scaleDummy;
 
@@ -18,11 +18,22 @@ public class FishUtils : MonoBehaviour
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
     public Color fishColor { get { return renderers[0].material.color; } } 
 
-    public void Setup()
+    public void Setup(int fishLayer)
     {
         this.scaleDummy = this.transform.Find("ScaleDummy").gameObject;
         this.boxCollider = this.scaleDummy.GetComponent<BoxCollider>();
         this.baseExtent = Mathf.Max(renderers[0].localBounds.extents.x, renderers[0].localBounds.extents.y, renderers[0].localBounds.extents.z);
+
+        this.ChangeLayersRecursively(this.scaleDummy.transform, fishLayer);
+    }
+
+    private void ChangeLayersRecursively(Transform transform, int layer)
+    {
+        foreach (Transform child in transform)
+        {
+            child.gameObject.layer = layer;
+            ChangeLayersRecursively(child, layer);
+        }
     }
 
     public void UpdateFishScale(float newVal, float length)
@@ -46,6 +57,7 @@ public class FishUtils : MonoBehaviour
         if (UserSettings.showFishDepthLines) ActivateDepthLine(true);
         if (UserSettings.showFishTrails) ActivateTrail(true);
         if (UserSettings.showThermocline) ActivateThermoBob(true);
+        this.occluded.color = green.color;
     }
 
     // Called via Event Trigger component on the ScaleDummy child object of the fish

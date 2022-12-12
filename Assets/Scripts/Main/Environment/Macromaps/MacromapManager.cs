@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 public class MacromapManager: MonoBehaviour
 {
     [SerializeField] private Toggle toggle;
+    [SerializeField] private GameObject bufferIcon;
 
     private static PolygonPacket currentPacket;
     private static DateTime earliestTimestamp;
@@ -83,7 +84,6 @@ public class MacromapManager: MonoBehaviour
             {
                 lock(MacromapManager.locker) MacromapManager.alreadyUpdating = true;
                 MacromapManager.currentPacket = await DatabaseConnection.GetMacromapPolygons();
-                if (MacromapManager.instance.toggle.interactable == false) {MacromapManager.EnableMaps(); } 
 
                 // Create a [0, 1] valued array of color intensities to be applied to mesh
                 MacromapManager.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
@@ -102,12 +102,28 @@ public class MacromapManager: MonoBehaviour
                             }
                         }
                     }
+                    // if (y%250 == 0) Debug.Log(string.Format("Macrophytes: {0}%", (float)y / (float)LocalMeshData.resolution * 100f));
                 }
                 lock(MacromapManager.locker) MacromapManager.alreadyUpdating = false;
             }
-            else if (MacromapManager.instance.toggle.interactable == false) {MacromapManager.EnableMaps(); }
         }
-        else if (MacromapManager.instance.toggle.interactable == true) {MacromapManager.DisableMaps(); }
+        else MacromapManager.intensityMap = null;
+    }
+
+    private void Update()
+    {
+        // Constantly checked whether to enable or disable
+        // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
+        if (!MacromapManager.beforeFirstTS)
+        {
+            if (MacromapManager.instance.toggle.interactable == false && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
+            { MacromapManager.EnableMaps(); }
+        }
+        else if (MacromapManager.instance.toggle.interactable == true) { MacromapManager.DisableMaps(); }
+
+        // Decide whether or not to show the buffering icon
+        if (MacromapManager.alreadyUpdating && !bufferIcon.activeSelf) bufferIcon.SetActive(true);
+        else if (!MacromapManager.alreadyUpdating && bufferIcon.activeSelf) bufferIcon.SetActive(false);
     }
 
     public static void EnableMaps(bool status=true)

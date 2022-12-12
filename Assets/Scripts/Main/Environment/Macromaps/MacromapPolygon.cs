@@ -8,6 +8,12 @@ public class MacromapPolygon
     public int lowerCoverage { get; private set; }
     public int upperCoverage { get; private set; }
 
+    // Max and mins
+    private float minX = float.MaxValue;
+    private float maxX = float.MinValue;
+    private float minY = float.MaxValue;
+    private float maxY = float.MinValue;
+
     public int vertexCount { get { return coordinates.Count; } }
 
 
@@ -24,7 +30,20 @@ public class MacromapPolygon
     // Need to transform from lake-local coords to mesh-local coords [LocalMeshData.resolution, LocalMeshData.resolution]
     // The origin of the local macrophyte data is the bottom left corner
     // Since we're drawing submeshes on the existing mesh, and the existing mesh is oriented in [y, x] coords, we need to mimic this
-    public void AddPoint(Vector2 newPoint) { this.coordinates.Add(new Vector2(newPoint.y + LocalMeshData.cutoffs["minHeight"], newPoint.x + LocalMeshData.cutoffs["minWidth"])); }
+    public void AddPoint(Vector2 newPoint)
+    {
+        float newY = newPoint.y + LocalMeshData.cutoffs["minHeight"];
+        float newX = newPoint.x + LocalMeshData.cutoffs["minWidth"];
+
+        this.coordinates.Add(new Vector2(newY, newX));
+
+        // Update maxes and mins
+        if (newY > this.maxY) this.maxY = newY;
+        if (newY < this.minY) this.minY = newY;
+        if (newX > this.maxX) this.maxX = newX;
+        if (newX < this.minX) this.minX = newX;
+    }
+
     public void SortPoints() { this.coordinates = MacromapPolygon.ConvexHull(coordinates); }
 
     public bool PointInPolygon(Vector2 testPoint)
@@ -39,20 +58,25 @@ public class MacromapPolygon
         // <param name="testPoint">the given point</param>
         // <returns>true if the point is inside the polygon; otherwise, false</returns>
 
+        // textPoint is using mesh coordinates which are ordered [y, x], and so testPoint.x is actually the mesh y-coordinate
         bool result = false;
-        int j = this.coordinates.Count - 1;
-        for (int i = 0; i < this.coordinates.Count; i++)
+        if (testPoint.x < this.minY || testPoint.x > this.maxY || testPoint.y < this.minX || testPoint.y > this.maxX) return result; // Definitely not within the polygon!
+        else
         {
-            if (this.coordinates[i].y < testPoint.y && this.coordinates[j].y >= testPoint.y || this.coordinates[j].y < testPoint.y && this.coordinates[i].y >= testPoint.y)
+            int j = this.coordinates.Count - 1;
+            for (int i = 0; i < this.coordinates.Count; i++)
             {
-                if (this.coordinates[i].x + (testPoint.y - this.coordinates[i].y) / (this.coordinates[j].y - this.coordinates[i].y) * (this.coordinates[j].x - this.coordinates[i].x) < testPoint.x)
+                if (this.coordinates[i].y < testPoint.y && this.coordinates[j].y >= testPoint.y || this.coordinates[j].y < testPoint.y && this.coordinates[i].y >= testPoint.y)
                 {
-                    result = !result;
+                    if (this.coordinates[i].x + (testPoint.y - this.coordinates[i].y) / (this.coordinates[j].y - this.coordinates[i].y) * (this.coordinates[j].x - this.coordinates[i].x) < testPoint.x)
+                    {
+                        result = !result;
+                    }
                 }
+                j = i;
             }
-            j = i;
+            return result;
         }
-        return result;
     }
 
 

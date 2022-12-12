@@ -128,6 +128,7 @@ MonoBehaviour:
   red: {fileID: 2100000, guid: 390088643e0307a4fb154e3452259f0c, type: 2}
   pink: {fileID: 2100000, guid: 071ada4e112c65342b49edde3d07fbf5, type: 2}
   yellow: {fileID: 2100000, guid: af16ea4e230d6dd4ba27075890d9eb20, type: 2}
+  occluded: {fileID: 2100000, guid: e444fd1d6e388fe4cbd33e9722255887, type: 2}
 --- !u!1 &1142954830363470
 GameObject:
   m_ObjectHideFlags: 0

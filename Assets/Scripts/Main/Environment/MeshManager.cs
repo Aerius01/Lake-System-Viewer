@@ -286,7 +286,6 @@ public class MeshManager : MonoBehaviour
                     if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
                     {
                         if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
-                        // if (MacromapManager.intensityMap[x, y] != 0f) if (i%(100f-MacromapManager.intensityMap[x, y] * 100f)<=0.05) this.colors[i] = new Color(0f, 1f, 0f);
                     }
                 }
             }

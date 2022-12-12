@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading;
 
 public class Fish : MonoBehaviour
 {   
@@ -70,8 +71,13 @@ public class Fish : MonoBehaviour
         this.fishObject.transform.parent = manager.transform;
         this.fishObject.name = string.Format("{0}", this.id);
 
+        // Set layer, including that of all children, for renderer customizations (handling occlusion)
+        // https://www.youtube.com/watch?v=szsWx9IQVDI
+        string layerName = (this.speciesName == "Mirror carp" || this.speciesName == "Scaled carp" || this.speciesName == "Catfish") ? (this.speciesName == "Catfish" ? "Catfish" : "Carp") : "Fish";
+        int fishLayer = LayerMask.NameToLayer(layerName);
+
         this.utils = this.fishObject.GetComponent<FishUtils>();
-        this.utils.Setup();
+        this.utils.Setup(fishLayer);
         this.UpdateFishScale();
         this.positionCache = new PositionCache(this.id);
 
@@ -116,7 +122,12 @@ public class Fish : MonoBehaviour
         this.utils.setNewText(fullText);
     }
 
-    public Task UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly) { this.positionCache.AllocateNewPackets(newPackets, forwardOnly); return Task.CompletedTask; }
+    public Task UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly, CancellationToken token)
+    {
+        this.positionCache.AllocateNewPackets(newPackets, forwardOnly, token);
+        return Task.CompletedTask; 
+    }
+
     public void RequeryCache(DateTime updateTime) { this.positionCache.FullRequery(updateTime); }
 
     public void UpdateFishPosition(bool scaleChange, DateTime updateTime)
