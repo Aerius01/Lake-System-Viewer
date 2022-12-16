@@ -23,7 +23,7 @@ public class FishManager
 
     // Async
     private static Task queryTask;
-    private static List<TaskStatus> activeQueryingStatuses = new List<TaskStatus> {TaskStatus.Running, TaskStatus.WaitingForActivation, TaskStatus.WaitingForChildrenToComplete, TaskStatus.WaitingToRun};
+    // private static List<TaskStatus> activeQueryingStatuses = new List<TaskStatus> {TaskStatus.Running, TaskStatus.WaitingForActivation, TaskStatus.WaitingForChildrenToComplete, TaskStatus.WaitingToRun};
 
     public FishManager(GameObject managerObject)
     {
@@ -126,7 +126,8 @@ public class FishManager
         DateTime updateTime = TimeManager.instance.currentTime;
 
         // Execute any queries that have been batched and are waiting if not already querying
-        if (DatabaseConnection.queuedQueries && (queryTask == null || !activeQueryingStatuses.Contains(queryTask.Status))) queryTask = DatabaseConnection.BatchAndRunPositionQueries();
+        // if (DatabaseConnection.queuedQueries && (queryTask == null || !activeQueryingStatuses.Contains(queryTask.Status))) queryTask = DatabaseConnection.BatchAndRunPositionQueries();
+        if (DatabaseConnection.queuedQueries && !DatabaseConnection.querying) queryTask = DatabaseConnection.BatchAndRunPositionQueries();
 
         // localScaler prevents the scale change going into effect halfway through an update
         bool localScaler = vertScaleChange ? true : false;

@@ -14,6 +14,7 @@ public class DatabaseConnection
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
+    public static bool querying { get; private set; }
     private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
@@ -22,6 +23,7 @@ public class DatabaseConnection
     {      
         forwardBatch = new List<CommandWrapper>();
         doubleSidedBatch = new List<CommandWrapper>();
+        DatabaseConnection.querying = false;
     }
 
     public static void QueuePositionBatchCommand(int id, DateTime queryRootTimestamp, bool forwardOnly=true)
@@ -50,13 +52,14 @@ public class DatabaseConnection
         }
     }
 
-
     public static async Task BatchAndRunPositionQueries()
     {
+        DatabaseConnection.querying = true;
+
         // cancellation request is not terminating pull, it must be locked somewhere.
         // look into throw on cancellation method, see where the hang-up is happening.
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(3000);
+        CancellationTokenSource cts = new CancellationTokenSource();
+        cts.CancelAfter(30000);
 
         int thisIteration = DatabaseConnection.counter;
         DatabaseConnection.counter++;
@@ -124,17 +127,20 @@ public class DatabaseConnection
         bool syncRunThrough = true;
         foreach (Task task in tasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
 
-
         if (!syncRunThrough)
         {
             // TODO: Create a static queue of all completionTasks, process them in order and cancel outdated ones as necessary
             // Each fish's position cache can only line up one query anyways
             Task completionTask = Task.WhenAll(tasks.ToArray());
             await completionTask;
-            Debug.Log(string.Format("Ending pull {0}", thisIteration));
+            if (cts.Token.IsCancellationRequested) Debug.Log(string.Format("Ending pull {0}: Cancelled", thisIteration));
+            else Debug.Log(string.Format("Ending pull {0}: Natural", thisIteration));
         }
 
         bufferTimer.StopTiming();
+        DatabaseConnection.querying = false;
+
+        return;
     } 
 
     public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, CancellationToken token, bool forwardOnly=true)
@@ -159,12 +165,21 @@ public class DatabaseConnection
                     if (!rdr.HasRows) { rdr.NextResult(); }
                     else
                     {
+                        bool firstRunThrough = true;
                         List<DataPacket> returnPackets = new List<DataPacket>();
                         while (await rdr.ReadAsync())
                         {
+                            if (token.IsCancellationRequested) break; 
+
                             // Nullity handled by SQL query
                             int id = rdr.GetInt32(rdr.GetOrdinal("id"));
                             DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                            if (firstRunThrough)
+                            {
+                                Debug.Log(string.Format("Processing ID: {0}", id));
+                                firstRunThrough = false;
+                            }
 
                             float x = 0f;
                             var entry = rdr.GetValue(rdr.GetOrdinal("x"));
@@ -187,8 +202,11 @@ public class DatabaseConnection
                         };
 
                         // Task that is completely independent of next iteration
-                        Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token);
-                        tasks.Add(task);
+                        if (!token.IsCancellationRequested)
+                        {
+                            Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token);
+                            tasks.Add(task);
+                        }
                     }
 
                     rdr.NextResult();
@@ -201,6 +219,7 @@ public class DatabaseConnection
         }
         
         // Ensure all fish caches are updated
+        Debug.Log("Waiting");
         await Task.WhenAll(tasks.ToArray());
     }
 

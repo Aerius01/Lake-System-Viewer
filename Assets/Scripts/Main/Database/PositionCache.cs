@@ -124,12 +124,12 @@ public class PositionCache
                     {
                         for (int i = 0; i < ~splitIndex; i++)
                         {
-                            if (token.IsCancellationRequested) break;
+                            if (token.IsCancellationRequested) { Debug.Log("Cancel registered in allocation"); break; }
                             else this.backwardCache.Add(listPackets[i]);
                         }
                         for (int i = ~splitIndex; i < listPackets.Count; i++)
                         {
-                            if (token.IsCancellationRequested) break;
+                            if (token.IsCancellationRequested) { Debug.Log("Cancel registered in allocation"); break; }
                             else this.forwardCache.Add(listPackets[i]);
                         }
                     }
@@ -138,12 +138,12 @@ public class PositionCache
                 {
                     for (int i = 0; i <= splitIndex; i++)
                     {
-                        if (token.IsCancellationRequested) break;
+                        if (token.IsCancellationRequested) { Debug.Log("Cancel registered in allocation"); break; }
                         else this.backwardCache.Add(listPackets[i]);
                     }
                     for (int i = splitIndex + 1; i < listPackets.Count; i++) 
                     {
-                        if (token.IsCancellationRequested) break;
+                        if (token.IsCancellationRequested) { Debug.Log("Cancel registered in allocation"); break; }
                         else this.forwardCache.Add(listPackets[i]);
                     }
                 }
