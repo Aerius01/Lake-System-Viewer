@@ -11,19 +11,25 @@ public class DatabaseConnection
 {
     private static int counter = 0;
     private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300";
+    public static List<int> requestedIDs {get; private set;}
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
+    private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
+    private static List<Task> queryingTasks;
+
+
     private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
-    static DatabaseConnection()  
-    {      
+    static DatabaseConnection()
+    {
         forwardBatch = new List<CommandWrapper>();
         doubleSidedBatch = new List<CommandWrapper>();
         DatabaseConnection.querying = false;
+        DatabaseConnection.requestedIDs = new List<int>();
     }
 
     public static void QueuePositionBatchCommand(int id, DateTime queryRootTimestamp, bool forwardOnly=true)
@@ -31,7 +37,7 @@ public class DatabaseConnection
         // Ensure that each ID has at most only a single query lined up
         lock(DatabaseConnection.locker)
         {
-            if (!forwardOnly) 
+            if (!forwardOnly)
             {
                 // Remove the previously lined up query and add it with the updated time
                 if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() != null) doubleSidedBatch.RemoveAt(doubleSidedBatch.IndexOf(doubleSidedBatch.Where(i => i.id == id).FirstOrDefault()));
@@ -48,34 +54,42 @@ public class DatabaseConnection
 
                 // If the same fish has a query in the double-sided queue, remove it
                 if (doubleSidedBatch.Where(i => i.id == id).FirstOrDefault() != null) doubleSidedBatch.RemoveAt(doubleSidedBatch.IndexOf(doubleSidedBatch.Where(i => i.id == id).FirstOrDefault()));
-            } 
+            }
         }
+    }
+
+    public static bool QueryIsQueued(int id)
+    {
+        if (DatabaseConnection.requestedIDs.Contains(id)) return true;
+        else return false;
     }
 
     public static async Task BatchAndRunPositionQueries()
     {
+        // Establish base parameters for the querying instance
         DatabaseConnection.querying = true;
-
-        // cancellation request is not terminating pull, it must be locked somewhere.
-        // look into throw on cancellation method, see where the hang-up is happening.
-        CancellationTokenSource cts = new CancellationTokenSource();
-        cts.CancelAfter(30000);
-
+        lock(DatabaseConnection.locker)
+        {
+            foreach (CommandWrapper commandWrapper in DatabaseConnection.forwardBatch) DatabaseConnection.requestedIDs.Add(commandWrapper.id);
+            foreach (CommandWrapper commandWrapper in DatabaseConnection.doubleSidedBatch) DatabaseConnection.requestedIDs.Add(commandWrapper.id);
+            DatabaseConnection.requestedIDs.Sort();
+        }
+        
         int thisIteration = DatabaseConnection.counter;
         DatabaseConnection.counter++;
         Debug.Log(string.Format("Pull: {0}", thisIteration));
 
+        // Async-related inits
         BufferTimer bufferTimer = Buffer.InitializeTimer();
-        List<Task> tasks = new List<Task>();
+        CancellationTokenSource cts = new CancellationTokenSource();
+        cts.CancelAfter(30000);
+        DatabaseConnection.queryingTasks = new List<Task>();
 
         // Parallelize forward queries
         if (DatabaseConnection.forwardBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
-
-            List<int> properties = DatabaseConnection.forwardBatch.Select(o => o.id).ToList();
-            Debug.Log(string.Format("Forward IDs: {0}; Split into {1} chunks", string.Join(", ", properties), chunkSize < 1 ? 1 : chunkSize));
-            // Debug.Log(string.Format("Splitting {0} forward query/ies into chunks of size {1}", forwardBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            Debug.Log(string.Format("Processing {0} forward query/ies", forwardBatch.Count));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container
@@ -89,20 +103,19 @@ public class DatabaseConnection
             foreach (List<CommandWrapper> partialList in partialBatchLists)
             {
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
-                foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
+                foreach (CommandWrapper command in partialList) { partialBatch.BatchCommands.Add(command.sql); }
 
-                Task runner = RunQueuedPositionQueries(partialBatch, cts.Token);
-                tasks.Add(runner);
+                Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token), cts.Token);
+                DatabaseConnection.queryingTasks.Add(runner);
+                DatabaseConnection.queryingTasks.Add(runner);
             }
         }
-        
+
         // Parallelize double-sided queries
         if (DatabaseConnection.doubleSidedBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
-            List<int> properties = DatabaseConnection.doubleSidedBatch.Select(o => o.id).ToList();
-            Debug.Log(string.Format("Double IDs: {0}; Split into {1} chunks", string.Join(", ", properties), chunkSize < 1 ? 1 : chunkSize));
-            // Debug.Log(string.Format("Splitting {0} double-sided query/ies into chunks of size {1}", doubleSidedBatch.Count, chunkSize < 1 ? 1 : chunkSize));
+            Debug.Log(string.Format("Processing {0} double-sided query/ies", doubleSidedBatch.Count));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container
@@ -115,33 +128,41 @@ public class DatabaseConnection
             // Wrap each batch query in a task and catalogue that task
             foreach (List<CommandWrapper> partialList in partialBatchLists)
             {
+                List<int> localIDs = new List<int>();
                 NpgsqlBatch partialBatch = new NpgsqlBatch();
-                foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql); 
+                foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql);
 
-                Task runner = RunQueuedPositionQueries(partialBatch, cts.Token, false);
-                tasks.Add(runner);
+                Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token, false), cts.Token);
+                DatabaseConnection.queryingTasks.Add(runner);
+                DatabaseConnection.queryingTasks.Add(runner);
             }
         }
 
         // Synch fall-back condition (in case all tasks finish immediately)
         bool syncRunThrough = true;
-        foreach (Task task in tasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
+        foreach (Task task in DatabaseConnection.queryingTasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
 
         if (!syncRunThrough)
         {
-            // TODO: Create a static queue of all completionTasks, process them in order and cancel outdated ones as necessary
-            // Each fish's position cache can only line up one query anyways
-            Task completionTask = Task.WhenAll(tasks.ToArray());
-            await completionTask;
+            Task completionTask = Task.WhenAll(DatabaseConnection.queryingTasks.ToArray());
+            try { await completionTask; }
+            catch (Exception e)
+            {
+                // This block will also receive errors from a faulted task
+                Debug.Log("At least one task was either faulted or cancelled");
+                Debug.Log(e);
+            }
+
             if (cts.Token.IsCancellationRequested) Debug.Log(string.Format("Ending pull {0}: Cancelled", thisIteration));
             else Debug.Log(string.Format("Ending pull {0}: Natural", thisIteration));
         }
 
         bufferTimer.StopTiming();
         DatabaseConnection.querying = false;
+        lock(DatabaseConnection.locker) DatabaseConnection.requestedIDs = new List<int>();
 
         return;
-    } 
+    }
 
     public static async Task RunQueuedPositionQueries(NpgsqlBatch queries, CancellationToken token, bool forwardOnly=true)
     {
@@ -150,10 +171,26 @@ public class DatabaseConnection
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
+            if (connection.State != ConnectionState.Open)
+            {
+                // This connection tends to have problems. Attempt to re-open the connection if it fails
+                int runningCount = 0;
+                while (runningCount < 30)
+                {
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException e) { Debug.Log(e.Message); }
+
+                    if (connection.State == ConnectionState.Open)
+                    {
+                        if (runningCount > 0) Debug.Log(string.Format("Opened failed connection on trial: {0}", runningCount));
+                        break;
+                    }
+                    runningCount++;
+                }
+            }
 
             NpgsqlBatch batch = new NpgsqlBatch(connection);
-            foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command); 
+            foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command);
 
             await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
             {
@@ -166,10 +203,11 @@ public class DatabaseConnection
                     else
                     {
                         bool firstRunThrough = true;
+                        int fishID = 0;
                         List<DataPacket> returnPackets = new List<DataPacket>();
                         while (await rdr.ReadAsync())
                         {
-                            if (token.IsCancellationRequested) break; 
+                            if (token.IsCancellationRequested) break;
 
                             // Nullity handled by SQL query
                             int id = rdr.GetInt32(rdr.GetOrdinal("id"));
@@ -177,7 +215,7 @@ public class DatabaseConnection
 
                             if (firstRunThrough)
                             {
-                                Debug.Log(string.Format("Processing ID: {0}", id));
+                                fishID = id;
                                 firstRunThrough = false;
                             }
 
@@ -204,8 +242,14 @@ public class DatabaseConnection
                         // Task that is completely independent of next iteration
                         if (!token.IsCancellationRequested)
                         {
-                            Task task = FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token);
+                            Task task = Task.Run(() => FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token), token);
                             tasks.Add(task);
+
+                            lock(DatabaseConnection.locker)
+                            {
+                                DatabaseConnection.requestedIDs.Remove(fishID);
+                                Debug.Log(string.Format("IDs still not put to allocation task:\n{0}", string.Join(", ", DatabaseConnection.requestedIDs)));
+                            }
                         }
                     }
 
@@ -217,9 +261,8 @@ public class DatabaseConnection
 
             await connection.CloseAsync();
         }
-        
-        // Ensure all fish caches are updated
-        Debug.Log("Waiting");
+
+        // Ensure all fish caches are updated, or have cancelled gracefully
         await Task.WhenAll(tasks.ToArray());
     }
 
@@ -228,7 +271,7 @@ public class DatabaseConnection
         DateTime startTime = DateTime.Now;
 
         List<int> idList = new List<int>();
-        // string sql = 
+        // string sql =
         // @"select distinct fish.id
         // from fish
         // inner join positions_local
@@ -242,16 +285,16 @@ public class DatabaseConnection
         {
             string addon = " and (fish.id = 2033 or fish.id = 2037)";
             sql = sql + addon;
-        }  
+        }
         else if (DatabaseConnection.smallSample == false)
         {
             string addon = " limit 30";
             sql = sql + addon;
-        }    
+        }
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -271,7 +314,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         Debug.Log(string.Format("Key fetching: {0}; number of keys: {1}", (DateTime.Now - startTime).TotalSeconds, idList.Count));
@@ -283,13 +326,13 @@ public class DatabaseConnection
     {
         string sql = string.Format(
             @"SELECT f.id,  f.species, s.name, f.tl, f.weight, f.sex, f.comment, min(p.timestamp) as minTime, max(p.timestamp) as maxTime
-            FROM FISH f 
-            left join species s ON f.species = s.ID 
+            FROM FISH f
+            left join species s ON f.species = s.ID
             left join positions_local p on f.id = p.id
             where f.id = {0}
             and s.name != 'Beacon' and p.timestamp is not null
             group by f.id, f.species, s.name, f.tl, f.weight, f.sex, f.comment", key);
-        
+
         return new NpgsqlBatchCommand(sql);
     }
 
@@ -337,11 +380,11 @@ public class DatabaseConnection
                             {
                                 try
                                 {
-                                    captureType = Convert.ToString(entry); 
+                                    captureType = Convert.ToString(entry);
                                     if (String.IsNullOrEmpty(captureType)) captureType = null;
                                 }
                                 catch { Debug.Log("Metadata conversion fail: capture type"); }
-                            }    
+                            }
 
                             int? length = null;
                             entry = rdr.GetValue(rdr.GetOrdinal("tl"));
@@ -349,7 +392,7 @@ public class DatabaseConnection
                             {
                                 try { length = Convert.ToInt32(entry); }
                                 catch { Debug.Log("Metadata conversion fail: length"); }
-                            }     
+                            }
 
                             int? speciesCode = null;
                             entry = rdr.GetValue(rdr.GetOrdinal("species"));
@@ -357,7 +400,7 @@ public class DatabaseConnection
                             {
                                 try { speciesCode = Convert.ToInt32(entry); }
                                 catch { Debug.Log("Metadata conversion fail: species code"); }
-                            } 
+                            }
 
                             int? weight = null;
                             entry = rdr.GetValue(rdr.GetOrdinal("weight"));
@@ -365,7 +408,7 @@ public class DatabaseConnection
                             {
                                 try { weight = Convert.ToInt32(entry); }
                                 catch { Debug.Log("Metadata conversion fail: weight"); }
-                            } 
+                            }
 
                             string speciesName = null;
                             entry = rdr.GetValue(rdr.GetOrdinal("name"));
@@ -373,11 +416,11 @@ public class DatabaseConnection
                             {
                                 try
                                 {
-                                    speciesName = Convert.ToString(entry); 
+                                    speciesName = Convert.ToString(entry);
                                     if (String.IsNullOrEmpty(speciesName)) speciesName = null;
                                 }
                                 catch { Debug.Log("Metadata conversion fail: species name"); }
-                            } 
+                            }
 
                             bool? male = null;
                             entry = rdr.GetValue(rdr.GetOrdinal("sex"));
@@ -387,7 +430,7 @@ public class DatabaseConnection
                                 if (tempString.Contains('m')) male = true;
                                 else if (tempString.Contains('f')) male = false;
                             }
-                            
+
                             // Nullity handled by SQL query
                             DateTime earliestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("minTime"));
                             DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
@@ -439,13 +482,13 @@ public class DatabaseConnection
                 or humidity is not null
                 or airpressure is not null
                 or precipitation is not null))
-        AND timestamp IS NOT null 
+        AND timestamp IS NOT null
         order by timestamp
         limit 1", strTime);
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -462,7 +505,7 @@ public class DatabaseConnection
                     {
                         try { windspeed = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: windspeed"); }
-                    }   
+                    }
 
                     DateTime? nextTimestamp = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
@@ -470,7 +513,7 @@ public class DatabaseConnection
                     {
                         try { nextTimestamp = Convert.ToDateTime(entry); }
                         catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
-                    }   
+                    }
 
                     float? winddirection = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("winddirection"));
@@ -478,7 +521,7 @@ public class DatabaseConnection
                     {
                         try { winddirection = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: winddirection"); }
-                    }   
+                    }
 
                     float? temperature = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
@@ -486,7 +529,7 @@ public class DatabaseConnection
                     {
                         try { temperature = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: temperature"); }
-                    }   
+                    }
 
                     float? humidity = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("humidity"));
@@ -494,7 +537,7 @@ public class DatabaseConnection
                     {
                         try { humidity = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: humidity"); }
-                    }  
+                    }
 
                     float? airpressure = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("airpressure"));
@@ -502,7 +545,7 @@ public class DatabaseConnection
                     {
                         try { airpressure = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: airpressure"); }
-                    }  
+                    }
 
                     float? precipitation = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("precipitation"));
@@ -510,7 +553,7 @@ public class DatabaseConnection
                     {
                         try { precipitation = Convert.ToSingle(entry); }
                         catch { Debug.Log("Weather data conversion fail: precipitation"); }
-                    }  
+                    }
 
                     returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
                 };
@@ -518,7 +561,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         return returnPacket;
@@ -529,7 +572,7 @@ public class DatabaseConnection
         DateTime earliestTimestamp = DateTime.MaxValue;
         DateTime latestTimestamp = DateTime.MinValue;
 
-        string sql = 
+        string sql =
         @"SELECT max(timestamp), min(timestamp)
         FROM weatherstation
         where windspeed is not null
@@ -542,7 +585,7 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -558,7 +601,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
@@ -591,7 +634,7 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -608,7 +651,7 @@ public class DatabaseConnection
                     {
                         try { nextTimestamp = Convert.ToDateTime(entry); }
                         catch { Debug.Log("Thermocline data conversion fail: nextTimestamp"); }
-                    }   
+                    }
 
                     // Never null by the architecture of the DB
                     float depth = float.MaxValue;
@@ -622,7 +665,7 @@ public class DatabaseConnection
                     {
                         try { temperature = Convert.ToSingle(entry); }
                         catch { Debug.Log("Thermocline data conversion fail: temperature"); }
-                    }   
+                    }
 
                     float? oxygen = null;
                     entry = rdr.GetValue(rdr.GetOrdinal("oxygen"));
@@ -630,7 +673,7 @@ public class DatabaseConnection
                     {
                         try { oxygen = Convert.ToSingle(entry); }
                         catch { Debug.Log("Thermocline data conversion fail: oxygen"); }
-                    }  
+                    }
 
                     ThermoReading reading = new ThermoReading(depth, temperature, oxygen);
 
@@ -651,7 +694,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         if (readings.Any()) return new ThermoPacket(timestamp, nextTimestamp, readings);
@@ -664,7 +707,7 @@ public class DatabaseConnection
         DateTime latestTimestamp = DateTime.MinValue;
 
         // TODO: adapt SQL query
-        string sql = 
+        string sql =
         @"SELECT max(timestamp), min(timestamp)
         FROM weatherstation
         where windspeed is not null
@@ -677,7 +720,7 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -693,7 +736,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
@@ -720,7 +763,7 @@ public class DatabaseConnection
 
                     // Add the appropriate number of columns
                     for (int i=0; i<columnCount; i++) { meshTable.Columns.Add(i.ToString(), typeof(float)); }
-                    
+
                     while (await rdr.ReadAsync())
                     {
                         DataRow row = meshTable.NewRow();
@@ -733,7 +776,7 @@ public class DatabaseConnection
                             {
                                 try { value = Convert.ToSingle(entry); }
                                 catch { Debug.Log(string.Format("Meshmap column data conversion fail at row: {0}, column: {1}", rowCount, i)); }
-                            }  
+                            }
                             else value = float.MaxValue; // Make it visible
 
                             row[i] = value;
@@ -760,7 +803,7 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open(); 
+            connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
@@ -771,7 +814,7 @@ public class DatabaseConnection
                 rdr.Close();
             }
 
-            connection.Close(); 
+            connection.Close();
         }
 
         return timestamp;
@@ -835,7 +878,7 @@ public class DatabaseConnection
                     {
                         try { nextTimestamp = Convert.ToDateTime(entry); }
                         catch { Debug.Log("Polygonal macromap data conversion fail: nextTimestamp"); }
-                    }   
+                    }
 
                     // Never null by the architecture of the query
                     int polyID = 0;
@@ -871,7 +914,7 @@ public class DatabaseConnection
                 await rdr.CloseAsync();
             }
 
-            await connection.CloseAsync(); 
+            await connection.CloseAsync();
         }
 
         // returnPacket.ProcessConvexHulls();
@@ -904,11 +947,11 @@ public class CommandWrapper
         {
             // Get PositionCache.batchSize (=300) data points in the future only
             sql = string.Format(
-                @"SELECT * FROM 
+                @"SELECT * FROM
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
+                    FROM
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
+                        FROM positions_local p
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
@@ -924,11 +967,11 @@ public class CommandWrapper
         {
             // Get PositionCache.batchSize (=300) data points on each side of the supplied time
             sql = string.Format(
-                @"(SELECT * FROM 
+                @"(SELECT * FROM
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
+                    FROM
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
+                        FROM positions_local p
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
@@ -942,9 +985,9 @@ public class CommandWrapper
                 UNION ALL
                 SELECT * FROM
                     (SELECT q.id, q.timestamp, q.x, q.y, q.z
-                    FROM 
+                    FROM
                         (SELECT p.id, p.timestamp, p.x, p.y, p.z, |/((p.x - lag(p.x, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.y - lag(p.y, 1) OVER ( ORDER BY p.timestamp )) ^ 2 + (p.z - lag(p.z, 1) OVER ( ORDER BY p.timestamp )) ^ 2) as leading_distance
-                        FROM positions_local p 
+                        FROM positions_local p
                         WHERE p.id = {0}
                             AND p.timestamp IS NOT NULL
                             AND p.x IS NOT NULL
