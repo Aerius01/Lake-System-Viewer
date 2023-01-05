@@ -9,6 +9,7 @@ public class MacromapManager: MonoBehaviour
     [SerializeField] private Toggle toggle;
     [SerializeField] private GameObject bufferIcon;
 
+
     private static PolygonPacket currentPacket;
     private static DateTime earliestTimestamp;
     public static float[,] intensityMap;
@@ -53,7 +54,7 @@ public class MacromapManager: MonoBehaviour
         else { _instance = this; }
     }
 
-    // Called in Start() of Main.cs; will run before local Update() --> FALSE, what the hell, Unity?
+    // Called in Start() of Main.cs; will run before local Update()? --> FALSE, what the hell, Unity?
     public static void InitializeMacrophyteMaps()
     {
         MacromapManager.earliestTimestamp = DatabaseConnection.MacromapPolygonsEarliestDate();

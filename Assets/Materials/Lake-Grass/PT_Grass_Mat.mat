@@ -9,15 +9,14 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PT_Grass_Mat
   m_Shader: {fileID: -6465566751694194690, guid: 4a0260f6d87fa874681b92ea8b5ca123, type: 3}
-  m_ShaderKeywords: _RECEIVE_SHADOWS_OFF _SURFACE_TYPE_TRANSPARENT
+  m_ShaderKeywords: _ALPHATEST_ON _RECEIVE_SHADOWS_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: 2450
   stringTagMap:
-    RenderType: Transparent
+    RenderType: TransparentCutout
   disabledShaderPasses:
-  - DepthOnly
   - SHADOWCASTER
   m_SavedProperties:
     serializedVersion: 3
@@ -92,7 +91,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaClip: 0
+    - _AlphaClip: 1
     - _Blend: 0
     - _BumpScale: 1
     - _CUSTOMCOLORSTINTING: 0
@@ -105,7 +104,7 @@ Material:
     - _Density: 0.05
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DstBlend: 10
+    - _DstBlend: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 1
     - _Glossiness: 0
@@ -128,9 +127,9 @@ Material:
     - _SnowCoverage: 0.45
     - _SnowGradient: 0.83
     - _SpecularHighlights: 1
-    - _SrcBlend: 5
+    - _SrcBlend: 1
     - _Strength: 1
-    - _Surface: 1
+    - _Surface: 0
     - _TRANSLUCENCYONOFF: 1
     - _TransAmbient: 0.2
     - _TransDirect: 1
@@ -144,8 +143,8 @@ Material:
     - _WindStrength: 0.5
     - _WorkflowMode: 1
     - _ZTest: 4
-    - _ZWrite: 0
-    - _ZWriteControl: 0
+    - _ZWrite: 1
+    - _ZWriteControl: 1
     - __dirty: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}

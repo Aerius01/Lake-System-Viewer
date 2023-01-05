@@ -97,6 +97,13 @@ public class MeshManager : MonoBehaviour
         this.gameObject.transform.position = meshPosition;
     }
 
+    public static float PointDepth(int x, int y)
+    {
+        // the vertices and the intensity color map are both in mesh coordinates
+        // both are also already oriented to the bottom left corner
+        return MeshManager.instance.vertices[y * LocalMeshData.resolution + x].y;
+    }
+
     private void CreateShape()
     {
         int totalVertices = resolution * resolution;

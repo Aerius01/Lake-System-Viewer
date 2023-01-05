@@ -57,7 +57,7 @@ public class UserSettings
     public static bool macrophyteMaps 
     {
         get { return _macrophyteMaps; } 
-        set { _macrophyteMaps = value; if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); }
+        set { _macrophyteMaps = value; if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); GrassSpawner.instance.SpawnGrass(); }
     }
 
 

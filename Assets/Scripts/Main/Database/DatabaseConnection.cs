@@ -17,13 +17,12 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static List<Task> queryingTasks;
-
-
     private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
+
+
     static DatabaseConnection()
     {
         forwardBatch = new List<CommandWrapper>();
@@ -83,13 +82,13 @@ public class DatabaseConnection
         BufferTimer bufferTimer = Buffer.InitializeTimer();
         CancellationTokenSource cts = new CancellationTokenSource();
         cts.CancelAfter(30000);
-        DatabaseConnection.queryingTasks = new List<Task>();
+        List<Task> queryingTasks = new List<Task>();
 
         // Parallelize forward queries
         if (DatabaseConnection.forwardBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
-            Debug.Log(string.Format("Processing {0} forward query/ies", forwardBatch.Count));
+            // Debug.Log(string.Format("Processing {0} forward query/ies", forwardBatch.Count));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container
@@ -106,8 +105,7 @@ public class DatabaseConnection
                 foreach (CommandWrapper command in partialList) { partialBatch.BatchCommands.Add(command.sql); }
 
                 Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token), cts.Token);
-                DatabaseConnection.queryingTasks.Add(runner);
-                DatabaseConnection.queryingTasks.Add(runner);
+                queryingTasks.Add(runner);
             }
         }
 
@@ -115,7 +113,7 @@ public class DatabaseConnection
         if (DatabaseConnection.doubleSidedBatch.Any())
         {
             int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
-            Debug.Log(string.Format("Processing {0} double-sided query/ies", doubleSidedBatch.Count));
+            // Debug.Log(string.Format("Processing {0} double-sided query/ies", doubleSidedBatch.Count));
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container
@@ -133,23 +131,22 @@ public class DatabaseConnection
                 foreach (CommandWrapper command in partialList) partialBatch.BatchCommands.Add(command.sql);
 
                 Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token, false), cts.Token);
-                DatabaseConnection.queryingTasks.Add(runner);
-                DatabaseConnection.queryingTasks.Add(runner);
+                queryingTasks.Add(runner);
             }
         }
 
         // Synch fall-back condition (in case all tasks finish immediately)
         bool syncRunThrough = true;
-        foreach (Task task in DatabaseConnection.queryingTasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
+        foreach (Task task in queryingTasks) { if (task.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
 
         if (!syncRunThrough)
         {
-            Task completionTask = Task.WhenAll(DatabaseConnection.queryingTasks.ToArray());
+            Task completionTask = Task.WhenAll(queryingTasks.ToArray());
             try { await completionTask; }
             catch (Exception e)
             {
                 // This block will also receive errors from a faulted task
-                Debug.Log("At least one task was either faulted or cancelled");
+                Debug.Log("At least one position querying task was either faulted or cancelled");
                 Debug.Log(e);
             }
 
@@ -180,11 +177,7 @@ public class DatabaseConnection
                     try { await connection.OpenAsync(); }
                     catch (NpgsqlException e) { Debug.Log(e.Message); }
 
-                    if (connection.State == ConnectionState.Open)
-                    {
-                        if (runningCount > 0) Debug.Log(string.Format("Opened failed connection on trial: {0}", runningCount));
-                        break;
-                    }
+                    if (connection.State == ConnectionState.Open) break;
                     runningCount++;
                 }
             }
@@ -248,7 +241,7 @@ public class DatabaseConnection
                             lock(DatabaseConnection.locker)
                             {
                                 DatabaseConnection.requestedIDs.Remove(fishID);
-                                Debug.Log(string.Format("IDs still not put to allocation task:\n{0}", string.Join(", ", DatabaseConnection.requestedIDs)));
+                                // Debug.Log(string.Format("IDs still not put to allocation task:\n{0}", string.Join(", ", DatabaseConnection.requestedIDs)));
                             }
                         }
                     }
@@ -350,11 +343,7 @@ public class DatabaseConnection
                     try { await connection.OpenAsync(); }
                     catch (NpgsqlException e) { Debug.Log(e.Message); }
 
-                    if (connection.State == ConnectionState.Open)
-                    {
-                        if (runningCount > 0) Debug.Log(string.Format("Opened failed connection on trial: {0}", runningCount));
-                        break;
-                    }
+                    if (connection.State == ConnectionState.Open) break;
                     runningCount++;
                 }
             }
