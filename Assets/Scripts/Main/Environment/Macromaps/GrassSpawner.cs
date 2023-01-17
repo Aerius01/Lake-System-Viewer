@@ -1,11 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 public class GrassSpawner: MonoBehaviour
 {
     [SerializeField] private GameObject grassPrefab;
     private List<GameObject> currentPrefabs;
+
+    private float baseExtent;
 
     // Singleton variables
     private static GrassSpawner _instance;
@@ -16,32 +17,47 @@ public class GrassSpawner: MonoBehaviour
     {
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+
+        this.currentPrefabs = new List<GameObject>();
+        this.baseExtent = grassPrefab.transform.GetChild(0).GetComponent<MeshRenderer>().localBounds.extents.y;
     }
 
     public void SpawnGrass()
     {
-        if (UserSettings.macrophyteMaps)
+        // We need both components for the exercise
+        if (HeightManager.currentPacket == null || MacromapManager.intensityMap == null) HeightManager.DisableMaps(); 
+
+        else if (UserSettings.macrophyteHeights)
         {
-            if (this.currentPrefabs == null) this.currentPrefabs = new List<GameObject>();
-            else if (this.currentPrefabs.Count != 0) foreach (GameObject grass in currentPrefabs) { Destroy(grass); } 
+            if (this.currentPrefabs.Count != 0) foreach (GameObject grass in currentPrefabs) { Destroy(grass); } 
 
             this.currentPrefabs = new List<GameObject>();
             System.Random rand = new System.Random();
 
-            for (int r = 0; r < LocalMeshData.resolution; r++)
-            {
-                if (r >= LocalMeshData.cutoffs["minHeight"] && r < LocalMeshData.cutoffs["maxHeight"])
+            // The intensity map cannot change while the grass is being spawned
+            lock(MacromapManager.mapLocker)
+            {    
+                for (int r = 0; r < LocalMeshData.resolution; r++)
                 {
-                    for (int c = 0; c < LocalMeshData.resolution; c++)
+                    if (r >= LocalMeshData.cutoffs["minHeight"] && r < LocalMeshData.cutoffs["maxHeight"])
                     {
-                        if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
+                        for (int c = 0; c < LocalMeshData.resolution; c++)
                         {
-                            if (MacromapManager.intensityMap[c, r] / 10f >= (float)rand.NextDouble())
+                            if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
                             {
-                                GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
-                                grass.transform.parent = this.gameObject.transform;
-                                grass.transform.localScale = new Vector3(5f, 30f * (float)rand.NextDouble(), 5f);
-                                this.currentPrefabs.Add(grass);
+                                // The model looks very weird if the macrophytes are too short
+                                if (HeightManager.currentPacket.heightArray[c, r] > 0.1f)
+                                {
+                                    if (MacromapManager.intensityMap[c, r] / 20f >= (float)rand.NextDouble())
+                                    {
+                                        GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
+                                        grass.transform.parent = this.gameObject.transform;
+
+                                        float scalingFactor = HeightManager.currentPacket.heightArray[c, r] / this.baseExtent * UserSettings.verticalScalingFactor;
+                                        grass.transform.localScale = new Vector3(5f, scalingFactor, 5f);
+                                        this.currentPrefabs.Add(grass);
+                                    }
+                                }
                             }
                         }
                     }

@@ -34,6 +34,7 @@ public class Main : MonoBehaviour
         if (await FishManager.initialization)
         {
             MacromapManager.InitializeMacrophyteMaps();
+            HeightManager.InitializeMacrophyteHeights();
 
             fishDictAssembled?.Invoke();
             TimeManager.instance.PlayButton();
@@ -53,6 +54,7 @@ public class Main : MonoBehaviour
             ThermoclineDOMain.instance.UpdateThermoclineDOMain();
             WindWeatherMain.instance.UpdateWindWeather(); 
             await Task.Run(() => MacromapManager.UpdateMaps());
+            await Task.Run(() => HeightManager.instance.ManualUpdate());
         }
     }
 }

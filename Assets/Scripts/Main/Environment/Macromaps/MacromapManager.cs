@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 
+public delegate void MacroPolyChange();
+
 public class MacromapManager: MonoBehaviour
 {
     [SerializeField] private Toggle toggle;
@@ -13,8 +15,13 @@ public class MacromapManager: MonoBehaviour
     private static PolygonPacket currentPacket;
     private static DateTime earliestTimestamp;
     public static float[,] intensityMap;
-    public static bool alreadyUpdating = false;
+    public static bool alreadyUpdating { get; private set; }
     private static readonly object locker = new object();
+    public static readonly object mapLocker = new object();
+    public static readonly object spawnLock = new object();
+
+    public static event MacroPolyChange macroPolyChange;
+    private static bool triggerSpawn = false;
 
     // Properties
     private static bool timeBounded
@@ -52,28 +59,16 @@ public class MacromapManager: MonoBehaviour
     {
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+
+        MacromapManager.alreadyUpdating = false;
     }
 
-    // Called in Start() of Main.cs; will run before local Update()? --> FALSE, what the hell, Unity?
+    // Called in Start() of Main.cs
     public static void InitializeMacrophyteMaps()
     {
-        MacromapManager.earliestTimestamp = DatabaseConnection.MacromapPolygonsEarliestDate();
-        // MacromapManager.currentPacket = DatabaseConnection.GetMacromapPolygons();
-        // foreach (MacromapPolygon polygon in MacromapManager.currentPacket.polygons)
-        // {
-        //     float xcoord = 0f;
-        //     float ycoord = 0f;
-        //     foreach (Vector2 coord in polygon.coordinates)
-        //     { 
-        //         xcoord += coord.x;
-        //         ycoord += coord.y;
-        //         Debug.Log(string.Format("{0}: ({1}, {2})", polygon.polygonID, coord.y, coord.x));
-        //     }
-
-        //     Debug.Log(string.Format("{0}: ({1}, {2})", polygon.polygonID, ycoord / polygon.vertexCount, xcoord / polygon.vertexCount)); 
-        //     Debug.Log(string.Format("{0}: {1}", polygon.polygonID, polygon.PointInPolygon(new Vector2(xcoord / polygon.vertexCount, ycoord / polygon.vertexCount)))); 
-        // }
+        MacromapManager.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_polygons_local");
         MacromapManager.intensityMap = null;
+        macroPolyChange += GrassSpawner.instance.SpawnGrass;
     }
 
     public static async Task UpdateMaps()
@@ -87,23 +82,28 @@ public class MacromapManager: MonoBehaviour
                 MacromapManager.currentPacket = await DatabaseConnection.GetMacromapPolygons();
 
                 // Create a [0, 1] valued array of color intensities to be applied to mesh
-                MacromapManager.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
-                for (int y = 0; y < LocalMeshData.resolution; y++)
-                {
-                    for (int x = 0; x < LocalMeshData.resolution; x++)
+                lock(MacromapManager.mapLocker)
+                {    
+                    MacromapManager.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
+                    for (int y = 0; y < LocalMeshData.resolution; y++)
                     {
-                        MacromapManager.intensityMap[y, x] = 0f;
-                        foreach (MacromapPolygon polygon in MacromapManager.currentPacket.polygons)
+                        for (int x = 0; x < LocalMeshData.resolution; x++)
                         {
-                            // Apply average intensity
-                            if (polygon.PointInPolygon(new Vector2(x, y)))
+                            MacromapManager.intensityMap[y, x] = 0f;
+                            foreach (MacromapPolygon polygon in MacromapManager.currentPacket.polygons)
                             {
-                                MacromapManager.intensityMap[y, x] = (polygon.lowerCoverage + polygon.upperCoverage) / 2f / 100f;
-                                break;
+                                // Apply average intensity
+                                if (polygon.PointInPolygon(new Vector2(x, y)))
+                                {
+                                    MacromapManager.intensityMap[y, x] = (polygon.lowerCoverage + polygon.upperCoverage) / 2f / 100f;
+                                    break;
+                                }
                             }
                         }
                     }
-                    // if (y%250 == 0) Debug.Log(string.Format("Macrophytes: {0}%", (float)y / (float)LocalMeshData.resolution * 100f));
+
+                    // Alert the grass spawner that it should respawn the prefabs
+                    lock (MacromapManager.spawnLock) { MacromapManager.triggerSpawn = true; }
                 }
                 lock(MacromapManager.locker) MacromapManager.alreadyUpdating = false;
             }
@@ -125,6 +125,16 @@ public class MacromapManager: MonoBehaviour
         // Decide whether or not to show the buffering icon
         if (MacromapManager.alreadyUpdating && !bufferIcon.activeSelf) bufferIcon.SetActive(true);
         else if (!MacromapManager.alreadyUpdating && bufferIcon.activeSelf) bufferIcon.SetActive(false);
+
+        // Unity is demanding this be executed from the main thread, hence the workaround
+        lock (MacromapManager.spawnLock)
+        {
+            if (MacromapManager.triggerSpawn)
+            {
+                MacromapManager.triggerSpawn = false;
+                macroPolyChange?.Invoke();
+            }
+        }
     }
 
     public static void EnableMaps(bool status=true)

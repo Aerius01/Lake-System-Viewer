@@ -57,7 +57,12 @@ public class UserSettings
     public static bool macrophyteMaps 
     {
         get { return _macrophyteMaps; } 
-        set { _macrophyteMaps = value; if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); GrassSpawner.instance.SpawnGrass(); }
+        set { _macrophyteMaps = value; if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); }
+    }
+    public static bool macrophyteHeights 
+    {
+        get { return _macrophyteHeights; } 
+        set { _macrophyteHeights = value; GrassSpawner.instance.SpawnGrass(); }
     }
 
 
@@ -71,6 +76,7 @@ public class UserSettings
     private static bool _showGradient;
     private static bool _gradedContours;
     private static bool _macrophyteMaps;
+    private static bool _macrophyteHeights;
 
     public static float verticalScalingFactor = 3f;
     public static float fishScalingFactor = 1f;

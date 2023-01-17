@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
+using System.Globalization;
 
 public class DatabaseConnection
 {
@@ -17,7 +18,7 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = null;
+    private static bool? smallSample = true;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -785,10 +786,10 @@ public class DatabaseConnection
         return meshTable;
     }
 
-    public static DateTime MacromapPolygonsEarliestDate()
+    public static DateTime EarliestDate(string tableName)
     {
         DateTime timestamp = DateTime.MaxValue;
-        string sql = "select min(timestamp) from macromap_polygons_local";
+        string sql = string.Format("select min(timestamp) from {0}", tableName);
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -797,7 +798,7 @@ public class DatabaseConnection
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
-                if (!rdr.HasRows) { Debug.Log("Problem getting earliest polygon macromap date"); }
+                if (!rdr.HasRows) { Debug.Log(string.Format("Problem getting earliest date from table {0}", tableName)); }
                 while (rdr.Read()) { timestamp = rdr.GetDateTime(rdr.GetOrdinal("min")); }
 
                 rdr.Close();
@@ -825,7 +826,7 @@ public class DatabaseConnection
             mp.upper,
             mp.x,
             mp.y,
-            (select min(timestamp) from macromap_polygons_local where timestamp >= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+            (select min(timestamp) from macromap_polygons_local where timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
                 and x is not null
                 and y is not null
                 and poly_id is not null
@@ -853,7 +854,7 @@ public class DatabaseConnection
 
                     // Query for earliest TS and make dummy return packet with accurate next_timestamp
                     // TODO: query failure returns DateTime.MaxValue, error handle if earliestTS is this value
-                    DateTime earliestTS = DatabaseConnection.MacromapPolygonsEarliestDate();
+                    DateTime earliestTS = DatabaseConnection.EarliestDate("macromap_polygons_local");
                     return new PolygonPacket(null, earliestTS);
                 }
 
@@ -907,6 +908,82 @@ public class DatabaseConnection
         }
 
         // returnPacket.ProcessConvexHulls();
+        return returnPacket;
+    }
+
+    public async static Task<MacroHeightPacket> GetMacromapHeights()
+    {
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+
+        // Inits
+        DateTime timestamp = DateTime.MaxValue;
+        DateTime? nextTimestamp = null;
+        MacroHeightPacket returnPacket = null;
+
+        string sql = string.Format(
+            @"select
+                *,
+                (select min(timestamp) from macromap_heights_local s where s.timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
+                    and s.height_m is not null 
+                    and s.x is not null 
+                    and s.y is not null) next_timestamp
+                from macromap_heights_local mhl
+                where mhl.timestamp = (select max(timestamp) from macromap_heights_local where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS'))
+                    and mhl.height_m is not null 
+                    and mhl.x is not null 
+                    and mhl.y is not null", 
+            strTime
+        );
+
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            await connection.OpenAsync();
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            {
+                if (!rdr.HasRows) { Debug.Log("macromap height SQL query yielded empty dataset"); }
+                else
+                {
+                    while (await rdr.ReadAsync())
+                    {
+                        timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                        nextTimestamp = null;
+                        var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { nextTimestamp = Convert.ToDateTime(entry); }
+                            catch { Debug.Log("Height macromap data conversion fail: nextTimestamp"); }
+                        }
+
+                        // Never null by the architecture of the query
+                        float x = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                        try { x = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Height macromap data conversion fail: x"); }
+
+                        float y = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                        try { y = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Height macromap data conversion fail: y"); }
+
+                        float height = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("height_m"));
+                        try { height = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Height macromap data conversion fail: height"); }
+
+                        if (returnPacket == null) { returnPacket = new MacroHeightPacket(timestamp, nextTimestamp); }
+                        returnPacket.AddPoint(x, y, height);
+                    };
+                }
+                await rdr.CloseAsync();
+            }
+
+            await connection.CloseAsync();
+        }
+
+        returnPacket.CoalesceDictionary();
         return returnPacket;
     }
 }

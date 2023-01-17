@@ -61,7 +61,7 @@ public class FishList : MonoBehaviour
 
         if (listPopulated)
         {
-            listSize = 0f;
+            listSize = 250; // Toggle group size + titles
             foreach (SpeciesBox speciesBox in speciesList)
             {
                 listSize += speciesBox.open ? speciesBox.contentSize : 60f;

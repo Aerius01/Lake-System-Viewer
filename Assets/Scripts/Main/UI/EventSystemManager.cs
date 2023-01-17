@@ -16,7 +16,7 @@ public class EventSystemManager : MonoBehaviour
     private EnvironmentManager environmentManager;
 
     [SerializeField]
-    private Toggle tagToggle, depthLineToggle, trailToggle, thermoToggle, windWeatherToggle, satelliteToggle, contourToggle, gradientToggle, gradedCLineToggle, macrophyteMapToggle;
+    private Toggle tagToggle, depthLineToggle, trailToggle, thermoToggle, windWeatherToggle, satelliteToggle, contourToggle, gradientToggle, gradedCLineToggle, macrophyteMapToggle, macrophyteHeightToggle;
     [SerializeField] private GraphicRaycaster gr;
 
     public static event AlertScaleChange scaleChangeEvent;
@@ -40,6 +40,7 @@ public class EventSystemManager : MonoBehaviour
         // Set up event listeners
         scaleChangeEvent += environmentManager.AdjustScales;
         scaleChangeEvent += FishManager.ChangeVerticalScale;
+        scaleChangeEvent += GrassSpawner.instance.SpawnGrass;
         fishScaleEvent += FishManager.ChangeFishScale;
         waterLevelEvent += environmentManager.AdjustWaterLevel;
     }
@@ -54,6 +55,7 @@ public class EventSystemManager : MonoBehaviour
     public void GradientToggle() { UserSettings.showGradient = gradientToggle.isOn ? true : false; }
     public void GradedContourLineToggle() { UserSettings.gradedContours = gradedCLineToggle.isOn ? true : false; }
     public void MacrophyteMapToggle() { UserSettings.macrophyteMaps = macrophyteMapToggle.isOn ? true : false; }
+    public void MacrophyteHeightToggle() { UserSettings.macrophyteHeights = macrophyteHeightToggle.isOn ? true : false; }
 
     public void AdjustWaterHeight()
     {
