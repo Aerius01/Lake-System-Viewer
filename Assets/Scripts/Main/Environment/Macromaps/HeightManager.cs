@@ -104,7 +104,6 @@ public class HeightManager : MonoBehaviour
     private static async Task Requery()
     {
         HeightManager.currentPacket = await DatabaseConnection.GetMacromapHeights();
-        Debug.Log("pulled");
 
         // Alert the grass spawner that it should respawn the prefabs
         lock(HeightManager.spawnLock) { HeightManager.triggerSpawn = true; }
