@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,7 +47,7 @@ public class DBHandler : MonoBehaviour
 
     public async void TestButton()
     {
-        this.connectButton.interactable = false;
+        this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
         this.testBuffer.SetActive(true);
 
         string connString = string.Format("Host={0};Username={1};Password={2};Database={3};", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
@@ -67,7 +68,7 @@ public class DBHandler : MonoBehaviour
                         await connection.OpenAsync();
                         this.connected = true;
                         stateTitle = "Success!";
-                        stateDescription = "The connection was successful. You can now verify the table structure.";
+                        stateDescription = "The connection was successful. You can now verify the database structure.";
                         break;
                     }
                     catch (SocketException e) { Debug.Log(e.Message); break; }// IP issue}
@@ -89,7 +90,7 @@ public class DBHandler : MonoBehaviour
                     catch (Npgsql.NpgsqlException)
                     {
                         stateTitle = "Failed to connect!";
-                        stateDescription = "The host could not be resolved. Is the IP address typed in correctly?"; 
+                        stateDescription = "The host could not be resolved - there was no answer at the provided IP. Is the IP address typed in correctly?"; 
                         break;
                     }
                 }
@@ -101,37 +102,28 @@ public class DBHandler : MonoBehaviour
         messageBox.transform.Find("Title").GetComponent<TextMeshProUGUI>().text = stateTitle;
         messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = stateDescription;
 
-        menuPanel.GetComponent<CanvasGroup>().interactable = false;
         this.testBuffer.SetActive(false);
         messageBox.SetActive(true);
 
         if (this.connected) this.verifyButton.interactable = true;
-        this.connectButton.interactable = true;
     }
 
-    // public void VerifyButton()
-    // {
-    //     string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
-    //     using (NpgsqlConnection connection = new NpgsqlConnection(connString))
-    //     {
-    //         if (connection.State != ConnectionState.Open)
-    //         {
-    //             // This connection tends to have problems. Attempt to re-open the connection if it fails
-    //             int runningCount = 0;
-    //             while (runningCount < 30)
-    //             {
-    //                 runningCount++;
-    //                 try { connection.Open(); }
-    //                 catch (NpgsqlException e) { Debug.Log(e.Message); }
+    public async void VerifyButton()
+    {
+        this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
 
-    //                 if (connection.State == ConnectionState.Open) connected = true; break;
-    //             }
-    //         }
+        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        {
+            // Run through checklist of tables
+            TableImports tableImports = new TableImports(connection);
+            await tableImports.VerifyTables();
 
-    //         connection.Close();
-    //     }
-    // }
+            await connection.CloseAsync();
+        }
 
+        this.menuPanel.GetComponent<CanvasGroup>().interactable = true;
+    }
 
 
     // verify table status --> verify structure
@@ -141,7 +133,6 @@ public class DBHandler : MonoBehaviour
 
     // change any input field --> restart
     // pop up box disables everything until "okay" clicked
-
 
     private void CheckButtonStatuses()
     {

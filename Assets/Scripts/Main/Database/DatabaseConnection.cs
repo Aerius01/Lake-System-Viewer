@@ -696,16 +696,11 @@ public class DatabaseConnection
         DateTime earliestTimestamp = DateTime.MaxValue;
         DateTime latestTimestamp = DateTime.MinValue;
 
-        // TODO: adapt SQL query
         string sql =
         @"SELECT max(timestamp), min(timestamp)
-        FROM weatherstation
-        where windspeed is not null
-            or winddirection is not null
-            or temperature is not null
-            or humidity is not null
-            or airpressure is not null
-            or precipitation is not null
+        FROM thermocline
+        where (temperature is not null
+                or oxygen is not null)
             AND timestamp IS NOT null";
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
