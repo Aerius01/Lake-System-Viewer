@@ -110,7 +110,9 @@ public class DBHandler : MonoBehaviour
 
     public async void VerifyButton()
     {
+        // WHAT IF THE CONNECTION TO DB IS LOST MID-QUERY
         this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
+        this.verifyBuffer.SetActive(true);
 
         string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
@@ -122,17 +124,13 @@ public class DBHandler : MonoBehaviour
             await connection.CloseAsync();
         }
 
+        this.verifyBuffer.SetActive(false);
         this.menuPanel.GetComponent<CanvasGroup>().interactable = true;
     }
 
 
-    // verify table status --> verify structure
-    // verify nullity/data quality of tables
+
     // start --> saves table bools, saves connectivity data, activates MAIN
-
-
-    // change any input field --> restart
-    // pop up box disables everything until "okay" clicked
 
     private void CheckButtonStatuses()
     {
