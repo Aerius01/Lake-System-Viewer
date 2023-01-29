@@ -10,6 +10,8 @@ public class TableImports
     private NpgsqlConnection connection;
     private List<string> tableNames;
     private Dictionary<string, Table> tables;
+    private LoaderBar loadingBar;
+    private List<string> checkTables;
 
     // die notwendig sind
     public bool fishAccepted { get; private set; }
@@ -23,9 +25,11 @@ public class TableImports
     public bool macroPolysAccepted { get; private set; }
     public bool macroHeightsAccepted { get; private set; }
 
-    public TableImports(NpgsqlConnection connection) { this.connection = connection; this.tables = new Dictionary<string, Table>(); }
+    private static readonly object operationLocker = new object();
 
-    public async Task<bool> VerifyTables()
+    public TableImports(NpgsqlConnection connection, LoaderBar loadingBar) { this.connection = connection; this.loadingBar = loadingBar; this.tables = new Dictionary<string, Table>(); }
+
+    public async Task<Tuple<bool, Dictionary<string,Table>>> VerifyTables()
     {
         int runningCount = 0;
         if (connection.State != ConnectionState.Open)
@@ -39,7 +43,7 @@ public class TableImports
             }
         }
 
-        if (runningCount == 30) { return false; } // failed to open
+        if (runningCount == 30) { return new Tuple<bool, Dictionary<string,Table>>(false, this.tables); } // failed to open
         else
         {
             DataTable schema = await connection.GetSchemaAsync("Tables");
@@ -48,51 +52,77 @@ public class TableImports
             foreach(DataRow row in schema.Rows) { this.tableNames.Add(row["table_name"].ToString()); }
 
             // Run through checklist of tables
-            return await this.Verificator();
+            return new Tuple<bool, Dictionary<string,Table>>(await this.Verificator(), this.tables);
         }
     }
 
     private async Task<bool> Verificator()
     {
-        // NECESSARY TABLES ---------------------------------------------------------------------------------------------
-        // fish
-        this.fishAccepted = await this.CheckFishTable();
+        // Verify the structure of each table in sequence. These cannot be parallelized since they each rely on
+        // querying the same database, and queries cannot be run in parallel (will throw an error).
 
-        // heightmap
-        Tuple<bool, int, int> heightMapPacket = await this.CheckHeightMap();
+        // Start by checking how many of the check tables are present. The ordering of these names is important.
+        this.checkTables = new List<string>() { "fish", "meshmap", "positions_local", "macromap_polygons_local", "macromap_heights_local", "species", "weatherstation", "thermocline" };
+        int tableCounter = 0;
+        foreach (string tableName in checkTables) if (this.tableNames.Contains(tableName)) tableCounter += 1;
+
+        this.loadingBar.WakeUp(tableCounter);
+
+        this.loadingBar.SetText(this.checkTables[0]);
+        this.fishAccepted = await Task.Run(() => this.CheckFishTable(this.checkTables[0]));
+
+        this.loadingBar.SetText(this.checkTables[1]);
+        Tuple<bool, int, int, float, float> heightMapPacket = await Task.Run(() => this.CheckHeightMap(this.checkTables[1]));
         this.heightMapAccepted = heightMapPacket.Item1;
 
-        // positions
-        // this.positionsAccepted = await this.CheckPositionsTable(heightMapPacket.Item2, heightMapPacket.Item3);
+        // These tables are dependent on the successful querying of the heightmap table
+        this.positionsAccepted = false;
+        this.macroPolysAccepted = false;
+        this.macroHeightsAccepted = false;
+        if (this.heightMapAccepted)
+        {
+            this.loadingBar.SetText(this.checkTables[2]);
+            this.positionsAccepted = await Task.Run(() => this.CheckPositionsTable(this.checkTables[2], heightMapPacket.Item2, heightMapPacket.Item3, heightMapPacket.Item4, heightMapPacket.Item5));
 
-        // bool requiredTablesPresent = (this.fishAccepted && this.heightMapAccepted && this.positionsAccepted) ? true : false;
+            this.loadingBar.SetText(this.checkTables[3]);
+            this.macroPolysAccepted = await Task.Run(() => this.CheckMacroPolyTable(this.checkTables[3], heightMapPacket.Item2, heightMapPacket.Item3));
 
-        // OPTIONAL TABLES ---------------------------------------------------------------------------------------------
-        this.speciesAccepted = await this.CheckSpeciesTable();
-        this.weatherAccepted = await this.CheckWeatherTable();
-        this.thermoclineAccepted = await this.CheckThermoTable();
+            this.loadingBar.SetText(this.checkTables[4]);
+            this.macroHeightsAccepted = await Task.Run(() => this.CheckMacroHeightTable(this.checkTables[4], heightMapPacket.Item2, heightMapPacket.Item3));
+        }
 
-        // return requiredTablesPresent;
-        return true;
+        this.loadingBar.SetText(this.checkTables[5]);
+        this.speciesAccepted = await Task.Run(() => this.CheckSpeciesTable(this.checkTables[5]));
+
+        this.loadingBar.SetText(this.checkTables[6]);
+        this.weatherAccepted = await Task.Run(() => this.CheckWeatherTable(this.checkTables[6]));
+
+        this.loadingBar.SetText(this.checkTables[7]);
+        this.thermoclineAccepted = await Task.Run(() => this.CheckThermoTable(this.checkTables[7]));
+
+        this.loadingBar.ShutDown();
+        
+        bool requiredTablesPresent = (this.fishAccepted && this.heightMapAccepted && this.positionsAccepted) ? true : false;
+        return requiredTablesPresent;
     }
 
-    private async Task<bool> CheckFishTable()
+    private async Task<bool> CheckFishTable(string tableName)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated, the id column exists, and the id column is unique
-        // WARNING: None
+        // WARNING: There should be no null values
 
         bool conditionsMet = true; 
 
         // Fish table
-        Table fishTable = new Table("fish");
-        this.tables["fish"] = fishTable;
+        Table fishTable = new Table(tableName);
+        lock(operationLocker) this.tables[tableName] = fishTable;
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("fish"))
+        if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The IDs must be unique
-            string sql = "select count(id) base_count, count(distinct id) unique_count from fish where id is not null";
+            string sql = string.Format("select count(id) base_count, count(distinct id) unique_count from {0} where id is not null", tableName);
 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
             try
@@ -130,7 +160,7 @@ public class TableImports
                 if (e.SqlState == "42703") 
                 { 
                     fishTable.SetLight(2);
-                    fishTable.SetMessage("The connected database's \"fish\" table does not have a column named \"id\". This column must both exist and be unique.");
+                    fishTable.SetMessage(string.Format("The connected database's \"{0}\" table does not have a column named \"id\". This column must both exist and be unique.", tableName));
                     conditionsMet = false;
                 }
                 else
@@ -145,24 +175,18 @@ public class TableImports
         else 
         {
             fishTable.SetLight(2);
-            fishTable.SetMessage("The \"fish\" table was not found in the provided database.");
+            fishTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName));
             conditionsMet = false;
         }
+
+        // WARNING: There should be no null values
+        if (conditionsMet) await this.NullCountCheck(fishTable, new List<string> {"id"});
 
         // INTERNAL: Determine which of the optional columns are present. This is necessary information for when building out the Fish.cs class.
         // Optional columns are: species, length, weight, sex, capture_type
         if (conditionsMet)
         {
-            // Get the table's schema for the column-based query
-            DataTable schema = connection.GetSchema("Tables");
-            string fishSchema = "";
-            foreach(DataRow row in schema.Rows) if (row["table_name"].ToString() == "fish") { fishSchema = row["table_schema"].ToString(); }
-            
-            string sql =  string.Format(@"SELECT *
-                FROM information_schema.columns
-                WHERE table_schema = '{0}'
-                AND table_name = 'fish'", fishSchema)
-            ;
+            string sql = string.Format("SELECT * FROM information_schema.columns WHERE table_name = '{0}'", tableName);
 
             // Check by removing the column names from the list if they're found
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
@@ -186,12 +210,11 @@ public class TableImports
             }
         }
 
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", fishTable.tableName, fishTable.lightColor, fishTable.tableMessage, string.Join(", ", fishTable.presentColumns)));
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", fishTable.tableName, fishTable.lightColor, fishTable.tableMessage, string.Join(", ", fishTable.presentColumns)));
         return conditionsMet;
     }
 
-    // TODO: check for null values
-    private async Task<Tuple<bool, int, int>> CheckHeightMap()
+    private async Task<Tuple<bool, int, int, float, float>> CheckHeightMap(string tableName)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated
@@ -202,17 +225,17 @@ public class TableImports
         // Heightmap table
         int rowCount = 0;
         int columnCount = 0;
-        Table heightMapTable = new Table("meshmap");
-        this.tables["meshmap"] = heightMapTable;
+        Table heightMapTable = new Table(tableName);
+        this.tables[tableName] = heightMapTable;
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("meshmap"))
+        if (this.tableNames.Contains(tableName))
         {
             // We only need the row count and column count to contrast against the positions table
             string sql =  string.Format(@"select
-                (select count(*) from meshmap) as rows,
-                (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_catalog = '{0}' AND table_name = 'meshmap') as columns 
-                ", connection.Database);
+                (select count(*) from {1}) as rows,
+                (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE table_catalog = '{0}' AND table_name = '{1}') as columns 
+                ", connection.Database, tableName);
 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
             await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
@@ -238,18 +261,18 @@ public class TableImports
         else 
         {
             heightMapTable.SetLight(2);
-            heightMapTable.SetMessage("The \"meshmap\" table was not found in the provided database.");
+            heightMapTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName));
             conditionsMet = false;
         }
 
         // WARNING: There should be no null values
+        float minVal = float.MaxValue;
+        float maxVal = float.MinValue;
         if (conditionsMet)
         {
             // Collect all information to procedurally generate the actual SQL statement, such that specific column names aren't necessary
             List<string> columnMapping = new List<string>();
-            string sql =  @"SELECT column_name 
-            FROM information_schema.columns
-            WHERE table_name = 'meshmap'";
+            string sql = string.Format("SELECT column_name FROM information_schema.columns WHERE table_name = '{0}'", tableName);
 
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
             await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
@@ -278,11 +301,8 @@ public class TableImports
                 (SELECT min(v) FROM (VALUES ({0})) AS value(v)) as rowMins,
                 (SELECT max(v) FROM (VALUES ({0})) AS value(v)) as rowMaxes,
                 (SELECT count(v) FROM (VALUES ({0})) AS value(v) where v is null) as nullCount
-                FROM meshmap) a", string.Join("), (", columnMapping))
+                FROM {1}) a", string.Join("), (", columnMapping), tableName)
             ; 
-
-            float minVal = float.MaxValue;
-            float maxVal = float.MinValue;
 
             cmd = new NpgsqlCommand(sql, connection);
             await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
@@ -305,8 +325,8 @@ public class TableImports
                         if (nullCount > 0)
                         {
                             heightMapTable.SetLight(1); // yellow warning light
-                            // PHRASING FOR ONLY ONE CELL (SINGULAR)
-                            heightMapTable.SetMessage(string.Format("{0} cells were found to have null values. Should you decide to continue without first correcting these, the depth values of those cells will be set to the maximum float value (and accordingly become very visible when rendering).", nullCount)); 
+                            if (nullCount == 1) heightMapTable.SetMessage(string.Format("{0} cell was found to have a null value. Should you decide to continue without first correcting it, the depth value of that cell will be set to the maximum float value (and accordingly become very visible when rendering).", nullCount)); 
+                            else heightMapTable.SetMessage(string.Format("{0} cells were found to have null values. Should you decide to continue without first correcting these, the depth values of those cells will be set to the maximum float value (and accordingly become very visible when rendering).", nullCount)); 
                         }
                     };
                 }
@@ -314,12 +334,11 @@ public class TableImports
             }
         }
 
-        // CARRY FORWARD MAX/MIN INFO
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}", heightMapTable.tableName, heightMapTable.lightColor, heightMapTable.tableMessage));
-        return new Tuple<bool, int, int> (conditionsMet, rowCount, columnCount);
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}", heightMapTable.tableName, heightMapTable.lightColor, heightMapTable.tableMessage));
+        return new Tuple<bool, int, int, float, float> (conditionsMet, rowCount, columnCount, minVal, maxVal);
     }
 
-    private async Task<bool> CheckPositionsTable(int rowCount, int columnCount)
+    private async Task<bool> CheckPositionsTable(string tableName, int rowCount, int columnCount, float minDepth, float maxDepth)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated, the id, timestamp, x, y and z columns exist
@@ -328,59 +347,22 @@ public class TableImports
         bool conditionsMet = true; 
 
         // Positions table
-        Table positionsTable = new Table("positions");
-        this.tables["positions"] = positionsTable;
+        Table positionsTable = new Table(tableName);
+        this.tables[tableName] = positionsTable;
+        List<string> requiredColumns = new List<string> {"id", "timestamp", "x", "y", "z"};
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("positions_local"))
+        if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
-            List<string> requiredColumns = new List<string> {"id", "timestamp", "x", "y", "z"};
-            
-            string sql =  @"SELECT *
-                FROM information_schema.columns
-                WHERE table_name = 'positions_local'"
-            ;
+            conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
 
-            // Check by removing the column names from the list if they're found
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-            {
-                // PRIMARY: The table must have data
-                if (!rdr.HasRows)
-                { 
-                    positionsTable.SetLight(2); 
-                    positionsTable.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
-                    conditionsMet = false; 
-                }
-                else
-                {
-                    while (await rdr.ReadAsync())
-                    {
-                        string columnName = Convert.ToString(rdr.GetValue(rdr.GetOrdinal("column_name")));
-                        positionsTable.presentColumns.Add(columnName);
-
-                        if (requiredColumns.Contains(columnName)) requiredColumns.Remove(columnName); 
-                    };
-
-                    // If the list still has names, these are the missing columns
-                    if (requiredColumns.Count > 0)
-                    {
-                        positionsTable.SetLight(2); 
-                        positionsTable.SetMessage(string.Format("The positions table must have columns named \"id\", \"timestamp\", \"x\", \"y\" and \"z\". Column(s): \"{0}\", were not found in the provided table.", string.Join("\", \"", requiredColumns)));
-                        conditionsMet = false; 
-                    }
-                }
-                await rdr.CloseAsync();
-            }
-
-            // WARNING: The max/min x and y should fall within the boundaries of the height map
-            // All columns need to be explicitly listed in the SQL query to test for the z-value (depth), so skip this
+            // WARNING: The max/min x, y and z should fall within the boundaries of the height map
             if (conditionsMet)
             {
-                sql = "SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y from positions_local";
+                string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y, max(z) max_z, min(z) min_z from {0}", tableName);
 
-                cmd = new NpgsqlCommand(sql, connection);
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
                 await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
                 {
                     if (!rdr.HasRows)
@@ -396,11 +378,19 @@ public class TableImports
                             float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
                             float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
                             float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
+                            float maxZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_z")));
+                            float minZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_z")));
 
                             if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
                             {
                                 positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("The positions values in the provided table exceed the local bounds of the heightmap. This may lead to fish \"swimming\" on land or in empty space."));
+                                positionsTable.SetMessage(string.Format("The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
+                            }
+
+                            if (minZ < minDepth || maxZ > maxDepth)
+                            {
+                                positionsTable.SetLight(1); // yellow warning light
+                                positionsTable.SetMessage(string.Format("The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
                             }
                         };
                     }
@@ -409,46 +399,20 @@ public class TableImports
             }
 
             // WARNING: Check for null values
-            if (conditionsMet)
-            {
-                sql = "SELECT COUNT(*) FROM positions_local WHERE id is null or timestamp is null or x is null or y is null or z is null";
-
-                cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows) 
-                    {
-                        positionsTable.SetLight(1); // yellow warning light
-                        positionsTable.SetMessage("Was unable to successfully query for null counts."); 
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            int nullCount = Convert.ToInt32(rdr.GetValue(rdr.GetOrdinal("count")));
-                            if (nullCount > 0)
-                            {
-                                positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("{0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); 
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
-            }
+            if (conditionsMet) await this.NullCountCheck(positionsTable, requiredColumns);
         }
         else
         { 
             positionsTable.SetLight(2); 
-            positionsTable.SetMessage("The \"positions\" table was not found in the provided database."); 
+            positionsTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", positionsTable.tableName, positionsTable.lightColor, positionsTable.tableMessage, string.Join(", ", positionsTable.presentColumns)));
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", positionsTable.tableName, positionsTable.lightColor, positionsTable.tableMessage, string.Join(", ", positionsTable.presentColumns)));
         return conditionsMet;
     }
 
-    private async Task<bool> CheckThermoTable()
+    private async Task<bool> CheckThermoTable(string tableName)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated, the timestamp, depth, and temperature columns exist
@@ -457,95 +421,35 @@ public class TableImports
         bool conditionsMet = true; 
 
         // Thermocline table
-        Table thermoTable = new Table("thermocline");
-        this.tables["thermocline"] = thermoTable;
+        Table thermoTable = new Table(tableName);
+        this.tables[tableName] = thermoTable;
+        List<string> requiredColumns = new List<string> {"timestamp", "depth", "temperature"};
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("thermocline"))
+        if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must have all of a timestamp, depth, and temperature columns. The oxygen column is optional.
-            List<string> requiredColumns = new List<string> {"timestamp", "depth", "temperature"};
-            
-            string sql = @"SELECT *
-                FROM information_schema.columns
-                WHERE table_name = 'thermocline'"
-            ;
-
-            // Check by removing the column names from the list if they're found
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-            {
-                // PRIMARY: The table must have data
-                if (!rdr.HasRows)
-                { 
-                    thermoTable.SetLight(2); 
-                    thermoTable.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
-                    conditionsMet = false; 
-                }
-                else
-                {
-                    while (await rdr.ReadAsync())
-                    {
-                        string columnName = Convert.ToString(rdr.GetValue(rdr.GetOrdinal("column_name")));
-                        thermoTable.presentColumns.Add(columnName);
-
-                        if (requiredColumns.Contains(columnName)) requiredColumns.Remove(columnName); 
-                    };
-
-                    // If the list still has names, these are the missing columns
-                    if (requiredColumns.Count > 0)
-                    {
-                        thermoTable.SetLight(2); 
-                        thermoTable.SetMessage(string.Format("The thermocline table must have columns named \"timestamp\", \"depth\", and \"temperature\". Column(s): \"{0}\", were not found in the provided table.", string.Join("\", \"", requiredColumns)));
-                        conditionsMet = false; 
-                    }
-                }
-                await rdr.CloseAsync();
-            }
+            conditionsMet = await this.RequiredColumnsCheck(thermoTable, requiredColumns);
 
             // WARNING: Check for null values
             if (conditionsMet)
             {
-                sql = "";
-                if (thermoTable.presentColumns.Contains("oxygen")) sql = "SELECT COUNT(*) FROM thermocline WHERE timestamp is null or temperature is null or depth is null or oxygen is null";
-                else sql = "SELECT COUNT(*) FROM thermocline WHERE timestamp is null or temperature is null or depth is null";
-
-                cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows) 
-                    {
-                        thermoTable.SetLight(1); // yellow warning light
-                        thermoTable.SetMessage("Was unable to successfully query for null counts."); 
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            int nullCount = Convert.ToInt32(rdr.GetValue(rdr.GetOrdinal("count")));
-                            if (nullCount > 0)
-                            {
-                                thermoTable.SetLight(1); // yellow warning light
-                                thermoTable.SetMessage(string.Format("{0} records were found to have a null value in at least one of the present columns. Note that these records will be ignored when rendering.", nullCount)); 
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
+                if (thermoTable.presentColumns.Contains("oxygen")) await this.NullCountCheck(thermoTable, new List<string> {"timestamp", "depth", "temperature", "oxygen"});
+                else await this.NullCountCheck(thermoTable, requiredColumns);
             }
         }
         else
         { 
             thermoTable.SetLight(2); 
-            thermoTable.SetMessage("The \"thermocline\" table was not found in the provided database."); 
+            thermoTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", thermoTable.tableName, thermoTable.lightColor, thermoTable.tableMessage, string.Join(", ", thermoTable.presentColumns)));
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", thermoTable.tableName, thermoTable.lightColor, thermoTable.tableMessage, string.Join(", ", thermoTable.presentColumns)));
         return conditionsMet;
     }
 
-    private async Task<bool> CheckSpeciesTable()
+    private async Task<bool> CheckSpeciesTable(string tableName)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated, the id and name columns exist
@@ -554,63 +458,22 @@ public class TableImports
         bool conditionsMet = true; 
 
         // Thermocline table
-        Table speciesTable = new Table("species");
-        this.tables["species"] = speciesTable;
+        Table speciesTable = new Table(tableName);
+        this.tables[tableName] = speciesTable;
+        List<string> requiredColumns = new List<string> { "id", "name" };
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("species"))
+        if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must have all of an id and name columns.
-            List<string> requiredColumns = new List<string> { "id", "name" };
-
-            // Get the table's schema for the column-based query
-            DataTable schema = connection.GetSchema("Tables");
-            string speciesSchema = "";
-            foreach(DataRow row in schema.Rows) if (row["table_name"].ToString() == "species") { speciesSchema = row["table_schema"].ToString(); }
-            
-            string sql =  @"SELECT *
-                FROM information_schema.columns
-                WHERE table_name = 'species'"
-            ;
-
-            // Check by removing the column names from the list if they're found
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-            {
-                // PRIMARY: The table must have data
-                if (!rdr.HasRows)
-                { 
-                    speciesTable.SetLight(2); 
-                    speciesTable.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
-                    conditionsMet = false; 
-                }
-                else
-                {
-                    while (await rdr.ReadAsync())
-                    {
-                        string columnName = Convert.ToString(rdr.GetValue(rdr.GetOrdinal("column_name")));
-                        speciesTable.presentColumns.Add(columnName);
-
-                        if (requiredColumns.Contains(columnName)) requiredColumns.Remove(columnName); 
-                    };
-
-                    // If the list still has names, these are the missing columns
-                    if (requiredColumns.Count > 0)
-                    {
-                        speciesTable.SetLight(2); 
-                        speciesTable.SetMessage(string.Format("The species table must have columns named \"id\", and \"name\". Column(s): \"{0}\", were not found in the provided table.", string.Join("\", \"", requiredColumns)));
-                        conditionsMet = false; 
-                    }
-                }
-                await rdr.CloseAsync();
-            }
+            conditionsMet = await this.RequiredColumnsCheck(speciesTable, requiredColumns);
 
             // WARNING: Check for species beyond existing prefabs
             if (conditionsMet)
             {
-                sql = "select count(*) from species where LOWER(name) not in ('scaled carp', 'catfish', 'pike', 'tench', 'mirror carp', 'perch', 'roach')";
+                string sql = string.Format("select count(*) from {0} where LOWER(name) not in ('scaled carp', 'catfish', 'pike', 'tench', 'mirror carp', 'perch', 'roach')", tableName);
 
-                cmd = new NpgsqlCommand(sql, connection);
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
                 await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
                 {
                     if (!rdr.HasRows) 
@@ -635,46 +498,20 @@ public class TableImports
             }
 
             // WARNING: Check for null values
-            if (conditionsMet)
-            {
-                sql = "SELECT COUNT(*) FROM species WHERE id is null or name is null";
-
-                cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows) 
-                    {
-                        speciesTable.SetLight(1); // yellow warning light
-                        speciesTable.SetMessage("Was unable to successfully query for null counts."); 
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            int nullCount = Convert.ToInt32(rdr.GetValue(rdr.GetOrdinal("count")));
-                            if (nullCount > 0)
-                            {
-                                speciesTable.SetLight(1); // yellow warning light
-                                speciesTable.SetMessage(string.Format("{0} records were found to have a null value in at least one of the present columns. Note that these records will be ignored when rendering.", nullCount)); 
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
-            }
+            if (conditionsMet) await this.NullCountCheck(speciesTable, requiredColumns);
         }
         else
         { 
             speciesTable.SetLight(2); 
-            speciesTable.SetMessage("The \"species\" table was not found in the provided database."); 
+            speciesTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", speciesTable.tableName, speciesTable.lightColor, speciesTable.tableMessage, string.Join(", ", speciesTable.presentColumns)));
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", speciesTable.tableName, speciesTable.lightColor, speciesTable.tableMessage, string.Join(", ", speciesTable.presentColumns)));
         return conditionsMet;
     }
 
-    private async Task<bool> CheckWeatherTable()
+    private async Task<bool> CheckWeatherTable(string tableName)
     {
         // CHECKS
         // PRIMARY: The table is present, the table is populated, the timestamp, winddirection and windspeed columns exist OR the timestamp and any of the temperature, humidity, airpressure, precipitation columns exist
@@ -683,19 +520,15 @@ public class TableImports
         bool conditionsMet = true; 
 
         // Weather table
-        Table weatherTable = new Table("weather");
-        this.tables["weather"] = weatherTable;
+        Table weatherTable = new Table(tableName);
+        this.tables[tableName] = weatherTable;
 
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains("weatherstation"))
+        if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must match one of the preset configurations.
             List<string> requiredColumns = new List<string> { "timestamp" };
-            
-            string sql = @"SELECT *
-                FROM information_schema.columns
-                WHERE table_name = 'weatherstation'"
-            ;
+            string sql = string.Format("SELECT * FROM information_schema.columns WHERE table_name = '{0}'", tableName);
 
             // Check by removing the column names from the list if they're found
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
@@ -722,14 +555,14 @@ public class TableImports
                     if (requiredColumns.Count > 0)
                     {
                         weatherTable.SetLight(2); 
-                        weatherTable.SetMessage("The weather table must have a column named \"timestamp\". It was not found in the provided table.");
+                        weatherTable.SetMessage(string.Format("The \"{0}\" table must have a column named \"timestamp\". It was not found in the provided table.", tableName));
                         conditionsMet = false; 
                     }
                     else if (!(weatherTable.presentColumns.Contains("winddirection") && weatherTable.presentColumns.Contains("windspeed")) && 
                     !(weatherTable.presentColumns.Contains("temperature") || weatherTable.presentColumns.Contains("humidity") || weatherTable.presentColumns.Contains("airpressure") || weatherTable.presentColumns.Contains("precipitation")))
                     {
                         weatherTable.SetLight(2); 
-                        weatherTable.SetMessage(string.Format("The weather table must have either columns named \"winddirection\" and \"windspeed\" (both must be present), or any column named \"temperature\", \"airpressure\", \"humidity\" or \"precipitation\". Only column(s): \"{0}\", were found in the provided table.", string.Join("\", \"", weatherTable.presentColumns)));
+                        weatherTable.SetMessage(string.Format("The \"{1}\" table must have either columns named \"winddirection\" and \"windspeed\" (both must be present), or any column named \"temperature\", \"airpressure\", \"humidity\" or \"precipitation\". Only column(s): \"{0}\", were found in the provided table.", string.Join("\", \"", weatherTable.presentColumns), tableName));
                         conditionsMet = false; 
                     }
                 }
@@ -744,40 +577,199 @@ public class TableImports
                 List<string> relevantNames = new List<string>() { "winddirection", "windspeed", "temperature", "airpressure", "humidity", "precipitation" };
                 foreach (string name in relevantNames) if (weatherTable.presentColumns.Contains(name)) subList.Add(name);
 
-                sql = string.Format("SELECT COUNT(*) FROM weatherstation WHERE {0} is null", string.Join(" is null or ", subList));
-
-                cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows) 
-                    {
-                        weatherTable.SetLight(1); // yellow warning light
-                        weatherTable.SetMessage("Was unable to successfully query for null counts."); 
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            int nullCount = Convert.ToInt32(rdr.GetValue(rdr.GetOrdinal("count")));
-                            if (nullCount > 0)
-                            {
-                                weatherTable.SetLight(1); // yellow warning light
-                                weatherTable.SetMessage(string.Format("{0} records were found to have a null value in at least one of the present columns. Null wind values will be ignored, whereas nulls in other fields will be reported as such in-game.", nullCount)); 
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
+                await this.NullCountCheck(weatherTable, subList);
             }
         }
         else
         { 
             weatherTable.SetLight(2); 
-            weatherTable.SetMessage("The \"weather\" table was not found in the provided database."); 
+            weatherTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", weatherTable.tableName, weatherTable.lightColor, weatherTable.tableMessage, string.Join(", ", weatherTable.presentColumns)));
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", weatherTable.tableName, weatherTable.lightColor, weatherTable.tableMessage, string.Join(", ", weatherTable.presentColumns)));
         return conditionsMet;
+    }
+
+    private async Task<bool> CheckMacroPolyTable(string tableName, int rowCount, int columnCount)
+    {
+        // CHECKS
+        // PRIMARY: The table is present, the table is populated, the timestamp, x, y, poly_id, upper and lower columns exist
+            // --> also check polygon vector ordering?
+        // WARNING: There should be no null values
+
+        bool conditionsMet = true; 
+
+        // Polygon table
+        Table polyTable = new Table(tableName);
+        this.tables[tableName] = polyTable;
+        List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "poly_id", "upper", "lower" };
+
+        // PRIMARY: The table must be present
+        if (this.tableNames.Contains(tableName))
+        {
+            // PRIMARY: The table must match one of the preset configurations.
+            conditionsMet = await this.RequiredColumnsCheck(polyTable, requiredColumns);
+
+            // WARNING: The max/min x, y and z should fall within the boundaries of the height map
+            if (conditionsMet) await this.XYBoundsCheck(polyTable, rowCount, columnCount);
+
+            // WARNING: Check for null values
+            if (conditionsMet) await this.NullCountCheck(polyTable, requiredColumns);
+        }
+        else
+        { 
+            polyTable.SetLight(2); 
+            polyTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            conditionsMet = false; 
+        }
+
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", polyTable.tableName, polyTable.lightColor, polyTable.tableMessage, string.Join(", ", polyTable.presentColumns)));
+        return conditionsMet;
+    }
+
+    private async Task<bool> CheckMacroHeightTable(string tableName, int rowCount, int columnCount)
+    {
+        // CHECKS
+        // PRIMARY: The table is present, the table is populated, the timestamp, x, y, poly_id, upper and lower columns exist
+            // --> also check polygon vector ordering?
+        // WARNING: There should be no null values, x/y values within bounds of height map
+
+        bool conditionsMet = true; 
+
+        // Polygon table
+        Table heightTable = new Table(tableName);
+        this.tables[tableName] = heightTable;
+        List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "height_m" };
+
+        // PRIMARY: The table must be present
+        if (this.tableNames.Contains(tableName))
+        {
+            // PRIMARY: The table must match one of the preset configurations.
+            conditionsMet = await this.RequiredColumnsCheck(heightTable, requiredColumns);
+
+            // WARNING: The max/min x and y should fall within the boundaries of the height map
+            if (conditionsMet) await this.XYBoundsCheck(heightTable, rowCount, columnCount);
+
+            // WARNING: Check for null values
+            if (conditionsMet) await this.NullCountCheck(heightTable, requiredColumns);
+        }
+        else
+        { 
+            heightTable.SetLight(2); 
+            heightTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            conditionsMet = false; 
+        }
+
+        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", heightTable.tableName, heightTable.lightColor, heightTable.tableMessage, string.Join(", ", heightTable.presentColumns)));
+        return conditionsMet;
+    }
+
+
+
+    // SUPPORT FUNCTIONS
+
+    private async Task<bool> RequiredColumnsCheck(Table table, List<string> requiredColumns)
+    {
+        bool conditionsMet = true; 
+        List<string> workingColumns = new List<string>();
+        foreach (string column in requiredColumns) workingColumns.Add(column);
+        
+        string sql =  string.Format("SELECT * FROM information_schema.columns WHERE table_name = '{0}'", table.tableName);
+
+        // Check by removing the column names from the list if they're found
+        NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+        await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+        {
+            // PRIMARY: The table must have data
+            if (!rdr.HasRows)
+            { 
+                table.SetLight(2); 
+                table.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
+                conditionsMet = false; 
+            }
+            else
+            {
+                while (await rdr.ReadAsync())
+                {
+                    string columnName = Convert.ToString(rdr.GetValue(rdr.GetOrdinal("column_name")));
+                    table.presentColumns.Add(columnName);
+
+                    if (workingColumns.Contains(columnName)) workingColumns.Remove(columnName); 
+                };
+
+                // If the list still has names, these are the missing columns
+                if (workingColumns.Count > 0)
+                {
+                    table.SetLight(2); 
+                    table.SetMessage(string.Format("The {0} table must have columns named \"{1}\". Column(s): \"{2}\", were not found in the provided table.", table.tableName, string.Join("\", \"", requiredColumns), string.Join("\", \"", workingColumns)));
+                    conditionsMet = false; 
+                }
+            }
+            await rdr.CloseAsync();
+        }
+
+        return conditionsMet;
+    }
+
+    private async Task XYBoundsCheck(Table table, int rowCount, int columnCount)
+    {
+        string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y from {0}", table.tableName);
+
+        NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+        await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+        {
+            if (!rdr.HasRows)
+            { 
+                table.SetLight(1); // yellow warning light
+                table.SetMessage("Was unable to successfully query for bounds testing against the height map bounds.");
+            }
+            else
+            {
+                while (await rdr.ReadAsync())
+                {
+                    float maxX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_x")));
+                    float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
+                    float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
+                    float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
+
+                    if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
+                    {
+                        table.SetLight(1); // yellow warning light
+                        table.SetMessage(string.Format("The (x, y) values in the provided table exceed the local bounds of the heightmap. This may cause to some fish to appear to be \"swimming\" on land or in empty space."));
+                    }
+                };
+            }
+            await rdr.CloseAsync();
+        }
+    }
+
+    private async Task NullCountCheck(Table table, List<string> columns)
+    {
+        int nullCount = 0;
+        string sql = string.Format("SELECT COUNT(*) FROM {0} WHERE {1} is null", table.tableName, string.Join(" is null or ", columns));
+
+        NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+        await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+        {
+            if (!rdr.HasRows) 
+            {
+                table.SetLight(1); // yellow warning light
+                table.SetMessage("Was unable to successfully query for null counts."); 
+            }
+            else
+            {
+                while (await rdr.ReadAsync())
+                {
+                    nullCount = Convert.ToInt32(rdr.GetValue(rdr.GetOrdinal("count")));
+                    if (nullCount > 0)
+                    {
+                        table.SetLight(1); // yellow warning light
+                        table.SetMessage(string.Format("{0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); 
+                    }
+                };
+            }
+            await rdr.CloseAsync();
+        }
     }
 }

@@ -16,14 +16,15 @@ public class DBHandler : MonoBehaviour
 
     [SerializeField] private Main main;
     [SerializeField] private Button connectButton, verifyButton, startButton;
-    [SerializeField] private GameObject menuPanel, messageBox, loadingBar, verifyBox;
+    [SerializeField] private GameObject menuPanel, messageBox, loadingBar, verifyBox, textPrefab, statusContainer;
+    [SerializeField] private Sprite greenLight, yellowLight, redLight;
 
     private void Awake()
     {
-        this.hostInput = menuPanel.transform.Find("Host").transform.Find("Input").GetComponent<TMP_InputField>();
-        this.usernameInput = menuPanel.transform.Find("Username").transform.Find("Input").GetComponent<TMP_InputField>();
-        this.passwordInput = menuPanel.transform.Find("Password").transform.Find("Input").GetComponent<TMP_InputField>();
-        this.DBNameInput = menuPanel.transform.Find("DatabaseName").transform.Find("Input").GetComponent<TMP_InputField>();
+        this.hostInput = menuPanel.transform.Find("Information").transform.Find("Host").transform.Find("Input").GetComponent<TMP_InputField>();
+        this.usernameInput = menuPanel.transform.Find("Information").transform.Find("Username").transform.Find("Input").GetComponent<TMP_InputField>();
+        this.passwordInput = menuPanel.transform.Find("Information").transform.Find("Password").transform.Find("Input").GetComponent<TMP_InputField>();
+        this.DBNameInput = menuPanel.transform.Find("Information").transform.Find("DatabaseName").transform.Find("Input").GetComponent<TMP_InputField>();
 
         this.testBuffer = connectButton.transform.Find("BufferIcon").gameObject;
         this.verifyBuffer = verifyButton.transform.Find("BufferIcon").gameObject;
@@ -99,11 +100,12 @@ public class DBHandler : MonoBehaviour
             await connection.CloseAsync();
         }
 
-        messageBox.transform.Find("Title").GetComponent<TextMeshProUGUI>().text = stateTitle;
+        messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = stateTitle;
         messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = stateDescription;
 
         this.testBuffer.SetActive(false);
         messageBox.SetActive(true);
+        this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
 
         if (this.connected) this.verifyButton.interactable = true;
     }
@@ -118,14 +120,45 @@ public class DBHandler : MonoBehaviour
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
             // Run through checklist of tables
-            TableImports tableImports = new TableImports(connection);
-            await tableImports.VerifyTables();
+            TableImports tableImports = new TableImports(connection, loadingBar.GetComponent<LoaderBar>());
+            Tuple<bool, Dictionary<string, Table>> verifTablePacket = await tableImports.VerifyTables();
 
+            // Delete any existing contents (ie, run already executed), and scroll window to top
+            foreach (Transform child in this.statusContainer.transform) Destroy(child.gameObject); 
+            Vector3 currentPos = this.statusContainer.transform.parent.localPosition;
+            currentPos.y = 0f;
+            this.statusContainer.transform.parent.localPosition = currentPos;
+
+            // Create new status indicators
+            foreach (string key in verifTablePacket.Item2.Keys)
+            {
+                GameObject statusIndicator = (Instantiate (textPrefab) as GameObject);
+                statusIndicator.transform.SetParent(this.statusContainer.transform, false);
+
+                // Grab the relevant prefab sections
+                Image light = statusIndicator.transform.Find("Light").GetComponent<Image>();
+                TextMeshProUGUI name = statusIndicator.transform.Find("Column").transform.Find("TableName").GetComponent<TextMeshProUGUI>();
+                TextMeshProUGUI message = statusIndicator.transform.Find("Column").transform.Find("TableMessage").GetComponent<TextMeshProUGUI>();
+
+                // Update those sections
+                Table table = verifTablePacket.Item2[key];
+
+                if (table.lightColor == 0) light.sprite = greenLight;
+                else if (table.lightColor == 1) light.sprite = yellowLight;
+                else light.sprite = redLight;
+
+                name.text = table.tableName;
+                message.text = table.tableMessage;
+            } 
+
+            this.verifyBox.SetActive(true);
+            this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
+            this.verified = verifTablePacket.Item1;
             await connection.CloseAsync();
         }
 
         this.verifyBuffer.SetActive(false);
-        this.menuPanel.GetComponent<CanvasGroup>().interactable = true;
+        if (this.verified) this.startButton.interactable = true;
     }
 
 
@@ -135,14 +168,14 @@ public class DBHandler : MonoBehaviour
     private void CheckButtonStatuses()
     {
         // Button disables
-        if (!connected && (verifyButton.interactable || startButton.interactable))
+        if (!this.connected && (this.verifyButton.interactable || this.startButton.interactable))
         {
-            verifyButton.interactable = false;
-            startButton.interactable = false;
+            this.verifyButton.interactable = false;
+            this.startButton.interactable = false;
         }
-        else if (!verified && startButton.interactable)
+        else if (!this.verified && this.startButton.interactable)
         {
-            startButton.interactable = false;
+            this.startButton.interactable = false;
         }
     }
 
