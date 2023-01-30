@@ -11,7 +11,7 @@ using System.Globalization;
 public class DatabaseConnection
 {
     private static int counter = 0;
-    private static string connString = "Host=172.16.8.56;Username=public_reader;Password=777c4bde2be5c594d93cd887599d165faaa63992d800a958914f66070549c;Database=doellnsee;CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300";
+    private static string connString;
     public static List<int> requestedIDs {get; private set;}
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
@@ -23,7 +23,6 @@ public class DatabaseConnection
     // false: 30 fish
     // null: all fish
 
-
     static DatabaseConnection()
     {
         forwardBatch = new List<CommandWrapper>();
@@ -31,6 +30,8 @@ public class DatabaseConnection
         DatabaseConnection.querying = false;
         DatabaseConnection.requestedIDs = new List<int>();
     }
+
+    public static void SetConnectionString(string connString) { DatabaseConnection.connString = connString; }
 
     public static void QueuePositionBatchCommand(int id, DateTime queryRootTimestamp, bool forwardOnly=true)
     {
@@ -82,7 +83,7 @@ public class DatabaseConnection
         // Async-related inits
         BufferTimer bufferTimer = Buffer.InitializeTimer();
         CancellationTokenSource cts = new CancellationTokenSource();
-        cts.CancelAfter(30000);
+        cts.CancelAfter(30000); // cancel if query is not complete after 30s
         List<Task> queryingTasks = new List<Task>();
 
         // Parallelize forward queries
@@ -450,7 +451,7 @@ public class DatabaseConnection
     public static WeatherPacket GetWeatherData()
     {
         // https://stackoverflow.com/questions/8145479/can-constructors-be-async
-        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         WeatherPacket returnPacket = null;
 
         string sql = string.Format(
@@ -599,7 +600,7 @@ public class DatabaseConnection
 
     public static ThermoPacket GetThermoData()
     {
-        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
         // Inits
         List<ThermoReading> readings = new List<ThermoReading>();
@@ -807,7 +808,7 @@ public class DatabaseConnection
 
     public async static Task<PolygonPacket> GetMacromapPolygons()
     {
-        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss");
+        string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
         // Inits
         DateTime timestamp = DateTime.MaxValue;
@@ -1022,7 +1023,7 @@ public class CommandWrapper
                         ORDER BY p.timestamp desc) q
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
                     LIMIT {3}) a
-                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist, PositionCache.batchSize);
+                ORDER BY a.timestamp", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), UserSettings.cutoffDist, PositionCache.batchSize);
         }
         else
         {
@@ -1057,7 +1058,7 @@ public class CommandWrapper
                             AND p.timestamp > TO_TIMESTAMP('{1}', 'YYYY-MM-DD HH24:MI:SS')
                         ORDER BY p.timestamp) q
                     WHERE (q.leading_distance > {2} or q.leading_distance is null)
-                    LIMIT {3}) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss"), UserSettings.cutoffDist, PositionCache.batchSize);
+                    LIMIT {3}) w", key, timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), UserSettings.cutoffDist, PositionCache.batchSize);
         }
 
         return new NpgsqlBatchCommand(sql);

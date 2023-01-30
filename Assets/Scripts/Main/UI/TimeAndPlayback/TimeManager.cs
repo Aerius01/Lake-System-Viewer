@@ -7,6 +7,7 @@ public class TimeManager : MonoBehaviour
     public bool paused {get; private set;}
     
     private double percentJump;
+    private PlaybackController playbackController;
 
     private static TimeManager _instance;
     [HideInInspector]
@@ -19,17 +20,18 @@ public class TimeManager : MonoBehaviour
         else { _instance = this; }
 
         paused = true;
+        this.playbackController = this.gameObject.GetComponent<PlaybackController>();
     }
 
     public void SetBoundingDates(DateTime earliestTime, DateTime latestTime)
     {
         currentTime = earliestTime;
         percentJump = latestTime.Subtract(earliestTime).TotalHours * 0.005;
-        PlaybackController.SetTickerDisplay();
+        this.playbackController.SetTickerDisplay();
     }
 
     // Update is called once per frame
-    private void FixedUpdate()  { if (!paused) { currentTime = currentTime.AddSeconds(Time.deltaTime * UserSettings.speedUpCoefficient); }}
+    private void FixedUpdate() { if (!paused) { currentTime = currentTime.AddSeconds(Time.deltaTime * UserSettings.speedUpCoefficient); }}
 
     // Playback controls
     public void PlayButton() { paused = false; }

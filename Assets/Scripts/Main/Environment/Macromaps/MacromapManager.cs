@@ -22,6 +22,7 @@ public class MacromapManager: MonoBehaviour
 
     public static event MacroPolyChange macroPolyChange;
     private static bool triggerSpawn = false;
+    private static bool initialized = false;
 
     // Properties
     private static bool timeBounded
@@ -69,6 +70,8 @@ public class MacromapManager: MonoBehaviour
         MacromapManager.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_polygons_local");
         MacromapManager.intensityMap = null;
         macroPolyChange += GrassSpawner.instance.SpawnGrass;
+
+        MacromapManager.initialized = true;
     }
 
     public static async Task UpdateMaps()
@@ -113,26 +116,29 @@ public class MacromapManager: MonoBehaviour
 
     private void Update()
     {
-        // Constantly checked whether to enable or disable
-        // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
-        if (!MacromapManager.beforeFirstTS)
+        if (MacromapManager.initialized)
         {
-            if (MacromapManager.instance.toggle.interactable == false && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
-            { MacromapManager.EnableMaps(); }
-        }
-        else if (MacromapManager.instance.toggle.interactable == true) { MacromapManager.DisableMaps(); }
-
-        // Decide whether or not to show the buffering icon
-        if (MacromapManager.alreadyUpdating && !bufferIcon.activeSelf) bufferIcon.SetActive(true);
-        else if (!MacromapManager.alreadyUpdating && bufferIcon.activeSelf) bufferIcon.SetActive(false);
-
-        // Unity is demanding this be executed from the main thread, hence the workaround
-        lock (MacromapManager.spawnLock)
-        {
-            if (MacromapManager.triggerSpawn)
+            // Constantly checked whether to enable or disable
+            // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
+            if (!MacromapManager.beforeFirstTS)
             {
-                MacromapManager.triggerSpawn = false;
-                macroPolyChange?.Invoke();
+                if (MacromapManager.instance.toggle.interactable == false && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
+                { MacromapManager.EnableMaps(); }
+            }
+            else if (MacromapManager.instance.toggle.interactable == true) { MacromapManager.DisableMaps(); }
+
+            // Decide whether or not to show the buffering icon
+            if (MacromapManager.alreadyUpdating && !bufferIcon.activeSelf) bufferIcon.SetActive(true);
+            else if (!MacromapManager.alreadyUpdating && bufferIcon.activeSelf) bufferIcon.SetActive(false);
+
+            // Unity is demanding this be executed from the main thread, hence the workaround
+            lock (MacromapManager.spawnLock)
+            {
+                if (MacromapManager.triggerSpawn)
+                {
+                    MacromapManager.triggerSpawn = false;
+                    macroPolyChange?.Invoke();
+                }
             }
         }
     }

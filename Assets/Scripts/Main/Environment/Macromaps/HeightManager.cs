@@ -15,6 +15,7 @@ public class HeightManager : MonoBehaviour
 
     public static event MacroHeightChange macroHeightChange;
     private static bool triggerSpawn = false;
+    private static bool initialized = false;
 
     [SerializeField] private Toggle toggle;
 
@@ -64,25 +65,29 @@ public class HeightManager : MonoBehaviour
     {
         HeightManager.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_heights_local");
         macroHeightChange += GrassSpawner.instance.SpawnGrass;
+        HeightManager.initialized = true;
     }
 
     private void Update()
     {
-        // Constantly check whether to enable or disable interactability
-        if (!HeightManager.beforeFirstTS)
+        if (HeightManager.initialized)
         {
-            if (HeightManager.instance.toggle.interactable == false && !HeightManager.alreadyUpdating && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
-            { HeightManager.EnableMaps(); }
-        }
-        else if (HeightManager.instance.toggle.interactable == true) { HeightManager.DisableMaps(); }
-
-        // Unity is demanding this be executed from the main thread, hence the workaround
-        lock(HeightManager.spawnLock)
-        {
-            if (HeightManager.triggerSpawn)
+            // Constantly check whether to enable or disable interactability
+            if (!HeightManager.beforeFirstTS)
             {
-                HeightManager.triggerSpawn = false;
-                macroHeightChange?.Invoke();
+                if (HeightManager.instance.toggle.interactable == false && !HeightManager.alreadyUpdating && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
+                { HeightManager.EnableMaps(); }
+            }
+            else if (HeightManager.instance.toggle.interactable == true) { HeightManager.DisableMaps(); }
+
+            // Unity is demanding this be executed from the main thread, hence the workaround
+            lock(HeightManager.spawnLock)
+            {
+                if (HeightManager.triggerSpawn)
+                {
+                    HeightManager.triggerSpawn = false;
+                    macroHeightChange?.Invoke();
+                }
             }
         }
     }

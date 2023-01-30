@@ -13,10 +13,11 @@ public class DBHandler : MonoBehaviour
     private bool connected = false, verified = false; 
     private TMP_InputField hostInput, usernameInput, passwordInput, DBNameInput;
     private GameObject testBuffer, verifyBuffer;
+    private TableImports tableImports;
 
-    [SerializeField] private Main main;
+    [SerializeField] private GameObject main;
     [SerializeField] private Button connectButton, verifyButton, startButton;
-    [SerializeField] private GameObject menuPanel, messageBox, loadingBar, verifyBox, textPrefab, statusContainer;
+    [SerializeField] private GameObject menuPanel, messageBox, loadingBar, verifyBox, textPrefab, statusContainer, background;
     [SerializeField] private Sprite greenLight, yellowLight, redLight;
 
     private void Awake()
@@ -51,7 +52,7 @@ public class DBHandler : MonoBehaviour
         this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
         this.testBuffer.SetActive(true);
 
-        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
+        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};Pooling=false;", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
         string stateTitle = "";
         string stateDescription = "";
 
@@ -112,48 +113,77 @@ public class DBHandler : MonoBehaviour
 
     public async void VerifyButton()
     {
-        // WHAT IF THE CONNECTION TO DB IS LOST MID-QUERY
         this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
         this.verifyBuffer.SetActive(true);
 
-        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
+        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=false;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
             // Run through checklist of tables
-            TableImports tableImports = new TableImports(connection, loadingBar.GetComponent<LoaderBar>());
-            Tuple<bool, Dictionary<string, Table>> verifTablePacket = await tableImports.VerifyTables();
-
-            // Delete any existing contents (ie, run already executed), and scroll window to top
-            foreach (Transform child in this.statusContainer.transform) Destroy(child.gameObject); 
-            Vector3 currentPos = this.statusContainer.transform.parent.localPosition;
-            currentPos.y = 0f;
-            this.statusContainer.transform.parent.localPosition = currentPos;
-
-            // Create new status indicators
-            foreach (string key in verifTablePacket.Item2.Keys)
+            try
             {
-                GameObject statusIndicator = (Instantiate (textPrefab) as GameObject);
-                statusIndicator.transform.SetParent(this.statusContainer.transform, false);
+                tableImports = new TableImports(connection, loadingBar.GetComponent<LoaderBar>());
+                Tuple<bool, Dictionary<string, Table>> verifTablePacket = await tableImports.VerifyTables();
 
-                // Grab the relevant prefab sections
-                Image light = statusIndicator.transform.Find("Light").GetComponent<Image>();
-                TextMeshProUGUI name = statusIndicator.transform.Find("Column").transform.Find("TableName").GetComponent<TextMeshProUGUI>();
-                TextMeshProUGUI message = statusIndicator.transform.Find("Column").transform.Find("TableMessage").GetComponent<TextMeshProUGUI>();
+                if (verifTablePacket.Item2.Keys.Count == 0) throw new NpgsqlException();
 
-                // Update those sections
-                Table table = verifTablePacket.Item2[key];
+                // Delete any existing contents (ie, run already executed), and scroll window to top
+                foreach (Transform child in this.statusContainer.transform) Destroy(child.gameObject); 
+                Vector3 currentPos = this.statusContainer.transform.parent.localPosition;
+                currentPos.y = 0f;
+                this.statusContainer.transform.parent.localPosition = currentPos;
 
-                if (table.lightColor == 0) light.sprite = greenLight;
-                else if (table.lightColor == 1) light.sprite = yellowLight;
-                else light.sprite = redLight;
+                // Create new status indicators
+                foreach (string key in verifTablePacket.Item2.Keys)
+                {
+                    GameObject statusIndicator = (Instantiate (textPrefab) as GameObject);
+                    statusIndicator.transform.SetParent(this.statusContainer.transform, false);
 
-                name.text = table.tableName;
-                message.text = table.tableMessage;
-            } 
+                    // Grab the relevant prefab sections
+                    Image light = statusIndicator.transform.Find("Light").GetComponent<Image>();
+                    TextMeshProUGUI name = statusIndicator.transform.Find("Column").transform.Find("TableName").GetComponent<TextMeshProUGUI>();
+                    TextMeshProUGUI message = statusIndicator.transform.Find("Column").transform.Find("TableMessage").GetComponent<TextMeshProUGUI>();
 
-            this.verifyBox.SetActive(true);
+                    // Update those sections
+                    Table table = verifTablePacket.Item2[key];
+
+                    if (table.lightColor == 0) light.sprite = greenLight;
+                    else if (table.lightColor == 1) light.sprite = yellowLight;
+                    else light.sprite = redLight;
+
+                    name.text = table.tableName;
+                    message.text = table.tableMessage;
+                } 
+
+                this.verified = verifTablePacket.Item1;
+                this.verifyBox.SetActive(true);
+            }
+            catch (Npgsql.NpgsqlException e)
+            {
+                if (e.InnerException is System.IO.IOException) // Connection interrupted while reading
+                {
+                    messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Connection Interrupted";
+                    messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = "The connection was interrupted while attempting to verify the tables. Please re-test the connection.";
+                }
+                else
+                {
+                    messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Connection Issue";
+                    messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = "The database could not be contacted at the verify step. It's unclear why, given that the database was contactable during the TEST step. Please re-test and try again.";
+                }
+
+                messageBox.SetActive(true);
+                this.NewInput();
+            }
+            catch (Exception)
+            {
+                messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Unhandled Exception";
+                messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = "Something unexpected and unaccounted for has occurred. Please restart the process. If the error persists, maybe try restarting the application or your computer.";
+                
+                messageBox.SetActive(true);
+                this.NewInput();
+            }
+
             this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
-            this.verified = verifTablePacket.Item1;
             await connection.CloseAsync();
         }
 
@@ -161,9 +191,16 @@ public class DBHandler : MonoBehaviour
         if (this.verified) this.startButton.interactable = true;
     }
 
+    public void StartButton()
+    {
+        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
+        DatabaseConnection.SetConnectionString(connString);
 
-
-    // start --> saves table bools, saves connectivity data, activates MAIN
+        this.tableImports.UpdateUserSettings();
+        this.main.SetActive(true);
+        this.background.SetActive(false);
+        this.gameObject.SetActive(false);
+    }
 
     private void CheckButtonStatuses()
     {

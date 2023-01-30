@@ -29,30 +29,42 @@ public class TableImports
 
     public TableImports(NpgsqlConnection connection, LoaderBar loadingBar) { this.connection = connection; this.loadingBar = loadingBar; this.tables = new Dictionary<string, Table>(); }
 
+    public void UpdateUserSettings() { UserSettings.TablePresences(fishAccepted, positionsAccepted, heightMapAccepted, speciesAccepted, weatherAccepted, thermoclineAccepted, macroPolysAccepted, macroHeightsAccepted); }
+
     public async Task<Tuple<bool, Dictionary<string,Table>>> VerifyTables()
     {
-        int runningCount = 0;
-        if (connection.State != ConnectionState.Open)
+        try
         {
-            // This connection tends to have problems. Attempt to re-open the connection if it fails
-            while (runningCount < 30)
+            int runningCount = 0;
+            if (connection.State != ConnectionState.Open)
             {
-                runningCount++;
-                try { await connection.OpenAsync(); break; }
-                catch (NpgsqlException e) { Debug.Log(e.Message); }
+                // This connection tends to have problems. Attempt to re-open the connection if it fails
+                while (runningCount < 30)
+                {
+                    runningCount++;
+                    try { await connection.OpenAsync(); break; }
+                    catch (NpgsqlException e) { Debug.Log(e.Message); }
+                }
+            }
+
+            if (runningCount == 30) { return new Tuple<bool, Dictionary<string,Table>>(false, this.tables); } // failed to open
+            else
+            {
+                DataTable schema = await connection.GetSchemaAsync("Tables");
+
+                this.tableNames = new List<string>();
+                foreach(DataRow row in schema.Rows) { this.tableNames.Add(row["table_name"].ToString()); }
+
+                // Run through checklist of tables
+                return new Tuple<bool, Dictionary<string,Table>>(await this.Verificator(), this.tables);
             }
         }
-
-        if (runningCount == 30) { return new Tuple<bool, Dictionary<string,Table>>(false, this.tables); } // failed to open
-        else
+        catch (Exception)
         {
-            DataTable schema = await connection.GetSchemaAsync("Tables");
-
-            this.tableNames = new List<string>();
-            foreach(DataRow row in schema.Rows) { this.tableNames.Add(row["table_name"].ToString()); }
-
-            // Run through checklist of tables
-            return new Tuple<bool, Dictionary<string,Table>>(await this.Verificator(), this.tables);
+            this.loadingBar.ShutDown();
+            if (this.connection.State != ConnectionState.Closed) await this.connection.CloseAsync();
+            this.connection = null;
+            throw;
         }
     }
 

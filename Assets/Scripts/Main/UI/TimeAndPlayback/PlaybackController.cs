@@ -6,23 +6,17 @@ using UnityEngine.UI;
 
 public class PlaybackController : MonoBehaviour
 {
-    private static TextMeshProUGUI timeDisplayText;
-    private Slider timeControlSlider;
+    [SerializeField] private TextMeshProUGUI timeDisplayText;
+    [SerializeField] private Slider timeControlSlider;
     public static double totalTicks { get; private set; }
     private bool sliderSelected;
 
-    private void Awake()
-    {
-        timeDisplayText = GameObject.Find("TimeDisplayText").GetComponent<TextMeshProUGUI>();
-        timeControlSlider = GameObject.Find("TimeControlSlider").GetComponent<Slider>();
-    }
+    private void Start() { this.sliderSelected = false; }
 
-    private void Start() { sliderSelected = false; }
-
-    public static void SetTickerDisplay()
+    public void SetTickerDisplay()
     {
-        timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
-        totalTicks = FishManager.latestOverallTime.Ticks - FishManager.earliestOverallTime.Ticks;
+        this.timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+        PlaybackController.totalTicks = FishManager.latestOverallTime.Ticks - FishManager.earliestOverallTime.Ticks;
     }
 
     void FixedUpdate()
@@ -30,12 +24,12 @@ public class PlaybackController : MonoBehaviour
         if (!TimeManager.instance.paused)
         {
             // Update time display
-            timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
+            this.timeDisplayText.text = TimeManager.instance.currentTime.ToString("G", CultureInfo.CreateSpecificCulture("de-DE"));
 
             // Adjust the slider value automatically if not touching it
-            if (!sliderSelected)
+            if (!this.sliderSelected)
             {
-                timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks) / (double)totalTicks);
+                this.timeControlSlider.normalizedValue = Convert.ToSingle((double)(TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks) / (double)totalTicks);
             }
         }
     }
@@ -43,16 +37,16 @@ public class PlaybackController : MonoBehaviour
     // Slider controls
     public void SliderDeselect()
     {
-        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
+        long differential = (long)(this.timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
-        sliderSelected = false;
+        this.sliderSelected = false;
     }
 
     public void ChangingValue()
     {
-        long differential = (long)(timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
+        long differential = (long)(this.timeControlSlider.normalizedValue * totalTicks) - ((long)TimeManager.instance.currentTime.Ticks - FishManager.earliestOverallTime.Ticks);
         TimeManager.instance.AddTicksToTime(differential);
     }
 
-    public void SliderSelect() { sliderSelected = true; }
+    public void SliderSelect() { this.sliderSelected = true; }
 }

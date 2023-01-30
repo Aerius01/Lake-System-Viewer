@@ -10,18 +10,21 @@ public class Main : MonoBehaviour
     [SerializeField] private FishManager fishManager;
     [SerializeField] private SunController sunController;
     [SerializeField] private MoonController moonController;
-    [SerializeField] private GameObject managerObject;
+    [SerializeField] private GameObject fishManagerObject, mainCanvas;
     private bool finishedStartup = false;
 
     public static event FishDictAssembled fishDictAssembled;
 
     private async void Start()
     {
+        mainCanvas.SetActive(true);
         LoadingScreen.Activate();
         List<Task> taskList = new List<Task>();
 
+
+        // Have everything instanced, so that we can trash/reset anything by simply deleting the instance
         Task<bool> meshSetUp = MeshManager.instance.SetUpMesh();
-        fishManager = new FishManager(managerObject);
+        fishManager = new FishManager(fishManagerObject);
 
         LoadingScreen.Text("Waiting on heightmap data...");
         if (await meshSetUp) ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations 
@@ -42,6 +45,13 @@ public class Main : MonoBehaviour
             finishedStartup = true;
             LoadingScreen.Deactivate();
         }
+    }
+
+    public void ClearAll()
+    {
+        // clear all Start() initializations
+        // Time/playback fully resets with a re-run of main.cs
+        // restart
     }
 
     private async void FixedUpdate()
