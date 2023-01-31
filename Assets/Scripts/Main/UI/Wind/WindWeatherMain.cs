@@ -68,7 +68,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         else _instance = this; 
     }
 
-    private void Start()
+    public void StartWindWeather()
     {
         foreach (GameObject obj in particleObject)
         { 

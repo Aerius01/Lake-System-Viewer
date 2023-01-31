@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Data;
 using System.Threading.Tasks;
+using System;
 
 [RequireComponent(typeof(MeshFilter))]
 public class MeshManager : MonoBehaviour
@@ -18,6 +19,7 @@ public class MeshManager : MonoBehaviour
 
     private (float, float)[] contourBoundaries;
     private int numberOfContourPartitions = 10;
+    private DataTable meshTable;
 
     [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
@@ -47,13 +49,17 @@ public class MeshManager : MonoBehaviour
         for (int i = 0; i < 10; i++) this.contourBoundaries[i] = new (LocalMeshData.minDepth + increment * i - tolerance, LocalMeshData.minDepth + increment * i + tolerance);
     }
 
-    public async Task<bool> SetUpMesh()
-    {   
-        DataTable meshTable = await DatabaseConnection.GetMeshMap();
+    public async Task<bool> ImportMap()
+    {
+        this.meshTable = await DatabaseConnection.GetMeshMap();
+        return true;
+    }
 
-        if(meshTable != null)
+    public bool SetUpMesh()
+    {   
+        if(this.meshTable != null)
         {
-            if(meshTable.Rows.Count > 0)
+            if(this.meshTable.Rows.Count > 0)
             {
                 LocalMeshData meshData = new LocalMeshData(meshTable, NDVI);
 

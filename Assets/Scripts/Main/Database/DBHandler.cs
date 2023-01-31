@@ -7,6 +7,7 @@ using Npgsql;
 using System.Data;
 using TMPro;
 using Unity;
+using System.Threading.Tasks;
 
 public class DBHandler : MonoBehaviour
 {
@@ -15,9 +16,10 @@ public class DBHandler : MonoBehaviour
     private GameObject testBuffer, verifyBuffer;
     private TableImports tableImports;
 
-    [SerializeField] private GameObject main;
+    [SerializeField] private Main main;
     [SerializeField] private Button connectButton, verifyButton, startButton;
-    [SerializeField] private GameObject menuPanel, messageBox, loadingBar, verifyBox, textPrefab, statusContainer, background;
+    [SerializeField] private GameObject menuPanel, messageBox, verifyBox, textPrefab, statusContainer, background;
+    [SerializeField] private LoaderBar loadingBar;
     [SerializeField] private Sprite greenLight, yellowLight, redLight;
 
     private void Awake()
@@ -122,10 +124,10 @@ public class DBHandler : MonoBehaviour
             // Run through checklist of tables
             try
             {
-                tableImports = new TableImports(connection, loadingBar.GetComponent<LoaderBar>());
-                Tuple<bool, Dictionary<string, Table>> verifTablePacket = await tableImports.VerifyTables();
+                tableImports = new TableImports(connection, loadingBar);
+                bool requiredTables = await tableImports.VerifyTables();
 
-                if (verifTablePacket.Item2.Keys.Count == 0) throw new NpgsqlException();
+                if (TableImports.tables.Keys.Count == 0) throw new NpgsqlException();
 
                 // Delete any existing contents (ie, run already executed), and scroll window to top
                 foreach (Transform child in this.statusContainer.transform) Destroy(child.gameObject); 
@@ -134,7 +136,7 @@ public class DBHandler : MonoBehaviour
                 this.statusContainer.transform.parent.localPosition = currentPos;
 
                 // Create new status indicators
-                foreach (string key in verifTablePacket.Item2.Keys)
+                foreach (string key in TableImports.tables.Keys)
                 {
                     GameObject statusIndicator = (Instantiate (textPrefab) as GameObject);
                     statusIndicator.transform.SetParent(this.statusContainer.transform, false);
@@ -145,7 +147,7 @@ public class DBHandler : MonoBehaviour
                     TextMeshProUGUI message = statusIndicator.transform.Find("Column").transform.Find("TableMessage").GetComponent<TextMeshProUGUI>();
 
                     // Update those sections
-                    Table table = verifTablePacket.Item2[key];
+                    Table table = TableImports.tables[key];
 
                     if (table.lightColor == 0) light.sprite = greenLight;
                     else if (table.lightColor == 1) light.sprite = yellowLight;
@@ -155,7 +157,7 @@ public class DBHandler : MonoBehaviour
                     message.text = table.tableMessage;
                 } 
 
-                this.verified = verifTablePacket.Item1;
+                this.verified = requiredTables;
                 this.verifyBox.SetActive(true);
             }
             catch (Npgsql.NpgsqlException e)
@@ -191,14 +193,29 @@ public class DBHandler : MonoBehaviour
         if (this.verified) this.startButton.interactable = true;
     }
 
-    public void StartButton()
+    public async void StartButton()
     {
+        this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
+        this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
+
         string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
         DatabaseConnection.SetConnectionString(connString);
 
-        this.tableImports.UpdateUserSettings();
-        this.main.SetActive(true);
-        this.background.SetActive(false);
+        loadingBar.WakeUp(TableImports.checkTables.Count);
+        bool successfulInit = true;
+        try { successfulInit = await this.main.Initialize(loadingBar); }
+        catch (Exception) { successfulInit = false; loadingBar.ShutDown(); throw; }
+
+        if (!successfulInit)
+        {
+            messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Import Error";
+            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = "There was an issue while importing the data. It is likely that the connection was interrupted. Please restart the verification process.";
+            
+            messageBox.SetActive(true);
+            this.NewInput();
+        }
+
+        loadingBar.ShutDown();
         this.gameObject.SetActive(false);
     }
 

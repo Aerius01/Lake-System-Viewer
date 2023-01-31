@@ -56,11 +56,11 @@ public class FishList : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Harmonize time across entire update time window
-        DateTime updateTime = TimeManager.instance.currentTime;
-
         if (listPopulated)
         {
+            // Harmonize time across entire update time window
+            DateTime updateTime = TimeManager.instance.currentTime;
+
             listSize = 250; // Toggle group size + titles
             foreach (SpeciesBox speciesBox in speciesList)
             {

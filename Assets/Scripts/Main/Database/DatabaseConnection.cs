@@ -732,7 +732,7 @@ public class DatabaseConnection
     {
         DataTable meshTable = new DataTable();
         string sql = "SELECT * FROM meshmap";
-
+        
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
             await connection.OpenAsync();
@@ -741,7 +741,11 @@ public class DatabaseConnection
             await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
                 // No fish metadata could be recovered
-                if (!rdr.HasRows) { Debug.Log("Meshmap SQL query yielded empty dataset"); }
+                if (!rdr.HasRows)
+                {
+                    Debug.Log("Meshmap SQL query yielded empty dataset");
+                    throw new Exception();
+                }
                 else
                 {
                     int columnCount = rdr.FieldCount;
@@ -779,6 +783,7 @@ public class DatabaseConnection
             }
             await connection.CloseAsync();
         }
+    
         return meshTable;
     }
 

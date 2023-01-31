@@ -9,9 +9,9 @@ public class TableImports
 {
     private NpgsqlConnection connection;
     private List<string> tableNames;
-    private Dictionary<string, Table> tables;
+    public static Dictionary<string, Table> tables { get; private set; }
     private LoaderBar loadingBar;
-    private List<string> checkTables;
+    public static List<string> checkTables { get; private set; }
 
     // die notwendig sind
     public bool fishAccepted { get; private set; }
@@ -27,11 +27,17 @@ public class TableImports
 
     private static readonly object operationLocker = new object();
 
-    public TableImports(NpgsqlConnection connection, LoaderBar loadingBar) { this.connection = connection; this.loadingBar = loadingBar; this.tables = new Dictionary<string, Table>(); }
+    public TableImports(NpgsqlConnection connection, LoaderBar loadingBar)
+    {
+        this.connection = connection;
+        this.loadingBar = loadingBar;
+        TableImports.tables = new Dictionary<string, Table>(); 
 
-    public void UpdateUserSettings() { UserSettings.TablePresences(fishAccepted, positionsAccepted, heightMapAccepted, speciesAccepted, weatherAccepted, thermoclineAccepted, macroPolysAccepted, macroHeightsAccepted); }
+        // The ordering of these names is important
+        TableImports.checkTables = new List<string>() { "fish", "meshmap", "positions_local", "macromap_polygons_local", "macromap_heights_local", "species", "weatherstation", "thermocline" };
+    }
 
-    public async Task<Tuple<bool, Dictionary<string,Table>>> VerifyTables()
+    public async Task<bool> VerifyTables()
     {
         try
         {
@@ -47,7 +53,7 @@ public class TableImports
                 }
             }
 
-            if (runningCount == 30) { return new Tuple<bool, Dictionary<string,Table>>(false, this.tables); } // failed to open
+            if (runningCount == 30) { return false; } // failed to open
             else
             {
                 DataTable schema = await connection.GetSchemaAsync("Tables");
@@ -56,7 +62,7 @@ public class TableImports
                 foreach(DataRow row in schema.Rows) { this.tableNames.Add(row["table_name"].ToString()); }
 
                 // Run through checklist of tables
-                return new Tuple<bool, Dictionary<string,Table>>(await this.Verificator(), this.tables);
+                return await this.Verificator();
             }
         }
         catch (Exception)
@@ -73,18 +79,17 @@ public class TableImports
         // Verify the structure of each table in sequence. These cannot be parallelized since they each rely on
         // querying the same database, and queries cannot be run in parallel (will throw an error).
 
-        // Start by checking how many of the check tables are present. The ordering of these names is important.
-        this.checkTables = new List<string>() { "fish", "meshmap", "positions_local", "macromap_polygons_local", "macromap_heights_local", "species", "weatherstation", "thermocline" };
+        // Start by checking how many of the check tables are present
         int tableCounter = 0;
         foreach (string tableName in checkTables) if (this.tableNames.Contains(tableName)) tableCounter += 1;
 
         this.loadingBar.WakeUp(tableCounter);
 
-        this.loadingBar.SetText(this.checkTables[0]);
-        this.fishAccepted = await Task.Run(() => this.CheckFishTable(this.checkTables[0]));
+        this.loadingBar.SetText(TableImports.checkTables[0]);
+        this.fishAccepted = await Task.Run(() => this.CheckFishTable(TableImports.checkTables[0]));
 
-        this.loadingBar.SetText(this.checkTables[1]);
-        Tuple<bool, int, int, float, float> heightMapPacket = await Task.Run(() => this.CheckHeightMap(this.checkTables[1]));
+        this.loadingBar.SetText(TableImports.checkTables[1]);
+        Tuple<bool, int, int, float, float> heightMapPacket = await Task.Run(() => this.CheckHeightMap(TableImports.checkTables[1]));
         this.heightMapAccepted = heightMapPacket.Item1;
 
         // These tables are dependent on the successful querying of the heightmap table
@@ -93,24 +98,24 @@ public class TableImports
         this.macroHeightsAccepted = false;
         if (this.heightMapAccepted)
         {
-            this.loadingBar.SetText(this.checkTables[2]);
-            this.positionsAccepted = await Task.Run(() => this.CheckPositionsTable(this.checkTables[2], heightMapPacket.Item2, heightMapPacket.Item3, heightMapPacket.Item4, heightMapPacket.Item5));
+            this.loadingBar.SetText(TableImports.checkTables[2]);
+            this.positionsAccepted = await Task.Run(() => this.CheckPositionsTable(TableImports.checkTables[2], heightMapPacket.Item2, heightMapPacket.Item3, heightMapPacket.Item4, heightMapPacket.Item5));
 
-            this.loadingBar.SetText(this.checkTables[3]);
-            this.macroPolysAccepted = await Task.Run(() => this.CheckMacroPolyTable(this.checkTables[3], heightMapPacket.Item2, heightMapPacket.Item3));
+            this.loadingBar.SetText(TableImports.checkTables[3]);
+            this.macroPolysAccepted = await Task.Run(() => this.CheckMacroPolyTable(TableImports.checkTables[3], heightMapPacket.Item2, heightMapPacket.Item3));
 
-            this.loadingBar.SetText(this.checkTables[4]);
-            this.macroHeightsAccepted = await Task.Run(() => this.CheckMacroHeightTable(this.checkTables[4], heightMapPacket.Item2, heightMapPacket.Item3));
+            this.loadingBar.SetText(TableImports.checkTables[4]);
+            this.macroHeightsAccepted = await Task.Run(() => this.CheckMacroHeightTable(TableImports.checkTables[4], heightMapPacket.Item2, heightMapPacket.Item3));
         }
 
-        this.loadingBar.SetText(this.checkTables[5]);
-        this.speciesAccepted = await Task.Run(() => this.CheckSpeciesTable(this.checkTables[5]));
+        this.loadingBar.SetText(TableImports.checkTables[5]);
+        this.speciesAccepted = await Task.Run(() => this.CheckSpeciesTable(TableImports.checkTables[5]));
 
-        this.loadingBar.SetText(this.checkTables[6]);
-        this.weatherAccepted = await Task.Run(() => this.CheckWeatherTable(this.checkTables[6]));
+        this.loadingBar.SetText(TableImports.checkTables[6]);
+        this.weatherAccepted = await Task.Run(() => this.CheckWeatherTable(TableImports.checkTables[6]));
 
-        this.loadingBar.SetText(this.checkTables[7]);
-        this.thermoclineAccepted = await Task.Run(() => this.CheckThermoTable(this.checkTables[7]));
+        this.loadingBar.SetText(TableImports.checkTables[7]);
+        this.thermoclineAccepted = await Task.Run(() => this.CheckThermoTable(TableImports.checkTables[7]));
 
         this.loadingBar.ShutDown();
         
@@ -128,7 +133,7 @@ public class TableImports
 
         // Fish table
         Table fishTable = new Table(tableName);
-        lock(operationLocker) this.tables[tableName] = fishTable;
+        lock(operationLocker) TableImports.tables[tableName] = fishTable;
 
         // PRIMARY: The table must be present
         if (this.tableNames.Contains(tableName))
@@ -238,7 +243,7 @@ public class TableImports
         int rowCount = 0;
         int columnCount = 0;
         Table heightMapTable = new Table(tableName);
-        this.tables[tableName] = heightMapTable;
+        TableImports.tables[tableName] = heightMapTable;
 
         // PRIMARY: The table must be present
         if (this.tableNames.Contains(tableName))
@@ -360,7 +365,7 @@ public class TableImports
 
         // Positions table
         Table positionsTable = new Table(tableName);
-        this.tables[tableName] = positionsTable;
+        TableImports.tables[tableName] = positionsTable;
         List<string> requiredColumns = new List<string> {"id", "timestamp", "x", "y", "z"};
 
         // PRIMARY: The table must be present
@@ -434,7 +439,7 @@ public class TableImports
 
         // Thermocline table
         Table thermoTable = new Table(tableName);
-        this.tables[tableName] = thermoTable;
+        TableImports.tables[tableName] = thermoTable;
         List<string> requiredColumns = new List<string> {"timestamp", "depth", "temperature"};
 
         // PRIMARY: The table must be present
@@ -471,7 +476,7 @@ public class TableImports
 
         // Thermocline table
         Table speciesTable = new Table(tableName);
-        this.tables[tableName] = speciesTable;
+        TableImports.tables[tableName] = speciesTable;
         List<string> requiredColumns = new List<string> { "id", "name" };
 
         // PRIMARY: The table must be present
@@ -533,7 +538,7 @@ public class TableImports
 
         // Weather table
         Table weatherTable = new Table(tableName);
-        this.tables[tableName] = weatherTable;
+        TableImports.tables[tableName] = weatherTable;
 
         // PRIMARY: The table must be present
         if (this.tableNames.Contains(tableName))
@@ -614,7 +619,7 @@ public class TableImports
 
         // Polygon table
         Table polyTable = new Table(tableName);
-        this.tables[tableName] = polyTable;
+        TableImports.tables[tableName] = polyTable;
         List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "poly_id", "upper", "lower" };
 
         // PRIMARY: The table must be present
@@ -651,7 +656,7 @@ public class TableImports
 
         // Polygon table
         Table heightTable = new Table(tableName);
-        this.tables[tableName] = heightTable;
+        TableImports.tables[tableName] = heightTable;
         List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "height_m" };
 
         // PRIMARY: The table must be present
