@@ -9,127 +9,169 @@ using TMPro;
 public class ThermoclineDOMain : MonoBehaviour
 {
     // In-game exposed
-    [SerializeField]
-    private Material planeMaterial;
-    [SerializeField]
-    private Toggle toggle;
-    [SerializeField]
-    private TextMeshProUGUI thermoText;
-    [SerializeField]
-    private GameObject thermoDepth;
-    [SerializeField]
-    private ColorBar TempCB, DOCB;
+    [SerializeField] private Material planeMaterial;
+    [SerializeField] private Toggle toggle;
+    [SerializeField] private TextMeshProUGUI thermoText;
+    [SerializeField] private GameObject thermoDepth, thermoRootObject, widgetText;
+    [SerializeField] private ColorBar TempCB, DOCB;
 
-    // Singleton variables
     private static ThermoclineDOMain _instance;
     [HideInInspector]
     public static ThermoclineDOMain instance {get { return _instance; } set {_instance = value; }}
 
+
+    public bool initialized { get; private set; }
+    private bool updating = false, performSyncUpdate = false;
+
     // Metadata
-    public static DateTime earliestWeatherTimestamp { get; private set; }
-    public static DateTime latestWeatherTimestamp { get; private set; }
+    public DateTime earliestThermoTimestamp { get; private set; }
+    public DateTime latestThermoTimestamp { get; private set; }
+    public float deepestReading { get; private set; }
     public ThermoclinePlane thermoclinePlane {get; private set;}
-    public static float? currentThermoDepth { get; private set; }
+    public float? currentThermoDepth { get; private set; }
+    public float increment { get; private set; }
+
     
     // Other
     private float incrementalHeight;
     private Vector3 originPositionBar, originContainer;
 
     // Update logic
-    private static ThermoPacket currentPacket = null;
+    private ThermoPacket currentPacket = null;
     private static readonly object locker = new object();
-    private static bool timeBounded
+    private bool timeBounded
     {
         get
         {
-            if (ThermoclineDOMain.currentPacket == null) return false; // no times to be bounded by
-            else if (DateTime.Compare(TimeManager.instance.currentTime, ThermoclineDOMain.currentPacket.timestamp) < 0) return false; // the current time is earlier than the packet's timestamp
-            else if (ThermoclineDOMain.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
+            if (this.currentPacket == null) return false; // no times to be bounded by
+            else if (DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket.timestamp) < 0) return false; // the current time is earlier than the packet's timestamp
+            else if (this.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
             else
             {
-                if (DateTime.Compare(TimeManager.instance.currentTime, ThermoclineDOMain.currentPacket.timestamp) > 0
-                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(ThermoclineDOMain.currentPacket.nextTimestamp)) < 0)
+                if (DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket.timestamp) > 0
+                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.nextTimestamp)) < 0)
                 return true; // traditional bounds (middle condition)
                 else return false;
             }
         }
     }
-    private static bool beforeFirstTS
+    private bool beforeFirstTS
     {
         get
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, ThermoclineDOMain.earliestWeatherTimestamp) < 0) return true;
+            if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestThermoTimestamp) < 0) return true;
             else return false;
         }
     }
 
 
 
-    private void Awake()
+    private async void Awake()
     {
-        // Destroy duplicates instances
-        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
-        else { _instance = this; }
-    }
+        this.initialized = false;
+        this.currentPacket = null;
 
-    public void StartThermo()
-    {
-        // Get TS extremes
-        DateTime[] boundingDates = DatabaseConnection.GetThermoMinMaxTimes();
-        ThermoclineDOMain.earliestWeatherTimestamp = boundingDates[0];
-        ThermoclineDOMain.latestWeatherTimestamp = boundingDates[1];
-
-        thermoclinePlane = new ThermoclinePlane(planeMaterial);
-
-        float height = TempCB.GetComponent<RectTransform>().rect.height;
-        incrementalHeight = height / 10f;
-        originPositionBar = thermoDepth.GetComponent<RectTransform>().anchoredPosition;
-        originContainer = instance.transform.parent.GetComponent<RectTransform>().position;
-
-        ToggleThermocline();
-        FetchNewBounds();
-    }
-
-    private static void FetchNewBounds()
-    {
-        if (!ThermoclineDOMain.beforeFirstTS)
+        try
         {
-            try { lock(ThermoclineDOMain.locker) { ThermoclineDOMain.currentPacket = DatabaseConnection.GetThermoData(); } }
-            catch (Npgsql.NpgsqlOperationInProgressException)
-            {
-                lock(ThermoclineDOMain.locker) { ThermoclineDOMain.currentPacket = null; }
-                Debug.Log("ThermoclineDOMain; DB Operation already in progress");
-            }
+            // Destroy duplicate instances
+            if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+            else { _instance = this; }
+
+            // Other inits
+            this.thermoclinePlane = new ThermoclinePlane(planeMaterial);
+            float height = this.TempCB.GetComponent<RectTransform>().rect.height;
+            incrementalHeight = height / 10f;
+            originPositionBar = this.thermoDepth.GetComponent<RectTransform>().anchoredPosition;
+            originContainer = this.thermoRootObject.GetComponent<RectTransform>().position;
+
+            // Get timestamp extremes
+            Tuple<DateTime, DateTime, float> returnPacket = DatabaseConnection.GetThermoMinMaxes(); 
+            this.earliestThermoTimestamp = returnPacket.Item1;
+            this.latestThermoTimestamp = returnPacket.Item2;
+            this.deepestReading = returnPacket.Item3;
+
+            if (this.earliestThermoTimestamp == DateTime.MinValue || this.latestThermoTimestamp == DateTime.MaxValue || this.deepestReading == float.MinValue) throw new Exception();
+
+            this.SetupWidget();
+
+            // Update
+            this.ToggleThermocline();
+            await this.UpdateThermoclineDOMain();
+
+            this.thermoRootObject.SetActive(true);
+            this.initialized = true;
         }
-        else ThermoclineDOMain.currentPacket = null;
-
-        ThermoclineDOMain.instance.PerformUpdate();
+        catch (Exception) { this.EnableThermoclineDOMain(false); }
     }
 
-    public void UpdateThermoclineDOMain()
+    private void SetupWidget()
     {
-        if (ThermoclineDOMain.currentPacket == null) FetchNewBounds();
-        else if (!ThermoclineDOMain.timeBounded) FetchNewBounds();
+        // Assemble text elements
+        List<int> textNumbers = new List<int>() { 20, 40, 60, 80, 100 };
+        Dictionary<int, TextMeshProUGUI> textObjects = new Dictionary<int, TextMeshProUGUI>();
+
+        foreach(int id in textNumbers) textObjects[id] = this.widgetText.transform.Find(id.ToString()).GetComponent<TextMeshProUGUI>();
+
+        // Update the in-game element
+        this.increment = this.deepestReading / 10f;
+        foreach(int id in textNumbers) textObjects[id].text = string.Format("-- {0:#0} -- ", ((float)id) * this.increment);
+
+        this.TempCB.StartUp();
+        this.DOCB.StartUp();
     }
 
-    private void PerformUpdate()
+    private async Task<bool> FetchNewBounds()
     {
-        if (ThermoclineDOMain.currentPacket == null) { if (ThermoclineDOMain.instance.toggle.interactable) ThermoclineDOMain.EnableThermoclineDOMain(false); }
-        else if (ThermoclineDOMain.currentPacket != null)
+        // if an exception is thrown or no data is returned (null), the method returns false
+        try 
+        { 
+            this.currentPacket = await DatabaseConnection.GetThermoData(); 
+            if (this.currentPacket == null) throw new Exception();
+            else return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    public async Task UpdateThermoclineDOMain()
+    {
+        // Handle asynchronous updates
+        // We don't want to senselessly overload the system with queries that return nothing
+        if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
         {
-            // Execute thermo-related updates
+            // Secure the multi-threading
+            lock(ThermoclineDOMain.locker) this.updating = true;
+
+            if (this.currentPacket == null) { if (await FetchNewBounds()) this.CallSyncUpdate(); } 
+            else if (!this.timeBounded) { if (await FetchNewBounds()) this.CallSyncUpdate(); }
+
+            lock(ThermoclineDOMain.locker) this.updating = false;
+        }
+    }
+
+    private void CallSyncUpdate()
+    {
+        // Execute thermo-related updates
+        lock(ThermoclineDOMain.locker) 
+        {
+            this.currentThermoDepth = this.CalculateDepth();
+            if (this.currentThermoDepth != null) this.performSyncUpdate = true;
+        }
+    }
+
+    private void Update()
+    {
+        if (this.initialized)
+        {
+            // Handle synchronous updates
+            if (this.currentPacket == null) { if (this.toggle.interactable) this.EnableThermoclineDOMain(false); }
+            if (this.currentThermoDepth == null) { if (this.toggle.interactable) { this.EnableThermoclineDOMain(false); thermoText.text = "Thermocline Depth:\n-"; } }
+
             lock(ThermoclineDOMain.locker) 
             {
-                currentThermoDepth = CalculateDepth();
-
-                if (currentThermoDepth == null)
+                if (this.performSyncUpdate)
                 {
-                    if (ThermoclineDOMain.instance.toggle.interactable) ThermoclineDOMain.EnableThermoclineDOMain(false);
-                    thermoText.text = "Thermocline Depth:\n-";
-                }
-                else
-                {
-                    if (!ThermoclineDOMain.instance.toggle.interactable) ThermoclineDOMain.EnableThermoclineDOMain(true);
+                    this.performSyncUpdate = false;
+                    if (!this.toggle.interactable) this.EnableThermoclineDOMain(true);
 
                     thermoclinePlane.RecalculatePlane((float)currentThermoDepth);
                     thermoText.text = string.Format("Thermocline Depth:\n{0:0.00}m", currentThermoDepth);
@@ -141,8 +183,8 @@ public class ThermoclineDOMain : MonoBehaviour
                     thermoDepth.GetComponent<RectTransform>().anchoredPosition = newPosition;
 
                     // Call color bars to update
-                    TempCB.UpdateCells("temp", ThermoclineDOMain.currentPacket.readings);
-                    DOCB.UpdateCells("oxygen", ThermoclineDOMain.currentPacket.readings);
+                    TempCB.UpdateCells("temp", this.currentPacket.readings);
+                    DOCB.UpdateCells("oxygen", this.currentPacket.readings);
                 }
             }
         }
@@ -152,29 +194,29 @@ public class ThermoclineDOMain : MonoBehaviour
     {
         if (UserSettings.showThermocline)
         {
-            instance.transform.parent.GetComponent<CanvasGroup>().alpha = 1;
-            thermoclinePlane.TogglePlane(true);
+            this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 1;
+            this.thermoclinePlane.TogglePlane(true);
         }
         else
         {
-            instance.transform.parent.GetComponent<CanvasGroup>().alpha = 0;
-            instance.transform.parent.GetComponent<RectTransform>().position = originContainer;
-            thermoclinePlane.TogglePlane(false);
+            this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 0;
+            this.thermoRootObject.GetComponent<RectTransform>().position = this.originContainer;
+            this.thermoclinePlane.TogglePlane(false);
         }
     }
 
-    public static void EnableThermoclineDOMain(bool status)
+    public void EnableThermoclineDOMain(bool status)
     {
-        if (status) ThermoclineDOMain.instance.toggle.interactable = true; 
+        if (status) this.toggle.interactable = true; 
         else
         {
-            ThermoclineDOMain.instance.toggle.isOn = false;
+            this.toggle.isOn = false;
             UserSettings.showThermocline = false;
-            ThermoclineDOMain.instance.toggle.interactable = false;
+            this.toggle.interactable = false;
         }
     }
 
-    public static float? CalculateDepth()
+    public float? CalculateDepth()
     {
         // Suggested by Georgiy Kirillin
         // https://github.com/GLEON/rLakeAnalyzer/blob/ef6de8c3e86d24f1d4190dbb1370afeb4e3181cb/R/thermo.depth.R
@@ -186,10 +228,10 @@ public class ThermoclineDOMain : MonoBehaviour
         { if (reading.density != null) refinedList.Add(reading); }
 
         // If max is null, then min is also null, only need to check one
-        if (ThermoclineDOMain.currentPacket.maxTemp == null) return null;
+        if (this.currentPacket.maxTemp == null) return null;
   
         // Ensure adequate temperature differential
-        else if(ThermoclineDOMain.currentPacket.maxTemp - ThermoclineDOMain.currentPacket.minTemp < 1) return null;
+        else if(this.currentPacket.maxTemp - this.currentPacket.minTemp < 1) return null;
   
         // We can't determine anything with less than 3 measurements
         int numberOfEntries = refinedList.Count;

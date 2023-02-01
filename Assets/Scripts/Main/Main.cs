@@ -12,6 +12,8 @@ public class Main : MonoBehaviour
     [SerializeField] private SunController sunController;
     [SerializeField] private MoonController moonController;
     [SerializeField] private GameObject fishManagerObject, gameCanvas;
+    [SerializeField] private MeshManager meshObject;
+    [SerializeField] private ThermoclineDOMain thermoObject;
     private bool finishedStartup = false;
 
     public static event FishDictAssembled fishDictAssembled;
@@ -25,31 +27,29 @@ public class Main : MonoBehaviour
         this.gameCanvas.SetActive(true);
         this.gameObject.SetActive(true);
 
-        Task<bool> meshSetUp = Task.Run(() => MeshManager.instance.ImportMap());
-        fishManager = new FishManager(fishManagerObject);
+        this.meshObject.gameObject.SetActive(true);
+        this.fishManager = new FishManager(fishManagerObject);
 
         // LoadingScreen.Text("Waiting on heightmap data...");
         // loadingBar.SetText("Processing heightmap");
-        try { await meshSetUp; }
-        catch(Exception) { Debug.Log("caught exception"); throw; }
 
-        if (meshSetUp.Result)
-        {
-            MeshManager.instance.SetUpMesh();
-        }
-        else
-        {
-            // error handling, mesh map fail
-        }
+        if (await MeshManager.initialization) MeshManager.instance.SetUpMeshSync();
+        else throw new Exception(); 
 
         // LoadingScreen.Text("Waiting on fish repository...");
         // loadingBar.SetText("Setting up fish repository");
         if (await FishManager.initialization)
         {
+            this.thermoObject.gameObject.SetActive(true);
+
+
+
+
+
+
             MacromapManager.InitializeMacrophyteMaps();
             HeightManager.InitializeMacrophyteHeights();
             WindWeatherMain.instance.StartWindWeather();
-            ThermoclineDOMain.instance.StartThermo(); // Cannot parallelize due to Unity operations 
 
             fishDictAssembled?.Invoke();
             TimeManager.instance.PlayButton();
@@ -75,7 +75,7 @@ public class Main : MonoBehaviour
             fishManager.UpdateFish();
             sunController.AdjustSunPosition();
             moonController.AdjustMoonPosition();
-            ThermoclineDOMain.instance.UpdateThermoclineDOMain();
+            if (this.thermoObject.initialized) await Task.Run(() => this.thermoObject.UpdateThermoclineDOMain());
             WindWeatherMain.instance.UpdateWindWeather(); 
             await Task.Run(() => MacromapManager.UpdateMaps());
             await Task.Run(() => HeightManager.instance.ManualUpdate());

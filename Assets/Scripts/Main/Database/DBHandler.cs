@@ -204,7 +204,12 @@ public class DBHandler : MonoBehaviour
         loadingBar.WakeUp(TableImports.checkTables.Count);
         bool successfulInit = true;
         try { successfulInit = await this.main.Initialize(loadingBar); }
-        catch (Exception) { successfulInit = false; loadingBar.ShutDown(); throw; }
+        catch (Exception)
+        { 
+            successfulInit = false; 
+            loadingBar.ShutDown(); 
+            throw; 
+        }
 
         if (!successfulInit)
         {
@@ -214,9 +219,9 @@ public class DBHandler : MonoBehaviour
             messageBox.SetActive(true);
             this.NewInput();
         }
+        else this.gameObject.SetActive(false); 
 
         loadingBar.ShutDown();
-        this.gameObject.SetActive(false);
     }
 
     private void CheckButtonStatuses()

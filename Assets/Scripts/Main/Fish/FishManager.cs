@@ -39,7 +39,7 @@ public class FishManager
         listOfSexes = new List<string>();
         listOfCaptureTypes = new List<string>();
 
-        initialization = AsyncInitialize(managerObject);
+        FishManager.initialization = AsyncInitialize(managerObject);
     }
 
     private Task<bool> AsyncInitialize(GameObject managerObject)
@@ -48,10 +48,23 @@ public class FishManager
         // https://stackoverflow.com/questions/17197699/awaiting-multiple-tasks-with-different-results
 
         // Local function to await task completion before calling the faux-construtor
-        async Task<bool> AwaitFetching(Task<Dictionary<int, FishPacket>>[] tasks) { Debug.Log("Awaiting fish creation..."); return AsyncConstructor(await Task.WhenAll(tasks), managerObject); }
+        async Task<bool> AwaitFetching(Task<Dictionary<int, FishPacket>>[] tasks)
+        { 
+            Debug.Log("Awaiting fish creation..."); 
+            try { return AsyncConstructor(await Task.WhenAll(tasks), managerObject); }
+            catch (Exception) { return false; }
+        }
 
         List<Task<Dictionary<int, FishPacket>>> tasks = new List<Task<Dictionary<int, FishPacket>>>();
-        List<int> listOfKeys = DatabaseConnection.GetFishKeys();
+
+        List<int> listOfKeys = null;
+        try 
+        {
+            listOfKeys = DatabaseConnection.GetFishKeys(); 
+            if (listOfKeys == null) throw new Exception();
+        }
+        catch (Exception) { return Task.Run(() => false); }
+
         listOfKeys.Sort();
 
         // Set so that there are 30 database queries running in parallel regardless as to number of fish
@@ -69,7 +82,14 @@ public class FishManager
         // Synch fall-back condition (all tasks finished immediately)
         bool syncRunThrough = true;
         foreach (Task<Dictionary<int, FishPacket>> item in tasks) { if (item.Status != TaskStatus.RanToCompletion) { syncRunThrough = false; break; } }
-        if (syncRunThrough) { Debug.Log("Sync runthrough condition"); return Task.FromResult( AsyncConstructor(tasks.Select(i => i.Result).ToArray(), managerObject) ); }
+        if (syncRunThrough)
+        { 
+            Debug.Log("Sync runthrough condition"); 
+
+            // Check if any of the tasks faulted (ended due to an unhandled exception)
+            foreach (Task<Dictionary<int, FishPacket>> item in tasks) { if (item.Status == TaskStatus.Faulted) return Task.Run(() => false); }
+            return Task.FromResult( AsyncConstructor(tasks.Select(i => i.Result).ToArray(), managerObject)); 
+        }
 
         // Otherwise, async await all tasks before continuing to next step
         return AwaitFetching(tasks.ToArray());

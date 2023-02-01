@@ -265,15 +265,7 @@ public class DatabaseConnection
     {
         DateTime startTime = DateTime.Now;
 
-        List<int> idList = new List<int>();
-        // string sql =
-        // @"select distinct fish.id
-        // from fish
-        // inner join positions_local
-        //     on fish.id = positions_local.id
-        // where fish.id is not null
-        //     and positions_local.z is not null";
-
+        List<int> idList = null;
         string sql = "select distinct fish.id from fish where fish.id is not null";
 
         if (DatabaseConnection.smallSample == true)
@@ -294,11 +286,8 @@ public class DatabaseConnection
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
-                if (!rdr.HasRows)
-                {
-                    // ERROR HANDLING
-                    Debug.Log("there's no data");
-                }
+                idList = new List<int>();
+                if (!rdr.HasRows) throw new Exception(); 
 
                 while (rdr.Read())
                 {
@@ -598,7 +587,7 @@ public class DatabaseConnection
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
     }
 
-    public static ThermoPacket GetThermoData()
+    public async static Task<ThermoPacket> GetThermoData()
     {
         string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
@@ -623,16 +612,16 @@ public class DatabaseConnection
                 or oxygen is not null))
         order by timestamp", strTime);
 
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
+            await connection.OpenAsync();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
-                if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); }
+                if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); throw new Exception(); }
 
-                while (rdr.Read())
+                while (await rdr.ReadAsync())
                 {
                     timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
 
@@ -682,23 +671,24 @@ public class DatabaseConnection
                     if (unique) readings.Add(reading);
                 };
 
-                rdr.Close();
+                await rdr.CloseAsync();
             }
 
-            connection.Close();
+            await connection.CloseAsync();
         }
 
         if (readings.Any()) return new ThermoPacket(timestamp, nextTimestamp, readings);
         else return null;
     }
 
-    public static DateTime[] GetThermoMinMaxTimes()
+    public static Tuple<DateTime, DateTime, float> GetThermoMinMaxes()
     {
         DateTime earliestTimestamp = DateTime.MaxValue;
         DateTime latestTimestamp = DateTime.MinValue;
+        float maxDepth = float.MinValue;
 
         string sql =
-        @"SELECT max(timestamp), min(timestamp)
+        @"SELECT max(timestamp), min(timestamp), max(depth) as max_depth
         FROM thermocline
         where (temperature is not null
                 or oxygen is not null)
@@ -711,12 +701,13 @@ public class DatabaseConnection
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
-                if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); }
+                if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); throw new Exception(); }
 
                 while (rdr.Read())
                 {
                     earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
                     latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
+                    maxDepth = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_depth")));
                 };
 
                 rdr.Close();
@@ -725,12 +716,12 @@ public class DatabaseConnection
             connection.Close();
         }
 
-        return new DateTime[2] { earliestTimestamp, latestTimestamp };
+        return new Tuple<DateTime, DateTime, float>(earliestTimestamp, latestTimestamp, maxDepth);
     }
 
     public static async Task<DataTable> GetMeshMap()
     {
-        DataTable meshTable = new DataTable();
+        DataTable meshTable = null;
         string sql = "SELECT * FROM meshmap";
         
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
@@ -748,6 +739,7 @@ public class DatabaseConnection
                 }
                 else
                 {
+                    meshTable = new DataTable();
                     int columnCount = rdr.FieldCount;
                     int rowCount = 0;
 

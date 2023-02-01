@@ -1,5 +1,6 @@
 using UnityEngine;
-using System.Data;
+using System;
+using System.Linq;
 using System.Collections.Generic;
 
 public class ColorBar : MonoBehaviour
@@ -10,7 +11,7 @@ public class ColorBar : MonoBehaviour
 
     public float upperVal = 25, lowerVal = 0;
 
-    private void Start()
+    public void StartUp()
     {
         gradientCells = new List<GameObject>();
 
@@ -18,6 +19,7 @@ public class ColorBar : MonoBehaviour
         {
             GameObject tempObject = Instantiate(cellPrefab, this.gameObject.transform.position, this.gameObject.transform.rotation, this.gameObject.transform) as GameObject;
             gradientCells.Add(tempObject);
+            tempObject.GetComponent<GradientCell>().StartUp();
         }
 
         DefineGradients();
@@ -64,11 +66,36 @@ public class ColorBar : MonoBehaviour
     {
         for (int i = 0; i < gradientCells.Count; i++)
         {
+            // Create mapping as there are 21 gradient cells but any number of depth readings
+            float readingDepth = ThermoclineDOMain.instance.deepestReading / 21f * i;
+            ThermoReading[] thermoArray = readings.ToArray();
+            ThermoReading closestReading = thermoArray.OrderBy(tr => Math.Abs(tr.depth - readingDepth)).First();
+
+            ThermoReading lowerReading = null;
+            ThermoReading upperReading = null;
+            List<ThermoReading> sortedList = readings.OrderBy(o=>o.depth).ToList();
+            if (closestReading.depth > readingDepth)
+            {
+                upperReading = closestReading;
+                int index = sortedList.IndexOf(upperReading);
+                lowerReading = sortedList[index-1];
+            }
+            else
+            {
+                lowerReading = closestReading;
+                int index = sortedList.IndexOf(lowerReading);
+                upperReading = sortedList[index+1];
+            }
+
+            // Get the interpolated value
+            float? value = null;
+            if (colName == "temp") value = ((upperReading.temperature - lowerReading.temperature) / (upperReading.depth - lowerReading.depth)) * (readingDepth - lowerReading.depth) + lowerReading.temperature;
+            else value = ((upperReading.oxygen - lowerReading.oxygen) / (upperReading.depth - lowerReading.depth)) * (readingDepth - lowerReading.depth) + lowerReading.oxygen;
+
             // Determine the individual cell color & set it
             GradientCell currentCell = gradientCells[i].GetComponent<GradientCell>();
-            currentCell.SetDepth(readings[i].depth);
+            currentCell.SetDepth(readingDepth);
             
-            float? value = colName == "temp" ? readings[i].temperature : readings[i].oxygen;
             if (value == null)
             {
                 currentCell.SetColor(Color.black);

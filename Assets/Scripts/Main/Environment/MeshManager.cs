@@ -21,6 +21,8 @@ public class MeshManager : MonoBehaviour
     private int numberOfContourPartitions = 10;
     private DataTable meshTable;
 
+    public static Task<bool> initialization { get; private set; }
+
     [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
@@ -37,6 +39,7 @@ public class MeshManager : MonoBehaviour
         else { _instance = this; }
 
         weightSlider.normalizedValue = 0.07f;
+        MeshManager.initialization = Task.Run(() => this.ImportMap());
     }
 
     private void CalculateContourBounds(float tolerance=0.07f)
@@ -51,11 +54,14 @@ public class MeshManager : MonoBehaviour
 
     public async Task<bool> ImportMap()
     {
-        this.meshTable = await DatabaseConnection.GetMeshMap();
-        return true;
+        try { this.meshTable = await DatabaseConnection.GetMeshMap(); }
+        catch (Exception) { return false; }
+
+        if (this.meshTable != null) return true;
+        else return false;
     }
 
-    public bool SetUpMesh()
+    public bool SetUpMeshSync()
     {   
         if(this.meshTable != null)
         {
