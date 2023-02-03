@@ -12,41 +12,39 @@ public class MacromapManager: MonoBehaviour
     [SerializeField] private GameObject bufferIcon;
 
 
-    private static PolygonPacket currentPacket;
-    private static DateTime earliestTimestamp;
-    public static float[,] intensityMap;
-    public static bool alreadyUpdating { get; private set; }
+    private PolygonPacket currentPacket;
+    private DateTime earliestTimestamp;
+    public float[,] intensityMap { get; private set; }
+
+    private bool updating = false, performSyncUpdate = false;
+    public Task<bool> initialized { get; private set; }
+
     private static readonly object locker = new object();
     public static readonly object mapLocker = new object();
-    public static readonly object spawnLock = new object();
-
-    public static event MacroPolyChange macroPolyChange;
-    private static bool triggerSpawn = false;
-    private static bool initialized = false;
 
     // Properties
-    private static bool timeBounded
+    private bool timeBounded
     {
         get
         {
-            if (MacromapManager.currentPacket == null) return false; // no times to be bounded by
-            else if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(MacromapManager.currentPacket.timestamp)) < 0) return false; // the current time is earlier than the packet's timestamp
-            else if (MacromapManager.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
+            if (this.currentPacket == null) return false; // no times to be bounded by
+            else if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.timestamp)) < 0) return false; // the current time is earlier than the packet's timestamp
+            else if (this.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
             else
             {
-                if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(MacromapManager.currentPacket.timestamp)) > 0
-                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(MacromapManager.currentPacket.nextTimestamp)) < 0)
+                if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.timestamp)) > 0
+                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.nextTimestamp)) < 0)
                 return true; // traditional bounds (middle condition)
                 else return false;
             }
         }
     }
 
-    private static bool beforeFirstTS
+    private bool beforeFirstTS
     {
         get
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, MacromapManager.earliestTimestamp) < 0) return true;
+            if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestTimestamp) < 0) return true;
             else return false;
         }
     }
@@ -58,101 +56,124 @@ public class MacromapManager: MonoBehaviour
 
     private void Awake()
     {
+        // Inits
+        this.intensityMap = null;
+        this.currentPacket = null;
+
+        // Singleton
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
 
-        MacromapManager.alreadyUpdating = false;
+        // No dependence on Unity functions --> can run async
+        this.initialized = Task.Run(() => this.AwakeAsync());
     }
 
-    // Called in Start() of Main.cs
-    public static void InitializeMacrophyteMaps()
+    private async Task<bool> AwakeAsync()
     {
-        MacromapManager.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_polygons_local");
-        MacromapManager.intensityMap = null;
-        macroPolyChange += GrassSpawner.instance.SpawnGrass;
-
-        MacromapManager.initialized = true;
-    }
-
-    public static async Task UpdateMaps()
-    {
-        // Updating regardless as to the state of UserSettings.macrophyteMaps
-        if (!MacromapManager.beforeFirstTS)
+        try
         {
-            if ((!MacromapManager.timeBounded || MacromapManager.intensityMap == null) && !MacromapManager.alreadyUpdating)
-            {
-                lock(MacromapManager.locker) MacromapManager.alreadyUpdating = true;
-                MacromapManager.currentPacket = await DatabaseConnection.GetMacromapPolygons();
+            this.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_polygons_local");
+            if (this.earliestTimestamp == DateTime.MaxValue) throw new Exception();
 
-                // Create a [0, 1] valued array of color intensities to be applied to mesh
-                lock(MacromapManager.mapLocker)
-                {    
-                    MacromapManager.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
-                    for (int y = 0; y < LocalMeshData.resolution; y++)
-                    {
-                        for (int x = 0; x < LocalMeshData.resolution; x++)
+            await this.UpdateMaps();
+            return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    private async Task<bool> FetchNewBounds()
+    {
+        // if an exception is thrown or no data is returned (null), the method returns false
+        try 
+        { 
+            this.currentPacket = await DatabaseConnection.GetMacromapPolygons();
+            if (this.currentPacket == null) throw new Exception();
+            else return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    public async Task UpdateMaps()
+    {
+        // Handle asynchronous updates
+        // We don't want to senselessly overload the system with queries that return nothing
+        if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
+        {
+            // Secure the multi-threading
+            lock(MacromapManager.locker) this.updating = true;
+
+            if (!this.timeBounded) 
+            { 
+                if (await this.FetchNewBounds()) 
+                {
+                    lock(MacromapManager.mapLocker)
+                    {    
+                        this.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
+                        for (int y = 0; y < LocalMeshData.resolution; y++)
                         {
-                            MacromapManager.intensityMap[y, x] = 0f;
-                            foreach (MacromapPolygon polygon in MacromapManager.currentPacket.polygons)
+                            for (int x = 0; x < LocalMeshData.resolution; x++)
                             {
-                                // Apply average intensity
-                                if (polygon.PointInPolygon(new Vector2(x, y)))
+                                this.intensityMap[y, x] = 0f;
+                                foreach (MacromapPolygon polygon in this.currentPacket.polygons)
                                 {
-                                    MacromapManager.intensityMap[y, x] = (polygon.lowerCoverage + polygon.upperCoverage) / 2f / 100f;
-                                    break;
+                                    // Apply average intensity
+                                    if (polygon.PointInPolygon(new Vector2(x, y)))
+                                    {
+                                        this.intensityMap[y, x] = (polygon.lowerCoverage + polygon.upperCoverage) / 2f / 100f;
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
 
-                    // Alert the grass spawner that it should respawn the prefabs
-                    lock (MacromapManager.spawnLock) { MacromapManager.triggerSpawn = true; }
+                    lock(MacromapManager.locker) { this.performSyncUpdate = true; } 
                 }
-                lock(MacromapManager.locker) MacromapManager.alreadyUpdating = false;
+                else { this.intensityMap = null; }
             }
+            lock(MacromapManager.locker) this.updating = false;
         }
-        else MacromapManager.intensityMap = null;
     }
 
-    private void Update()
+    private async void Update()
     {
-        if (MacromapManager.initialized)
+        if (await this.initialized)
         {
             // Constantly checked whether to enable or disable
             // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
-            if (!MacromapManager.beforeFirstTS)
+            if (!this.beforeFirstTS)
             {
-                if (MacromapManager.instance.toggle.interactable == false && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
-                { MacromapManager.EnableMaps(); }
+                if (this.toggle.interactable == false && !this.updating && this.intensityMap != null)
+                { this.EnableMaps(); }
             }
-            else if (MacromapManager.instance.toggle.interactable == true) { MacromapManager.DisableMaps(); }
+            else if (this.toggle.interactable == true) { this.DisableMaps(); }
 
             // Decide whether or not to show the buffering icon
-            if (MacromapManager.alreadyUpdating && !bufferIcon.activeSelf) bufferIcon.SetActive(true);
-            else if (!MacromapManager.alreadyUpdating && bufferIcon.activeSelf) bufferIcon.SetActive(false);
+            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
 
             // Unity is demanding this be executed from the main thread, hence the workaround
-            lock (MacromapManager.spawnLock)
+            lock (MacromapManager.locker)
             {
-                if (MacromapManager.triggerSpawn)
+                if (this.performSyncUpdate)
                 {
-                    MacromapManager.triggerSpawn = false;
-                    macroPolyChange?.Invoke();
+                    this.performSyncUpdate = false;
+                    GrassSpawner.instance.SpawnGrass();
                 }
             }
         }
     }
 
-    public static void EnableMaps(bool status=true)
+    public void EnableMaps(bool status=true)
     {
-        if (status) MacromapManager.instance.toggle.interactable = true; 
+        if (status) this.toggle.interactable = true; 
         else
         {
-            MacromapManager.instance.toggle.isOn = false;
+            this.toggle.isOn = false;
             UserSettings.macrophyteMaps = false;
-            MacromapManager.instance.toggle.interactable = false; 
+            this.toggle.interactable = false; 
         }
     }
 
-    public static void DisableMaps() { MacromapManager.EnableMaps(false); }
+    public void DisableMaps() { this.EnableMaps(false); }
 }

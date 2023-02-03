@@ -7,41 +7,39 @@ public delegate void MacroHeightChange();
 
 public class HeightManager : MonoBehaviour
 {
-    private static DateTime earliestTimestamp;
-    public static MacroHeightPacket currentPacket { get; private set; }
-    public static bool alreadyUpdating = false;
+    private DateTime earliestTimestamp;
+    public MacroHeightPacket currentPacket { get; private set; }
     private static readonly object locker = new object();
     private static readonly object spawnLock = new object();
 
-    public static event MacroHeightChange macroHeightChange;
-    private static bool triggerSpawn = false;
-    private static bool initialized = false;
+    public Task<bool> initialized { get; private set; }
+    private bool updating = false, performSyncUpdate = false;
 
     [SerializeField] private Toggle toggle;
 
     // Properties
-    private static bool timeBounded
+    private bool timeBounded
     {
         get
         {
-            if (HeightManager.currentPacket == null) return false; // no times to be bounded by
-            else if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(HeightManager.currentPacket.timestamp)) < 0) return false; // the current time is earlier than the packet's timestamp
-            else if (HeightManager.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
+            if (this.currentPacket == null) return false; // no times to be bounded by
+            else if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.timestamp)) < 0) return false; // the current time is earlier than the packet's timestamp
+            else if (this.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
             else
             {
-                if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(HeightManager.currentPacket.timestamp)) > 0
-                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(HeightManager.currentPacket.nextTimestamp)) < 0)
+                if (DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.timestamp)) > 0
+                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.nextTimestamp)) < 0)
                 return true; // traditional bounds (middle condition)
                 else return false;
             }
         }
     }
 
-    private static bool beforeFirstTS
+    private bool beforeFirstTS
     {
         get
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, HeightManager.earliestTimestamp) < 0) return true;
+            if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestTimestamp) < 0) return true;
             else return false;
         }
     }
@@ -56,78 +54,85 @@ public class HeightManager : MonoBehaviour
 
     private void Awake()
     {
+        this.currentPacket = null;
+
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+
+        // No dependence on Unity functions --> can run async
+        this.initialized = Task.Run(() => this.AwakeAsync());;
     }
 
-    // Called in Start() of Main.cs
-    public static void InitializeMacrophyteHeights()
+    private async Task<bool> AwakeAsync()
     {
-        HeightManager.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_heights_local");
-        macroHeightChange += GrassSpawner.instance.SpawnGrass;
-        HeightManager.initialized = true;
+        try
+        {
+            this.earliestTimestamp = DatabaseConnection.EarliestDate("macromap_heights_local");
+            if (this.earliestTimestamp == DateTime.MaxValue) throw new Exception();
+
+            await this.UpdateHeights();
+            return true;
+        }
+        catch (Exception) { return false; }
     }
 
-    private void Update()
+    private async Task<bool> FetchNewBounds()
     {
-        if (HeightManager.initialized)
+        // if an exception is thrown or no data is returned (null), the method returns false
+        try 
+        { 
+            this.currentPacket = await DatabaseConnection.GetMacromapHeights();
+            if (this.currentPacket == null) throw new Exception();
+            else return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    public async Task UpdateHeights()
+    {
+        // The grass spawner needs the intensity map. Without it, the entire exercise is moot.
+        if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
+        {
+            // Check whether we need to requery
+            lock(HeightManager.locker) this.updating = true;
+            if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(HeightManager.locker) this.performSyncUpdate = true; }
+            lock(HeightManager.locker) this.updating = false;
+        }
+    }
+
+    private async void Update()
+    {
+        if (await this.initialized)
         {
             // Constantly check whether to enable or disable interactability
-            if (!HeightManager.beforeFirstTS)
-            {
-                if (HeightManager.instance.toggle.interactable == false && !HeightManager.alreadyUpdating && !MacromapManager.alreadyUpdating && MacromapManager.intensityMap != null)
-                { HeightManager.EnableMaps(); }
-            }
-            else if (HeightManager.instance.toggle.interactable == true) { HeightManager.DisableMaps(); }
+            // The macroheights toggle should only be enabled if MacromapManager is not updating, hence the lock
+            if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (this.toggle.interactable == false && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
+            else if (this.toggle.interactable == true) { this.DisableMaps(); }
 
             // Unity is demanding this be executed from the main thread, hence the workaround
-            lock(HeightManager.spawnLock)
+            lock(HeightManager.locker)
             {
-                if (HeightManager.triggerSpawn)
+                if (this.performSyncUpdate)
                 {
-                    HeightManager.triggerSpawn = false;
-                    macroHeightChange?.Invoke();
+                    this.performSyncUpdate = false;
+                    GrassSpawner.instance.SpawnGrass();
                 }
             }
         }
     }
 
-    public async void ManualUpdate()
-    {
-        // The grass spawner needs the intensity map. Without it, the entire exercise is moot.
-        if (!HeightManager.beforeFirstTS && !HeightManager.alreadyUpdating)
-        {
-            // Check whether we need to requery
-            if (!HeightManager.timeBounded)
-            {
-                lock(HeightManager.locker) alreadyUpdating = true;
-                await HeightManager.Requery();
-            }
-        }
-    }
-
-    private static async Task Requery()
-    {
-        HeightManager.currentPacket = await DatabaseConnection.GetMacromapHeights();
-
-        // Alert the grass spawner that it should respawn the prefabs
-        lock(HeightManager.spawnLock) { HeightManager.triggerSpawn = true; }
-
-        lock(HeightManager.locker) alreadyUpdating = false;
-    }
-
     // Set the interactability of the toggle
-    public static void EnableMaps(bool status=true)
+    public void EnableMaps(bool status=true)
     {
-        if (status) HeightManager.instance.toggle.interactable = true; 
+        if (status) this.toggle.interactable = true; 
         else
         {
-            HeightManager.instance.toggle.isOn = false;
+            this.toggle.isOn = false;
             UserSettings.macrophyteHeights = false;
-            HeightManager.instance.toggle.interactable = false; 
+            this.toggle.interactable = false; 
         }
     }
 
-    public static void DisableMaps() { HeightManager.EnableMaps(false); }
+    public void DisableMaps() { this.EnableMaps(false); }
 
 }

@@ -43,7 +43,7 @@ public class GradientPicker : MonoBehaviour
     private int selectedColorKey;
     private List<GradientAlphaKey> alphaKeys;
 
-    private void Awake()
+    public void Awake()
     {
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }

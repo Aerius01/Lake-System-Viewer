@@ -7,21 +7,27 @@ public class SunController : MonoBehaviour
     [SerializeField] private GameObject skyTransform;
     [SerializeField] private Gradient sunColor;
 
-    public float latitude = 53, longitude = 13.58f;
+    private float latitude = -1, longitude = -1;
     int timeZone = 1;
 
     private double currentZenithAngleDeg, currentAzimuthAngleDeg;
 
-    private void Start()
+    private void Start() { skyTransform.transform.position = LocalMeshData.meshCenter; }
+
+    private void Update()
     {
-        skyTransform.transform.position = LocalMeshData.meshCenter;
+        if (!TimeManager.instance.paused && this.latitude != -1 && this.longitude != -1)
+        {
+            this.CalculateNewSunPos();
+            this.gameObject.transform.LookAt(LocalMeshData.meshCenter);
+            this.skyTransform.transform.rotation = Quaternion.Euler(new Vector3(-(90 - (float)this.currentZenithAngleDeg), (float)this.currentAzimuthAngleDeg - 90f, 0f));
+        }
     }
 
-    public void AdjustSunPosition()
+    public void SetLatLong(float latitude, float longitude)
     {
-        CalculateNewSunPos();
-        this.gameObject.transform.LookAt(LocalMeshData.meshCenter);
-        skyTransform.transform.rotation = Quaternion.Euler(new Vector3(-(90 - (float)currentZenithAngleDeg), (float)currentAzimuthAngleDeg - 90f, 0f));
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     private double degrees_to_radians(double degrees)
@@ -84,7 +90,7 @@ public class SunController : MonoBehaviour
                                         (540 - radians_to_degrees(Math.Acos(((Math.Sin(degrees_to_radians(latitude)) * Math.Cos(degrees_to_radians(solarZenithAngleDegrees))) - 
                                             Math.Sin(degrees_to_radians(sunDeclinationDegrees))) / (Math.Cos(degrees_to_radians(latitude)) * Math.Sin(degrees_to_radians(solarZenithAngleDegrees)))))) % 360;
         
-        currentZenithAngleDeg = solarZenithAngleDegrees;
-        currentAzimuthAngleDeg = solarAzimuthAngleDegrees;
+        this.currentZenithAngleDeg = solarZenithAngleDegrees;
+        this.currentAzimuthAngleDeg = solarAzimuthAngleDegrees;
     }
 }

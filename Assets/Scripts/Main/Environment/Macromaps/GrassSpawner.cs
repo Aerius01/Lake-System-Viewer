@@ -7,6 +7,7 @@ public class GrassSpawner: MonoBehaviour
     private List<GameObject> currentPrefabs;
 
     private float baseExtent;
+    private readonly object locker = new object();
 
     // Singleton variables
     private static GrassSpawner _instance;
@@ -15,59 +16,65 @@ public class GrassSpawner: MonoBehaviour
 
     private void Awake()
     {
+        // Singleton
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
 
         this.currentPrefabs = new List<GameObject>();
         this.baseExtent = grassPrefab.transform.GetChild(0).GetComponent<MeshRenderer>().localBounds.extents.y;
+        EventSystemManager.scaleChangeEvent += this.SpawnGrass;
     }
 
     public void SpawnGrass()
     {
-        // We need both components for the exercise
-        if (HeightManager.currentPacket == null || MacromapManager.intensityMap == null) HeightManager.DisableMaps(); 
-
-        else if (UserSettings.macrophyteHeights)
+        lock (this.locker)
         {
-            if (this.currentPrefabs.Count != 0) foreach (GameObject grass in currentPrefabs) { Destroy(grass); } 
-
-            this.currentPrefabs = new List<GameObject>();
-            System.Random rand = new System.Random();
-
-            // The intensity map cannot change while the grass is being spawned
-            lock(MacromapManager.mapLocker)
-            {    
-                for (int r = 0; r < LocalMeshData.resolution; r++)
+            // We need both components for the exercise
+            if (HeightManager.instance != null && MacromapManager.instance != null)
+            {
+                if (UserSettings.macrophyteHeights)
                 {
-                    if (r >= LocalMeshData.cutoffs["minHeight"] && r < LocalMeshData.cutoffs["maxHeight"])
-                    {
-                        for (int c = 0; c < LocalMeshData.resolution; c++)
-                        {
-                            if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
-                            {
-                                // The model looks very weird if the macrophytes are too short
-                                if (HeightManager.currentPacket.heightArray[c, r] > 0.1f)
-                                {
-                                    if (MacromapManager.intensityMap[c, r] / 20f >= (float)rand.NextDouble())
-                                    {
-                                        GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
-                                        grass.transform.parent = this.gameObject.transform;
+                    if (this.currentPrefabs.Count != 0) foreach (GameObject grass in currentPrefabs) { Destroy(grass); } 
 
-                                        float scalingFactor = HeightManager.currentPacket.heightArray[c, r] / this.baseExtent * UserSettings.verticalScalingFactor;
-                                        grass.transform.localScale = new Vector3(5f, scalingFactor, 5f);
-                                        this.currentPrefabs.Add(grass);
+                    this.currentPrefabs = new List<GameObject>();
+                    System.Random rand = new System.Random();
+
+                    // The intensity map cannot change while the grass is being spawned
+                    lock(MacromapManager.mapLocker)
+                    {    
+                        for (int r = 0; r < LocalMeshData.resolution; r++)
+                        {
+                            if (r >= LocalMeshData.cutoffs["minHeight"] && r < LocalMeshData.cutoffs["maxHeight"])
+                            {
+                                for (int c = 0; c < LocalMeshData.resolution; c++)
+                                {
+                                    if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
+                                    {
+                                        // The model looks very weird if the macrophytes are too short
+                                        if (HeightManager.instance.currentPacket.heightArray[c, r] > 0.1f)
+                                        {
+                                            if (MacromapManager.instance.intensityMap[c, r] / 20f >= (float)rand.NextDouble())
+                                            {
+                                                GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
+                                                grass.transform.parent = this.gameObject.transform;
+
+                                                float scalingFactor = HeightManager.instance.currentPacket.heightArray[c, r] / this.baseExtent * UserSettings.verticalScalingFactor;
+                                                grass.transform.localScale = new Vector3(5f, scalingFactor, 5f);
+                                                this.currentPrefabs.Add(grass);
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                else
+                {
+                    foreach (GameObject grass in this.currentPrefabs) { Destroy(grass); } 
+                    this.currentPrefabs = new List<GameObject>();
+                }
             }
-        }
-        else
-        {
-            foreach (GameObject grass in this.currentPrefabs) { Destroy(grass); } 
-            this.currentPrefabs = new List<GameObject>();
         }
     }
 }

@@ -12,23 +12,20 @@ public class ContinuousFilterHandler : MonoBehaviour
     private int counter = 0;
     private List<ContinuousFilter> filterList;
 
+
     private void Awake()
     {
-        Main.fishDictAssembled += this.SetScales;
         filterList = new List<ContinuousFilter>();
         FilterManager.AddContHandler(this);
     }
 
     private void Start()
     {
-        if (this.isLengthHandler) { this.header.text =  "Length";}
-        else { this.header.text = "Weight";}
-    }
-
-    private void SetScales()
-    {
         if (this.isLengthHandler) slider.SetRange(FishManager.minLength, FishManager.maxLength);
         else slider.SetRange(FishManager.minWeight, FishManager.maxWeight);
+
+        if (this.isLengthHandler) { this.header.text =  "Length";}
+        else { this.header.text = "Weight";}
     }
 
     public bool PassesFilters(Fish fish)

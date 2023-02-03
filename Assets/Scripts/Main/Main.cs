@@ -14,51 +14,51 @@ public class Main : MonoBehaviour
     [SerializeField] private GameObject fishManagerObject, gameCanvas;
     [SerializeField] private MeshManager meshObject;
     [SerializeField] private ThermoclineDOMain thermoObject;
+    [SerializeField] private WindWeatherMain weatherObject;
+    [SerializeField] private MacromapManager macromapManager;
+    [SerializeField] private HeightManager heightManager;
     private bool finishedStartup = false;
-
-    public static event FishDictAssembled fishDictAssembled;
 
     public async Task<bool> Initialize(LoaderBar loadingBar)
     {
-        // Have everything instanced, so that we can trash/reset anything by simply deleting the instance
-        // Decide where the async nature should come in, in case some instances need to instantiate on the main thread
-
-        // activate the respective gameobjects so that their initializations run synchronously, but are activated 
-        this.gameCanvas.SetActive(true);
         this.gameObject.SetActive(true);
 
-        this.meshObject.gameObject.SetActive(true);
-        this.fishManager = new FishManager(fishManagerObject);
-
-        // LoadingScreen.Text("Waiting on heightmap data...");
-        // loadingBar.SetText("Processing heightmap");
-
-        if (await MeshManager.initialization) MeshManager.instance.SetUpMeshSync();
-        else throw new Exception(); 
-
-        // LoadingScreen.Text("Waiting on fish repository...");
-        // loadingBar.SetText("Setting up fish repository");
-        if (await FishManager.initialization)
+        try
         {
-            this.thermoObject.gameObject.SetActive(true);
+            // Independent inits
+            this.meshObject.gameObject.SetActive(true);
+            this.fishManager = new FishManager(fishManagerObject);
 
+            this.weatherObject.gameObject.SetActive(true); // TODO: if init failed, alert user
+            this.macromapManager.gameObject.SetActive(true); // TODO: if init failed, alert user
+            this.heightManager.gameObject.SetActive(true); // TODO: if init failed, alert user
 
+            this.sunController.gameObject.SetActive(true);
+            this.sunController.SetLatLong(53f, 13.58f);
 
+            // Meshmap dependents
+            if (await this.meshObject.initialized)
+            {
+                this.meshObject.SetUpMeshSync();
+                this.thermoObject.gameObject.SetActive(true); // TODO: if init failed, alert user // Depends on meshmap resolution
+            }
+            else throw new Exception(); 
 
+            // FishManager dependents
+            if (await FishManager.initialized)
+            {
+                this.gameCanvas.SetActive(true); // activates FishList and the Categorical/ContinuousFilterHandler Awake() methods, which are dependents on the FishManager
+                TimeManager.instance.PlayButton();
+            }
+            else throw new Exception();
 
-
-            MacromapManager.InitializeMacrophyteMaps();
-            HeightManager.InitializeMacrophyteHeights();
-            WindWeatherMain.instance.StartWindWeather();
-
-            fishDictAssembled?.Invoke();
-            TimeManager.instance.PlayButton();
-
-            finishedStartup = true;
-            // LoadingScreen.Deactivate();
+            this.finishedStartup = true;
         }
-
-        return finishedStartup;
+        catch (Exception) { return false; }
+        
+        // need to return info if only partial success (some init fails)
+        // wait here for all inits?
+        return this.finishedStartup;
     }
 
     public void ClearAll()
@@ -70,15 +70,23 @@ public class Main : MonoBehaviour
 
     private async void FixedUpdate()
     {
-        if (finishedStartup)
+        // TODO: error handling for interrupted DB connection
+
+        if (this.finishedStartup)
         {
             fishManager.UpdateFish();
-            sunController.AdjustSunPosition();
             moonController.AdjustMoonPosition();
-            if (this.thermoObject.initialized) await Task.Run(() => this.thermoObject.UpdateThermoclineDOMain());
-            WindWeatherMain.instance.UpdateWindWeather(); 
-            await Task.Run(() => MacromapManager.UpdateMaps());
-            await Task.Run(() => HeightManager.instance.ManualUpdate());
+            
+            // Parallelized updates
+            List<Task> updateTasks = new List<Task>();
+
+            if (this.thermoObject.initialized) updateTasks.Add(Task.Run(() => this.thermoObject.UpdateThermoclineDOMain()));
+            if (this.weatherObject.initialized) updateTasks.Add(Task.Run(() => this.weatherObject.UpdateWindWeather()));
+            if (await this.macromapManager.initialized) updateTasks.Add(Task.Run(() => this.macromapManager.UpdateMaps()));
+            if (await this.heightManager.initialized) updateTasks.Add(Task.Run(() => this.heightManager.UpdateHeights()));
+
+            Task completionTask = Task.WhenAll(updateTasks.ToArray());
+            await completionTask;
         }
     }
 }

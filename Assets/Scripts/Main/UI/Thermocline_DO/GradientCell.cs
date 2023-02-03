@@ -21,7 +21,7 @@ public class GradientCell : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
         }
         else
         {
-            text.text = typeTemp ? string.Format("{0:0.00}m, {1:0.00}C", currentDepth, currentVal) : string.Format("{0:0.00}m, {1:0.00}mg/L", currentDepth, currentVal);
+            text.text = typeTemp ? string.Format("{0:0.00}m, {1:0.00}°C", currentDepth, currentVal) : string.Format("{0:0.00}m, {1:0.00}mg/L", currentDepth, currentVal);
         }
 
         textBox.SetActive(true);

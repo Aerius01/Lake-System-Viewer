@@ -21,12 +21,14 @@ public class MeshManager : MonoBehaviour
     private int numberOfContourPartitions = 10;
     private DataTable meshTable;
 
-    public static Task<bool> initialization { get; private set; }
+    public Task<bool> initialized { get; private set; }
 
     [SerializeField] private Gradient gradient;
     [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
     [SerializeField] private Slider weightSlider;
+    [SerializeField] private GradientPicker gradientPicker;
+    [SerializeField] private ColorPickerImported colorPicker;
 
     private static MeshManager _instance;
     [HideInInspector]
@@ -39,7 +41,7 @@ public class MeshManager : MonoBehaviour
         else { _instance = this; }
 
         weightSlider.normalizedValue = 0.07f;
-        MeshManager.initialization = Task.Run(() => this.ImportMap());
+        this.initialized = Task.Run(() => this.ImportMap());
     }
 
     private void CalculateContourBounds(float tolerance=0.07f)
@@ -92,7 +94,9 @@ public class MeshManager : MonoBehaviour
                 waterText.text = string.Format("{0}", waterObject.transform.position.y);
 
                 // Create gradient for height map toggling
-                GradientPicker.Create(this.gradient, GradientFinished);
+                this.gradientPicker.Awake();
+                this.colorPicker.Awake();
+                GradientPicker.Create(this.gradient, GradientFinished); 
 
                 TerrainManager.instance.SetUpTerrain();
                 return true;
@@ -231,6 +235,9 @@ public class MeshManager : MonoBehaviour
         Debug.Log("You chose a Gradient with " + finishedGradient.colorKeys.Length + " Color keys");
         this.gradient = finishedGradient;
        
+        float[,] intensityMapSnapshot = null;
+        if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
+
         for (int i = 0, y = 0; y < resolution; y++)
         {
             for (int x = 0; x < resolution; x++, i++)
@@ -238,9 +245,9 @@ public class MeshManager : MonoBehaviour
                 this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y));
 
                 // Apply macrophyte color mix
-                if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                if (UserSettings.macrophyteMaps && intensityMapSnapshot != null)
                 {
-                    if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                    if (intensityMapSnapshot[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * intensityMapSnapshot[x, y] + this.colors[i] * (1f - intensityMapSnapshot[x, y]);
                 }
             }
         }
@@ -252,6 +259,9 @@ public class MeshManager : MonoBehaviour
     {
         if (UserSettings.showGradient)
         {
+            float[,] intensityMapSnapshot = null;
+            if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
+
             for (int i = 0, y = 0; y < resolution; y++)
             { 
                 for (int x = 0; x < resolution; x++, i++)
@@ -259,9 +269,9 @@ public class MeshManager : MonoBehaviour
                     this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); 
 
                     // Apply macrophyte color mix
-                    if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                    if (UserSettings.macrophyteMaps && intensityMapSnapshot != null)
                     {
-                        if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                        if (intensityMapSnapshot[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * intensityMapSnapshot[x, y] + this.colors[i] * (1f - intensityMapSnapshot[x, y]);
                     }
                 }
             }
@@ -280,6 +290,9 @@ public class MeshManager : MonoBehaviour
             Color[] contourColors = new Color[10];
             if (graded) for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f), 1f-(1f-(float)c/10f));
             else for (int c = 0; c < contourColors.Length; c++) contourColors[c] = new Color(1f, 1f, 1f);
+
+            float[,] intensityMapSnapshot = null;
+            if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
 
             // Apply based on depths
             for (int i = 0, y = 0; y < this.resolution; y++)
@@ -302,9 +315,9 @@ public class MeshManager : MonoBehaviour
                     if (!colorApplied) this.colors[i] = lakeBedColor;
                     
                     // Apply macrophyte color mix
-                    if (UserSettings.macrophyteMaps && MacromapManager.intensityMap != null && !MacromapManager.alreadyUpdating)
+                    if (UserSettings.macrophyteMaps && intensityMapSnapshot != null)
                     {
-                        if (MacromapManager.intensityMap[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * MacromapManager.intensityMap[x, y] + this.colors[i] * (1f - MacromapManager.intensityMap[x, y]);
+                        if (intensityMapSnapshot[x, y] != 0f) this.colors[i] = new Color(0f, 1f, 0f) * intensityMapSnapshot[x, y] + this.colors[i] * (1f - intensityMapSnapshot[x, y]);
                     }
                 }
             }

@@ -19,24 +19,12 @@ public class CategoricalFilterHandler : MonoBehaviour
     public bool isSexHandler { get { return _isSexHandler; } }
     private List<CategoricalFilter> filterList;
 
+
     private void Awake()
     {
-        Main.fishDictAssembled += this.GetOptions;
         filterList = new List<CategoricalFilter>();
         FilterManager.AddCatHandler(this);
-    }
 
-    private void Start()
-    {
-        if (this.isSexHandler) { this.header.text = "Sex"; }
-        else { this.header.text = "Capture Type"; }
-
-        contentPanel.position = new Vector3(0,0,0);
-        initialStartSize = this.contentSize;
-    }
-
-    private void GetOptions()
-    {
         List<string> optionsList = isSexHandler ? FishManager.listOfSexes : FishManager.listOfCaptureTypes;
 
         // Populate the toggle list with discovered options
@@ -64,6 +52,15 @@ public class CategoricalFilterHandler : MonoBehaviour
 
         this.contentPanel.sizeDelta += new Vector2(0, this.contentSize - this.initialStartSize);
         LayoutRebuilder.ForceRebuildLayoutImmediate(this.contentPanel);
+    }
+
+    private void Start()
+    {
+        if (this.isSexHandler) { this.header.text = "Sex"; }
+        else { this.header.text = "Capture Type"; }
+
+        contentPanel.position = new Vector3(0,0,0);
+        initialStartSize = this.contentSize;
     }
 
     public bool PassesFilters(Fish fish)

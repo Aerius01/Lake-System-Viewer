@@ -40,7 +40,7 @@ public class ColorPickerImported : MonoBehaviour
     public TMP_InputField hexaComponent;
     public RawImage colorComponent;
 
-    private void Awake()
+    public void Awake()
     {
         instance = this;
         gameObject.SetActive(false);

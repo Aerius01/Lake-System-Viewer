@@ -40,7 +40,6 @@ public class EventSystemManager : MonoBehaviour
         // Set up event listeners
         scaleChangeEvent += environmentManager.AdjustScales;
         scaleChangeEvent += FishManager.ChangeVerticalScale;
-        scaleChangeEvent += GrassSpawner.instance.SpawnGrass;
         fishScaleEvent += FishManager.ChangeFishScale;
         waterLevelEvent += environmentManager.AdjustWaterLevel;
     }

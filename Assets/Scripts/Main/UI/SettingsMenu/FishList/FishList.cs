@@ -10,9 +10,7 @@ public class FishList : MonoBehaviour
     private List<SpeciesBox> speciesList;
     [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
 
-    private void Awake() { Main.fishDictAssembled += this.PopulateList; }
-
-    public void PopulateList()
+    private void Awake()
     {
         speciesList = new List<SpeciesBox>();
 

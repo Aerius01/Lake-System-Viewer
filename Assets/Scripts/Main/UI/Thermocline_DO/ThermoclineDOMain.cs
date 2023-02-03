@@ -82,7 +82,7 @@ public class ThermoclineDOMain : MonoBehaviour
             float height = this.TempCB.GetComponent<RectTransform>().rect.height;
             incrementalHeight = height / 10f;
             originPositionBar = this.thermoDepth.GetComponent<RectTransform>().anchoredPosition;
-            originContainer = this.thermoRootObject.GetComponent<RectTransform>().position;
+            originContainer = this.thermoRootObject.GetComponent<RectTransform>().anchoredPosition;
 
             // Get timestamp extremes
             Tuple<DateTime, DateTime, float> returnPacket = DatabaseConnection.GetThermoMinMaxes(); 
@@ -200,7 +200,7 @@ public class ThermoclineDOMain : MonoBehaviour
         else
         {
             this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 0;
-            this.thermoRootObject.GetComponent<RectTransform>().position = this.originContainer;
+            this.thermoRootObject.GetComponent<RectTransform>().localPosition = this.originContainer;
             this.thermoclinePlane.TogglePlane(false);
         }
     }

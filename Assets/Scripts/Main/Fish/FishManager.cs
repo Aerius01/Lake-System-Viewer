@@ -19,7 +19,7 @@ public class FishManager
     public static List<string> listOfSexes {get; private set;}
     public static List<string> listOfCaptureTypes {get; private set;}
 
-    public static Task<bool> initialization { get; private set; }
+    public static Task<bool> initialized { get; private set; }
 
     // Async
     private static Task queryTask;
@@ -39,7 +39,7 @@ public class FishManager
         listOfSexes = new List<string>();
         listOfCaptureTypes = new List<string>();
 
-        FishManager.initialization = AsyncInitialize(managerObject);
+        FishManager.initialized = AsyncInitialize(managerObject);
     }
 
     private Task<bool> AsyncInitialize(GameObject managerObject)

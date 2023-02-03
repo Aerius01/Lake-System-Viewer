@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 24588937358157088}
-  - component: {fileID: 6018165384523727411}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -40,24 +39,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &6018165384523727411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1045912795081103999}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 143548bbeb1a2594289f15a81b67a5b0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minObject: {fileID: 7503175896192888940}
-  maxObject: {fileID: 7503175896339078352}
-  invertToggle: {fileID: 7503175895213301772}
-  lowerBar: {fileID: 7503175896068504431}
-  middleBar: {fileID: 7503175896483514878}
-  upperBar: {fileID: 7503175896469128377}
 --- !u!1 &7503175894663279956
 GameObject:
   m_ObjectHideFlags: 0
@@ -1644,12 +1625,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 143548bbeb1a2594289f15a81b67a5b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minObject: {fileID: 7503175896192888940}
-  maxObject: {fileID: 7503175896339078352}
   invertToggle: {fileID: 7503175895213301772}
   lowerBar: {fileID: 7503175896068504431}
   middleBar: {fileID: 7503175896483514878}
   upperBar: {fileID: 7503175896469128377}
+  minSlider: {fileID: 0}
+  maxSlider: {fileID: 0}
+  minHandle: {fileID: 7503175894725927863}
+  maxHandle: {fileID: 7503175896770938751}
+  minInput: {fileID: 7503175896776291185}
+  maxInput: {fileID: 7503175894930286183}
 --- !u!1 &7503175896227724567
 GameObject:
   m_ObjectHideFlags: 0

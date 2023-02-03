@@ -3,20 +3,18 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Threading.Tasks;
 
 public delegate void WindChangeEvent(Vector2 newDir, float windSpeed);
 
 public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     // Required game objects
-    [SerializeField]
-    private TextMeshProUGUI windSpeedText;
-    [SerializeField]
-    private GameObject[] particleObject;
-    [SerializeField]
-    private GameObject compassDial, compassArrow, toolTip, weatherText;
-    [SerializeField]
-    private Toggle toggle;
+    [SerializeField] private TextMeshProUGUI windSpeedText, toolTipDeg;
+    [SerializeField] private GameObject[] particleObject;
+    [SerializeField] private GameObject compassDial, compassArrow, weatherText, rootObject, windObject, genObject;
+    [SerializeField] private Toggle toggle;
+    [SerializeField] private CanvasGroup rootCanvas, toolTipCanvas, compassCanvas;
 
     // Singleton
     private static WindWeatherMain _instance;
@@ -24,105 +22,191 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public static WindWeatherMain instance {get { return _instance; } set {_instance = value; }}
 
     // Update logic
-    private static WeatherPacket currentPacket = null;
+    private WeatherPacket currentPacket = null;
+    private Vector3 windStartPos, weatherStartPos;
     private static readonly object locker = new object();
-    private static bool timeBounded
+    public bool initialized { get; private set; }
+    private bool updating = false, performSyncUpdate = false;
+
+    // Metadata
+    public DateTime earliestWeatherTimestamp { get; private set;}
+    public DateTime latestWeatherTimestamp { get; private set;}
+
+    // For the particle controller
+    private WindChangeEvent windChanged;
+
+    // Properties
+    private bool timeBounded
     {
         get
         {
-            if (WindWeatherMain.currentPacket == null) return false; // no times to be bounded by
-            else if (DateTime.Compare(TimeManager.instance.currentTime, WindWeatherMain.currentPacket.timestamp) < 0) return false; // the current time is earlier than the packet's timestamp
-            else if (WindWeatherMain.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
+            if (this.currentPacket == null) return false; // no times to be bounded by
+            else if (DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket.timestamp) < 0) return false; // the current time is earlier than the packet's timestamp
+            else if (this.currentPacket.nextTimestamp == null) return true; // we are in bounds (passed prev condition), but there is no future packet coming
             else
             {
-                if (DateTime.Compare(TimeManager.instance.currentTime, WindWeatherMain.currentPacket.timestamp) > 0
-                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(WindWeatherMain.currentPacket.nextTimestamp)) < 0)
+                if (DateTime.Compare(TimeManager.instance.currentTime, this.currentPacket.timestamp) > 0
+                && DateTime.Compare(TimeManager.instance.currentTime, Convert.ToDateTime(this.currentPacket.nextTimestamp)) < 0)
                 return true; // traditional bounds (middle condition)
                 else return false;
             }
         }
     }
-    private static bool beforeFirstTS
+    private bool beforeFirstTS
     {
         get
         {
-            if (DateTime.Compare(TimeManager.instance.currentTime, WindWeatherMain.earliestWeatherTimestamp) < 0) return true;
+            if (DateTime.Compare(TimeManager.instance.currentTime, this.earliestWeatherTimestamp) < 0) return true;
             else return false;
         }
     }
 
-    // Metadata
-    public static DateTime earliestWeatherTimestamp { get; private set;}
-    public static DateTime latestWeatherTimestamp { get; private set;}
 
-    // Other
-    private Vector3 windStartPos, weatherStartPos;
 
-    // For the particle controller
-    private WindChangeEvent windChanged;
 
-    private void Awake()
+    private async void Awake()
     {
-        // Singleton
-        if (_instance != null && _instance != this) Destroy(this.gameObject); 
-        else _instance = this; 
-    }
+        this.initialized = false;
+        this.currentPacket = null;
 
-    public void StartWindWeather()
-    {
-        foreach (GameObject obj in particleObject)
-        { 
-            WindParticleController controller = obj.GetComponent<WindParticleController>();
-            controller.GetSystem();
-            windChanged += controller.UpdateDirection;
-        }
-
-        windStartPos = instance.transform.Find("Wind").GetComponent<RectTransform>().position;
-        weatherStartPos = instance.transform.Find("General").GetComponent<RectTransform>().position;
-        
-        // Get TS extremes
-        DateTime[] boundingDates = DatabaseConnection.GetWeatherMinMaxTimes();
-        WindWeatherMain.earliestWeatherTimestamp = boundingDates[0];
-        WindWeatherMain.latestWeatherTimestamp = boundingDates[1];
-
-        ToggleWind();
-        FetchNewBounds();
-    }
-
-    private static void FetchNewBounds()
-    {
-        if (!WindWeatherMain.beforeFirstTS)
+        try
         {
-            try { lock(WindWeatherMain.locker) { WindWeatherMain.currentPacket = DatabaseConnection.GetWeatherData(); } }
-            catch (Npgsql.NpgsqlOperationInProgressException)
+            // Singleton
+            if (_instance != null && _instance != this) Destroy(this.gameObject); 
+            else _instance = this; 
+
+            foreach (GameObject obj in particleObject)
+            { 
+                WindParticleController controller = obj.GetComponent<WindParticleController>();
+                controller.GetSystem();
+                windChanged += controller.UpdateDirection;
+            }
+
+            this.windStartPos = this.windObject.GetComponent<RectTransform>().anchoredPosition;
+            this.weatherStartPos = this.genObject.GetComponent<RectTransform>().anchoredPosition;
+            
+            // Get TS extremes
+            DateTime[] boundingDates = await DatabaseConnection.GetWeatherMinMaxTimes();
+            this.earliestWeatherTimestamp = boundingDates[0];
+            this.latestWeatherTimestamp = boundingDates[1];
+
+            if (this.earliestWeatherTimestamp == DateTime.MaxValue || this.latestWeatherTimestamp == DateTime.MinValue) throw new Exception();
+
+            this.ToggleWind();
+            await this.UpdateWindWeather();
+
+            this.rootObject.SetActive(true);
+            this.initialized = true;
+        }
+        catch (Exception) { this.EnableWindWeather(false); }
+    }
+
+
+    private async Task<bool> FetchNewBounds()
+    {
+        // if an exception is thrown or no data is returned (null), the method returns false
+        try 
+        { 
+            this.currentPacket = await DatabaseConnection.GetWeatherData(); 
+            if (this.currentPacket == null) throw new Exception();
+            else return true;
+        }
+        catch (Exception) { return false; }
+    }
+
+    public async Task UpdateWindWeather()
+    {
+        // Handle asynchronous updates
+        // We don't want to senselessly overload the system with queries that return nothing
+        if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
+        {
+            // Secure the multi-threading
+            lock(WindWeatherMain.locker) this.updating = true;
+            if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(WindWeatherMain.locker) { this.performSyncUpdate = true; } }
+            lock(WindWeatherMain.locker) this.updating = false;
+        }
+    }
+
+    private void Update()
+    {
+        if (this.initialized)
+        {
+            this.compassDial.transform.localEulerAngles = new Vector3(0f, 0f, Camera.main.transform.eulerAngles.y);
+
+            // Handle synchronous updates
+            if (this.currentPacket == null) { if (this.toggle.interactable) this.EnableWindWeather(false); }
+
+            lock(WindWeatherMain.locker) 
             {
-                lock(WindWeatherMain.locker) { WindWeatherMain.currentPacket = null; }
-                Debug.Log("WindWeather; DB Operation already in progress");
+                if (this.performSyncUpdate)
+                {
+                    this.performSyncUpdate = false;
+                    if (!this.toggle.interactable) this.EnableWindWeather(true);
+
+                    // Execute wind-related updates
+                    if (this.currentPacket.windspeed == null || this.currentPacket.windDirection == null)
+                    {
+                        this.compassCanvas.alpha = 0f;
+                        this.toolTipDeg.text = " - °";
+                        this.windSpeedText.text = "Wind Speed: - m/s";
+                    }
+                    else
+                    {
+                        this.compassCanvas.alpha = 1f;
+                        this.compassArrow.transform.localEulerAngles = new Vector3(0f, 0f, 360 - (float)this.currentPacket.windDirection);
+                        this.windSpeedText.text = string.Format("Wind Speed: {0:#0.00} m/s", (float)this.currentPacket.windspeed);
+                        this.toolTipDeg.text = string.Format("{0:###}°", (float)this.currentPacket.windDirection);
+
+                        // Invoke the event for particle systems to update
+                        double radDir = (double)(360f - (float)this.currentPacket.windDirection) * Math.PI / 180f + Math.PI/2;
+                        Vector2 unitVector = new Vector2((float)Math.Cos(radDir), (float)Math.Sin(radDir));
+                        this.windChanged?.Invoke(unitVector, (float)this.currentPacket.windspeed);
+                    }
+
+                    // Manage other weather data
+                    string strTemp = this.currentPacket.temperature == null ? " - \n" : string.Format("{0:#0.0} °C\n", (float)this.currentPacket.temperature);
+                    string strHumidity = this.currentPacket.humidity == null ? " - \n" : string.Format("{0:#0.0} %\n", (float)this.currentPacket.humidity);
+                    string strAirPressure = this.currentPacket.airPressure == null ? " - \n" : string.Format("{0:###0.0} hPa\n", (float)this.currentPacket.airPressure);
+                    string strPrecip = this.currentPacket.precipitation == null ? " - \n" : string.Format("{0:#0.0} mm/h", (float)this.currentPacket.precipitation);
+
+                    this.weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
+                }
             }
         }
-        else WindWeatherMain.currentPacket = null;
-
-        WindWeatherMain.instance.PerformUpdate();
     }
 
-    public void UpdateWindWeather()
-    {
-        if (WindWeatherMain.currentPacket == null) FetchNewBounds();
-        else if (!WindWeatherMain.timeBounded) FetchNewBounds();
+    public void OnPointerEnter(PointerEventData eventData) { this.toolTipCanvas.alpha = 1f; }
+    public void OnPointerExit(PointerEventData eventData) { this.toolTipCanvas.alpha = 0f; }
 
-        compassDial.transform.localEulerAngles = new Vector3(0f, 0f, Camera.main.transform.eulerAngles.y);
-    }
-
-    private void PerformUpdate()
+    public void ToggleWind()
     {
-        if (WindWeatherMain.currentPacket == null)
+        if (UserSettings.showWindWeather)
         {
-            if (WindWeatherMain.instance.toggle.interactable) WindWeatherMain.EnableWindWeather(false);
+            this.rootCanvas.alpha = 1;
+            foreach (GameObject obj in particleObject) { obj.SetActive(true); }
+        }
+        else
+        {
+            this.rootCanvas.alpha = 0;
+            this.windObject.GetComponent<RectTransform>().localPosition = windStartPos;
+            this.genObject.GetComponent<RectTransform>().localPosition = weatherStartPos;
+            foreach (GameObject obj in particleObject) { obj.SetActive(false); }
+        }
+    }
+
+    public void EnableWindWeather(bool status)
+    {
+        if (status) this.toggle.interactable = true; 
+        else
+        {
+            this.toggle.isOn = false;
+            UserSettings.showWindWeather = false;
+            this.toggle.interactable = false;
 
             // Null out wind
-            compassArrow.GetComponent<CanvasGroup>().alpha = 0f;
-            toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = " - °";
-            windSpeedText.text = "Wind Speed: - m/s";
+            this.compassCanvas.alpha = 0f;
+            this.toolTipDeg.text = " - °";
+           this. windSpeedText.text = "Wind Speed: - m/s";
 
             // Null out other weather data
             string strTemp = " - \n";
@@ -130,70 +214,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             string strAirPressure = " - \n";
             string strPrecip = " - \n";
 
-            weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
-
-        }
-        else if (WindWeatherMain.currentPacket != null)
-        {
-            if (!WindWeatherMain.instance.toggle.interactable) WindWeatherMain.EnableWindWeather(true);
-
-            // Execute wind-related updates
-            if (WindWeatherMain.currentPacket.windspeed == null || WindWeatherMain.currentPacket.windDirection == null)
-            {
-                compassArrow.GetComponent<CanvasGroup>().alpha = 0f;
-                toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = " - °";
-                windSpeedText.text = "Wind Speed: - m/s";
-            }
-            else
-            {
-                compassArrow.GetComponent<CanvasGroup>().alpha = 1f;
-                compassArrow.transform.localEulerAngles = new Vector3(0f, 0f, 360 - (float)WindWeatherMain.currentPacket.windDirection);
-                windSpeedText.text = string.Format("Wind Speed: {0:#0.00} m/s", (float)WindWeatherMain.currentPacket.windspeed);
-                toolTip.transform.Find("DegText").GetComponent<TextMeshProUGUI>().text = string.Format("{0:###}°", (float)WindWeatherMain.currentPacket.windDirection);
-
-                // Invoke the event for particle systems to update
-                double radDir = (double)(360f - (float)WindWeatherMain.currentPacket.windDirection) * Math.PI / 180f + Math.PI/2;
-                Vector2 unitVector = new Vector2((float)Math.Cos(radDir), (float)Math.Sin(radDir));
-                windChanged?.Invoke(unitVector, (float)WindWeatherMain.currentPacket.windspeed);
-            }
-
-            // Manage other weather data
-            string strTemp = WindWeatherMain.currentPacket.temperature == null ? " - \n" : string.Format("{0:#0.0} °C\n", (float)WindWeatherMain.currentPacket.temperature);
-            string strHumidity = WindWeatherMain.currentPacket.humidity == null ? " - \n" : string.Format("{0:#0.0} %\n", (float)WindWeatherMain.currentPacket.humidity);
-            string strAirPressure = WindWeatherMain.currentPacket.airPressure == null ? " - \n" : string.Format("{0:###0.0} hPa\n", (float)WindWeatherMain.currentPacket.airPressure);
-            string strPrecip = WindWeatherMain.currentPacket.precipitation == null ? " - \n" : string.Format("{0:#0.0} mm/h", (float)WindWeatherMain.currentPacket.precipitation);
-
-            weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
-        }
-    }
-
-    public void OnPointerEnter(PointerEventData eventData) { toolTip.GetComponent<CanvasGroup>().alpha = 1f; }
-    public void OnPointerExit(PointerEventData eventData) { toolTip.GetComponent<CanvasGroup>().alpha = 0f; }
-
-    public void ToggleWind()
-    {
-        if (UserSettings.showWindWeather)
-        {
-            instance.gameObject.GetComponent<CanvasGroup>().alpha = 1;
-            foreach (GameObject obj in particleObject) { obj.SetActive(true); }
-        }
-        else
-        {
-            instance.gameObject.GetComponent<CanvasGroup>().alpha = 0;
-            instance.transform.Find("Wind").GetComponent<RectTransform>().position = windStartPos;
-            instance.transform.Find("General").GetComponent<RectTransform>().position = weatherStartPos;
-            foreach (GameObject obj in particleObject) { obj.SetActive(false); }
-        }
-    }
-
-    public static void EnableWindWeather(bool status)
-    {
-        if (status) WindWeatherMain.instance.toggle.interactable = true; 
-        else
-        {
-            WindWeatherMain.instance.toggle.isOn = false;
-            UserSettings.showWindWeather = false;
-            WindWeatherMain.instance.toggle.interactable = false;
+           this. weatherText.GetComponent<TextMeshProUGUI>().text = strTemp + strHumidity + strAirPressure + strPrecip;
         }
     }
 }

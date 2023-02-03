@@ -4,34 +4,20 @@ using TMPro;
 
 public class TwoEndedSlider : MonoBehaviour 
 {
-    [SerializeField] private GameObject minObject, maxObject;
     [SerializeField] private Toggle invertToggle;
     [SerializeField] private RectTransform lowerBar, middleBar, upperBar;
-
-    private Slider minSlider, maxSlider;
-    private RectTransform minHandle, maxHandle;
-    private TMP_InputField minInput, maxInput;
+    [SerializeField] private Slider minSlider, maxSlider;
+    [SerializeField] private RectTransform minHandle, maxHandle;
+    [SerializeField] private TMP_InputField minInput, maxInput;
 
     private bool isMinNode;
     private float minValue = 0f, maxValue = 1f;
 
     // Exposed
-    public float currentMin { get { return minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
-    public float currentMax { get { return maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
+    public float currentMin { get { return this.minSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
+    public float currentMax { get { return this.maxSlider.normalizedValue * (this.maxValue - this.minValue) + this.minValue; } }
     public bool inverted { get { return this.invertToggle.isOn; } }
 
-
-    private void Awake()
-    {
-        minSlider = minObject.GetComponent<Slider>();
-        maxSlider = maxObject.GetComponent<Slider>();
-
-        minHandle = minSlider.transform.Find("HandleSlideArea").transform.Find("Handle").GetComponent<RectTransform>();
-        maxHandle = maxSlider.transform.Find("HandleSlideArea").transform.Find("Handle").GetComponent<RectTransform>();
-
-        minInput = minObject.transform.Find("InputField (TMP)").GetComponent<TMP_InputField>();
-        maxInput = maxObject.transform.Find("InputField (TMP)").GetComponent<TMP_InputField>();
-    }
 
     private void Start() { UpdateMaskBars(); }
 

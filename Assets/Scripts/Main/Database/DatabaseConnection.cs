@@ -437,7 +437,7 @@ public class DatabaseConnection
         return returnDict;
     }
 
-    public static WeatherPacket GetWeatherData()
+    public static async Task<WeatherPacket> GetWeatherData()
     {
         // https://stackoverflow.com/questions/8145479/can-constructors-be-async
         string strTime = TimeManager.instance.currentTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
@@ -466,16 +466,16 @@ public class DatabaseConnection
         order by timestamp
         limit 1", strTime);
 
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
+            await connection.OpenAsync();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
-                if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); }
+                if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); throw new Exception(); }
 
-                while (rdr.Read())
+                while (await rdr.ReadAsync())
                 {
                     DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
 
@@ -538,16 +538,16 @@ public class DatabaseConnection
                     returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
                 };
 
-                rdr.Close();
+                await rdr.CloseAsync();
             }
 
-            connection.Close();
+            await connection.CloseAsync();
         }
 
         return returnPacket;
     }
 
-    public static DateTime[] GetWeatherMinMaxTimes()
+    public static async Task<DateTime[]> GetWeatherMinMaxTimes()
     {
         DateTime earliestTimestamp = DateTime.MaxValue;
         DateTime latestTimestamp = DateTime.MinValue;
@@ -563,25 +563,25 @@ public class DatabaseConnection
             or precipitation is not null
             AND timestamp IS NOT null";
 
-        using (NpgsqlConnection connection = new NpgsqlConnection(connString))
+        await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
+            await connection.OpenAsync();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
-                if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); }
+                if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); throw new Exception(); }
 
-                while (rdr.Read())
+                while (await rdr.ReadAsync())
                 {
                     earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
                     latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
                 };
 
-                rdr.Close();
+                await rdr.CloseAsync();
             }
 
-            connection.Close();
+            await connection.CloseAsync();
         }
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
@@ -791,7 +791,7 @@ public class DatabaseConnection
 
             using (NpgsqlDataReader rdr = cmd.ExecuteReader())
             {
-                if (!rdr.HasRows) { Debug.Log(string.Format("Problem getting earliest date from table {0}", tableName)); }
+                if (!rdr.HasRows) { Debug.Log(string.Format("Problem getting earliest date from table {0}", tableName)); throw new Exception(); }
                 while (rdr.Read()) { timestamp = rdr.GetDateTime(rdr.GetOrdinal("min")); }
 
                 rdr.Close();
