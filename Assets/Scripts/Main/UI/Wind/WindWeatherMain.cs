@@ -63,18 +63,20 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
 
 
-
-    private async void Awake()
+    private void Awake()
     {
         this.initialized = false;
         this.currentPacket = null;
 
+        // Singleton
+        if (_instance != null && _instance != this) Destroy(this.gameObject); 
+        else _instance = this; 
+    }
+
+    public async Task WakeUp()
+    {
         try
         {
-            // Singleton
-            if (_instance != null && _instance != this) Destroy(this.gameObject); 
-            else _instance = this; 
-
             foreach (GameObject obj in particleObject)
             { 
                 WindParticleController controller = obj.GetComponent<WindParticleController>();
@@ -98,7 +100,16 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             this.rootObject.SetActive(true);
             this.initialized = true;
         }
-        catch (Exception) { this.EnableWindWeather(false); }
+        catch (Exception e) { this.EnableWindWeather(false); Debug.Log(e.Message); Debug.Log(e.StackTrace); }
+    }
+
+    public void Clear()
+    {
+        this.gameObject.SetActive(false);
+        this.EnableWindWeather(false);
+        this.windChanged = null;
+        this.currentPacket = null;
+        this.initialized = false;
     }
 
 
@@ -125,6 +136,9 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(WindWeatherMain.locker) { this.performSyncUpdate = true; } }
             lock(WindWeatherMain.locker) this.updating = false;
         }
+        
+        if (this.beforeFirstTS) this.currentPacket = null;
+
     }
 
     private void Update()
@@ -135,6 +149,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
             // Handle synchronous updates
             if (this.currentPacket == null) { if (this.toggle.interactable) this.EnableWindWeather(false); }
+            else if (this.currentPacket != null) { if (!this.toggle.interactable) this.EnableWindWeather(true); }
 
             lock(WindWeatherMain.locker) 
             {

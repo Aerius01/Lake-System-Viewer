@@ -84,6 +84,12 @@ public class Fish : MonoBehaviour
         this.fishObject.SetActive(false);
     }
 
+    public void Clear()
+    {
+        Destroy(this.fishObject);
+        Destroy(this);
+    }
+
     public bool FishShouldExist(DateTime timestamp)
     {
         if ((DateTime.Compare(timestamp, this.earliestTime) < 0 

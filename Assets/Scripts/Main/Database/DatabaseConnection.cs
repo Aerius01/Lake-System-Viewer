@@ -18,7 +18,7 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = true;
+    private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish

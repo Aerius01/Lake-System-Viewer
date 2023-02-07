@@ -34,7 +34,7 @@ public class MeshManager : MonoBehaviour
     [HideInInspector]
     public static MeshManager instance {get { return _instance; } set {_instance = value; }}
 
-    private void Awake()
+    public void WakeUp()
     {
         // Destroy duplicates instances
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
@@ -104,6 +104,14 @@ public class MeshManager : MonoBehaviour
             return false;
         }
         return false;
+    }
+
+    public void Clear()
+    {
+        this.gameObject.GetComponent<MeshFilter>().mesh = null;
+        Destroy(this.mesh);
+
+        this.gameObject.SetActive(false);
     }
 
     public void ReZeroMesh()

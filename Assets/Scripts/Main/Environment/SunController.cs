@@ -30,20 +30,9 @@ public class SunController : MonoBehaviour
         this.longitude = longitude;
     }
 
-    private double degrees_to_radians(double degrees)
-    {
-        return (degrees * (Math.PI/180));
-    }
-    
-    private double radians_to_degrees(double radians)
-    {
-        return (radians * (180/Math.PI));
-    }
-
-    private double ToJulianDate(DateTime date)
-    {
-        return date.ToOADate() + 2415018.5;
-    }
+    private double degrees_to_radians(double degrees) { return (degrees * (Math.PI/180)); }
+    private double radians_to_degrees(double radians) { return (radians * (180/Math.PI)); }
+    private double ToJulianDate(DateTime date) { return date.ToOADate() + 2415018.5; }
 
     private void CalculateNewSunPos()
     {

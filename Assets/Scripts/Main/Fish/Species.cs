@@ -4,10 +4,13 @@ using System.Collections.Generic;
 public class Species : MonoBehaviour
 {
     public static Dictionary<string, GameObject> prefabDict {get; private set;}
-    [SerializeField]
-    private GameObject perch, roach, pike, tench, carp, walleye;
+    [SerializeField] private GameObject perch, roach, pike, tench, carp, walleye;
 
-    private void Awake()
+    public bool initialized { get; private set; }
+
+    private void Awake() { this.initialized = false; }
+
+    public void WakeUp()
     {
         prefabDict = new Dictionary<string, GameObject>()
         {
@@ -19,5 +22,9 @@ public class Species : MonoBehaviour
             {"Scaled carp", carp},
             {"Tench", tench}
         };
+
+        this.initialized = true;
     }
+
+    public void Clear() { this.initialized = false; this.gameObject.SetActive(false); }
 }

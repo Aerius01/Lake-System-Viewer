@@ -56,16 +56,24 @@ public class MacromapManager: MonoBehaviour
 
     private void Awake()
     {
-        // Inits
+        this.initialized = null;
         this.intensityMap = null;
         this.currentPacket = null;
 
         // Singleton
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+    }
 
-        // No dependence on Unity functions --> can run async
-        this.initialized = Task.Run(() => this.AwakeAsync());
+    public void WakeUp() { this.initialized = Task.Run(() => this.AwakeAsync()); }
+
+    public void Clear()
+    { 
+        GrassSpawner.instance.Clear();
+        this.initialized = Task.Run(() => false);
+        this.intensityMap = null;
+        this.currentPacket = null;
+        this.gameObject.SetActive(false); 
     }
 
     private async Task<bool> AwakeAsync()
@@ -133,6 +141,8 @@ public class MacromapManager: MonoBehaviour
             }
             lock(MacromapManager.locker) this.updating = false;
         }
+
+        if (this.beforeFirstTS) { this.currentPacket = null; this.intensityMap = null; }
     }
 
     private async void Update()
@@ -141,11 +151,7 @@ public class MacromapManager: MonoBehaviour
         {
             // Constantly checked whether to enable or disable
             // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
-            if (!this.beforeFirstTS)
-            {
-                if (this.toggle.interactable == false && !this.updating && this.intensityMap != null)
-                { this.EnableMaps(); }
-            }
+            if (!this.beforeFirstTS) { if (!this.toggle.interactable && !this.updating && this.intensityMap != null) { this.EnableMaps(); } }
             else if (this.toggle.interactable == true) { this.DisableMaps(); }
 
             // Decide whether or not to show the buffering icon

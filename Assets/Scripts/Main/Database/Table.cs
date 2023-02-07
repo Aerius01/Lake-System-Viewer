@@ -8,6 +8,7 @@ public class Table
     public List<string> presentColumns { get; private set; }
 
     public bool status { get { if (this.lightColor == 2) return false; else return true; } }
+    public bool imported = false;
 
     public Table(string name)
     { 
@@ -24,4 +25,6 @@ public class Table
         else this.AddMessage(message);
     }
     private void AddMessage(string message) { this.tableMessage += string.Format("\n\n{0}", message); }
+
+    public void Imported(bool status) { this.imported = status; }
 }

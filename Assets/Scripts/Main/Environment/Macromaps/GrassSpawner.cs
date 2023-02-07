@@ -69,12 +69,14 @@ public class GrassSpawner: MonoBehaviour
                         }
                     }
                 }
-                else
-                {
-                    foreach (GameObject grass in this.currentPrefabs) { Destroy(grass); } 
-                    this.currentPrefabs = new List<GameObject>();
-                }
+                else this.Clear(); 
             }
         }
+    }
+
+    public void Clear()
+    { 
+        foreach (GameObject grass in this.currentPrefabs) { Destroy(grass); } 
+        this.currentPrefabs = new List<GameObject>();
     }
 }

@@ -10,7 +10,7 @@ public class FishList : MonoBehaviour
     private List<SpeciesBox> speciesList;
     [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
 
-    private void Awake()
+    public void WakeUp()
     {
         speciesList = new List<SpeciesBox>();
 
@@ -50,6 +50,13 @@ public class FishList : MonoBehaviour
         }
 
         listPopulated = true;
+    }
+
+    public void Clear()
+    {
+        this.listPopulated = false;
+        foreach (SpeciesBox speciesBox in this.speciesList) { speciesBox.Clear(); }
+        this.speciesList = null;
     }
 
     private void FixedUpdate()

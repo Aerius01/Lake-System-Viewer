@@ -211,17 +211,22 @@ public class DBHandler : MonoBehaviour
             throw; 
         }
 
+        loadingBar.ShutDown();
+
         if (!successfulInit)
         {
+            Debug.Log("Failed init");
+            this.main.ClearAll();
+            
             messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Import Error";
-            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = "There was an issue while importing the data. It is likely that the connection was interrupted. Please restart the verification process.";
+            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = string.Format("There was an issue while importing either the \"{0}\" or the \"{1}\" tables. It is likely that the connection was interrupted. Please restart the verification process.", TableImports.checkTables[0], TableImports.checkTables[1]);
             
             messageBox.SetActive(true);
             this.NewInput();
         }
-        else this.gameObject.SetActive(false); 
+        else this.gameObject.SetActive(false);
 
-        loadingBar.ShutDown();
+        foreach (string key in TableImports.tables.Keys) { Debug.Log(string.Format("{0}: {1}", TableImports.tables[key].tableName, TableImports.tables[key].imported)); }
     }
 
     private void CheckButtonStatuses()

@@ -50,17 +50,24 @@ public class HeightManager : MonoBehaviour
     public static HeightManager instance {get { return _instance; } set {_instance = value; }}
 
 
-
-
     private void Awake()
     {
+        this.initialized = null;
         this.currentPacket = null;
 
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+    }
 
-        // No dependence on Unity functions --> can run async
-        this.initialized = Task.Run(() => this.AwakeAsync());;
+    public void WakeUp() { this.initialized = Task.Run(() => this.AwakeAsync()); }
+
+    public void Clear()
+    { 
+        this.initialized = Task.Run(() => false);
+        this.currentPacket = null;
+        GrassSpawner.instance.Clear();
+
+        this.gameObject.SetActive(false); 
     }
 
     private async Task<bool> AwakeAsync()
@@ -98,6 +105,8 @@ public class HeightManager : MonoBehaviour
             if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(HeightManager.locker) this.performSyncUpdate = true; }
             lock(HeightManager.locker) this.updating = false;
         }
+
+        if (this.beforeFirstTS) this.currentPacket = null;
     }
 
     private async void Update()
@@ -106,7 +115,7 @@ public class HeightManager : MonoBehaviour
         {
             // Constantly check whether to enable or disable interactability
             // The macroheights toggle should only be enabled if MacromapManager is not updating, hence the lock
-            if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (this.toggle.interactable == false && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
+            if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (!this.toggle.interactable && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
             else if (this.toggle.interactable == true) { this.DisableMaps(); }
 
             // Unity is demanding this be executed from the main thread, hence the workaround

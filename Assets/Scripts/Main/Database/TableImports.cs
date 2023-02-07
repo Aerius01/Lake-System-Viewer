@@ -368,62 +368,62 @@ public class TableImports
         TableImports.tables[tableName] = positionsTable;
         List<string> requiredColumns = new List<string> {"id", "timestamp", "x", "y", "z"};
 
-        // PRIMARY: The table must be present
-        if (this.tableNames.Contains(tableName))
-        {
-            // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
-            conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
+        // // PRIMARY: The table must be present
+        // if (this.tableNames.Contains(tableName))
+        // {
+        //     // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
+        //     conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
 
-            // WARNING: The max/min x, y and z should fall within the boundaries of the height map
-            if (conditionsMet)
-            {
-                string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y, max(z) max_z, min(z) min_z from {0}", tableName);
+        //     // WARNING: The max/min x, y and z should fall within the boundaries of the height map
+        //     if (conditionsMet)
+        //     {
+        //         string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y, max(z) max_z, min(z) min_z from {0}", tableName);
 
-                NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows)
-                    { 
-                        positionsTable.SetLight(1); // yellow warning light
-                        positionsTable.SetMessage("Was unable to successfully query for bounds testing against the height map bounds.");
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            float maxX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_x")));
-                            float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
-                            float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
-                            float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
-                            float maxZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_z")));
-                            float minZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_z")));
+        //         NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+        //         await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+        //         {
+        //             if (!rdr.HasRows)
+        //             { 
+        //                 positionsTable.SetLight(1); // yellow warning light
+        //                 positionsTable.SetMessage("Was unable to successfully query for bounds testing against the height map bounds.");
+        //             }
+        //             else
+        //             {
+        //                 while (await rdr.ReadAsync())
+        //                 {
+        //                     float maxX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_x")));
+        //                     float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
+        //                     float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
+        //                     float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
+        //                     float maxZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_z")));
+        //                     float minZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_z")));
 
-                            if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
-                            {
-                                positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
-                            }
+        //                     if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
+        //                     {
+        //                         positionsTable.SetLight(1); // yellow warning light
+        //                         positionsTable.SetMessage(string.Format("The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
+        //                     }
 
-                            if (minZ < minDepth || maxZ > maxDepth)
-                            {
-                                positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
-            }
+        //                     if (minZ < minDepth || maxZ > maxDepth)
+        //                     {
+        //                         positionsTable.SetLight(1); // yellow warning light
+        //                         positionsTable.SetMessage(string.Format("The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
+        //                     }
+        //                 };
+        //             }
+        //             await rdr.CloseAsync();
+        //         }
+        //     }
 
-            // WARNING: Check for null values
-            if (conditionsMet) await this.NullCountCheck(positionsTable, requiredColumns);
-        }
-        else
-        { 
-            positionsTable.SetLight(2); 
-            positionsTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
-            conditionsMet = false; 
-        }
+        //     // WARNING: Check for null values
+        //     if (conditionsMet) await this.NullCountCheck(positionsTable, requiredColumns);
+        // }
+        // else
+        // { 
+        //     positionsTable.SetLight(2); 
+        //     positionsTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+        //     conditionsMet = false; 
+        // }
 
         // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", positionsTable.tableName, positionsTable.lightColor, positionsTable.tableMessage, string.Join(", ", positionsTable.presentColumns)));
         return conditionsMet;

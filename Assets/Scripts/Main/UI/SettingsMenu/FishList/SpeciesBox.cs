@@ -24,6 +24,12 @@ public class SpeciesBox : ListBox
         }
     }
 
+    public void Clear()
+    {
+        foreach (FishBox fishBox in components) { Destroy(fishBox.gameObject); }
+        Destroy(this.gameObject);
+    }
+
     // METHODS
     public void SetUpBox(string name)
     {

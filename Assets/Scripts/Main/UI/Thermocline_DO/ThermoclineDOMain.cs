@@ -64,19 +64,20 @@ public class ThermoclineDOMain : MonoBehaviour
         }
     }
 
-
-
-    private async void Awake()
+    private void Awake()
     {
         this.initialized = false;
         this.currentPacket = null;
 
+        // Destroy duplicate instances
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+    }
+
+    public async Task WakeUp()
+    {
         try
         {
-            // Destroy duplicate instances
-            if (_instance != null && _instance != this) { Destroy(this.gameObject); }
-            else { _instance = this; }
-
             // Other inits
             this.thermoclinePlane = new ThermoclinePlane(planeMaterial);
             float height = this.TempCB.GetComponent<RectTransform>().rect.height;
@@ -103,6 +104,25 @@ public class ThermoclineDOMain : MonoBehaviour
         }
         catch (Exception) { this.EnableThermoclineDOMain(false); }
     }
+
+    public void Clear()
+    {
+        this.initialized = false;
+        this.currentPacket = null;
+        this.EnableThermoclineDOMain(false);
+
+        if (this.thermoclinePlane != null)
+        {
+            Destroy(this.thermoclinePlane.GetObject());
+            this.thermoclinePlane = null;
+        }
+
+        this.TempCB.Clear();
+        this.DOCB.Clear();
+
+        this.gameObject.SetActive(false);
+    }
+
 
     private void SetupWidget()
     {
@@ -146,6 +166,8 @@ public class ThermoclineDOMain : MonoBehaviour
 
             lock(ThermoclineDOMain.locker) this.updating = false;
         }
+
+        if (this.beforeFirstTS) this.currentPacket = null;
     }
 
     private void CallSyncUpdate()
@@ -164,7 +186,8 @@ public class ThermoclineDOMain : MonoBehaviour
         {
             // Handle synchronous updates
             if (this.currentPacket == null) { if (this.toggle.interactable) this.EnableThermoclineDOMain(false); }
-            if (this.currentThermoDepth == null) { if (this.toggle.interactable) { this.EnableThermoclineDOMain(false); thermoText.text = "Thermocline Depth:\n-"; } }
+            else if (this.currentThermoDepth == null) { if (this.toggle.interactable) { this.EnableThermoclineDOMain(false); thermoText.text = "Thermocline Depth:\n-"; } }
+            else if (this.currentPacket != null) { if (!this.toggle.interactable) { this.EnableThermoclineDOMain(true); } }
 
             lock(ThermoclineDOMain.locker) 
             {

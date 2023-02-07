@@ -27,6 +27,9 @@ public class FishManager
 
     public FishManager(GameObject managerObject)
     {
+        FishManager.initialized = null;
+        FishManager.queryTask = null;
+
         fishDict = new Dictionary<int, Fish>();
 
         // Extreme value initializations
@@ -41,6 +44,8 @@ public class FishManager
 
         FishManager.initialized = AsyncInitialize(managerObject);
     }
+
+    public void Clear() { foreach (int key in FishManager.fishDict.Keys) { FishManager.fishDict[key].Clear(); } }
 
     private Task<bool> AsyncInitialize(GameObject managerObject)
     {

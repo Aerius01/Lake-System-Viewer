@@ -54,5 +54,7 @@ public class ThermoclinePlane
         mesh.RecalculateNormals();
     }
 
+    public GameObject GetObject() { return this.planeObject; }
+
     public void TogglePlane(bool status) { planeObject.SetActive(status); }
 }
