@@ -51,7 +51,6 @@ public class GradientPicker : MonoBehaviour
         key = transform.GetChild(1).gameObject;
         positionComponent = transform.parent.GetChild(1).GetComponent<TMP_InputField>();
         colorComponent = transform.parent.GetChild(2).GetComponent<Image>();
-        transform.parent.gameObject.SetActive(false);
     }
     /// <summary>
     /// Creates a new GradiantPicker

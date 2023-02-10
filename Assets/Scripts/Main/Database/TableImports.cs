@@ -96,17 +96,16 @@ public class TableImports
         this.positionsAccepted = false;
         this.macroPolysAccepted = false;
         this.macroHeightsAccepted = false;
-        if (this.heightMapAccepted)
-        {
-            this.loadingBar.SetText(TableImports.checkTables[2]);
-            this.positionsAccepted = await Task.Run(() => this.CheckPositionsTable(TableImports.checkTables[2], heightMapPacket.Item2, heightMapPacket.Item3, heightMapPacket.Item4, heightMapPacket.Item5));
 
-            this.loadingBar.SetText(TableImports.checkTables[3]);
-            this.macroPolysAccepted = await Task.Run(() => this.CheckMacroPolyTable(TableImports.checkTables[3], heightMapPacket.Item2, heightMapPacket.Item3));
+        this.loadingBar.SetText(TableImports.checkTables[2]);
+        this.positionsAccepted = await Task.Run(() => this.CheckPositionsTable(TableImports.checkTables[2], heightMapPacket.Item2, heightMapPacket.Item3, heightMapPacket.Item4, heightMapPacket.Item5));
 
-            this.loadingBar.SetText(TableImports.checkTables[4]);
-            this.macroHeightsAccepted = await Task.Run(() => this.CheckMacroHeightTable(TableImports.checkTables[4], heightMapPacket.Item2, heightMapPacket.Item3));
-        }
+        this.loadingBar.SetText(TableImports.checkTables[3]);
+        this.macroPolysAccepted = await Task.Run(() => this.CheckMacroPolyTable(TableImports.checkTables[3], heightMapPacket.Item2, heightMapPacket.Item3));
+
+        this.loadingBar.SetText(TableImports.checkTables[4]);
+        this.macroHeightsAccepted = await Task.Run(() => this.CheckMacroHeightTable(TableImports.checkTables[4], heightMapPacket.Item2, heightMapPacket.Item3));
+    
 
         this.loadingBar.SetText(TableImports.checkTables[5]);
         this.speciesAccepted = await Task.Run(() => this.CheckSpeciesTable(TableImports.checkTables[5]));
@@ -150,7 +149,7 @@ public class TableImports
                     if (!rdr.HasRows)
                     {
                         fishTable.SetLight(2);
-                        fishTable.SetMessage("No records were recovered while testing for unique IDs. Is this table populated?");
+                        fishTable.SetMessage("RED: No records were recovered while testing for unique IDs. Is this table populated?");
                         conditionsMet = false;
                     }
                     else
@@ -163,7 +162,7 @@ public class TableImports
                             if (baseCount != uniqueCount)
                             {
                                 fishTable.SetLight(2);
-                                fishTable.SetMessage("The ID column has duplicate values. Please ensure that the ID column is unique, and then try again.");
+                                fishTable.SetMessage("RED: The ID column has duplicate values. Please ensure that the ID column is unique, and then try again.");
                                 conditionsMet = false;
                             }
                         };
@@ -177,13 +176,13 @@ public class TableImports
                 if (e.SqlState == "42703") 
                 { 
                     fishTable.SetLight(2);
-                    fishTable.SetMessage(string.Format("The connected database's \"{0}\" table does not have a column named \"id\". This column must both exist and be unique.", tableName));
+                    fishTable.SetMessage(string.Format("RED: The connected database's \"{0}\" table does not have a column named \"id\". This column must both exist and be unique.", tableName));
                     conditionsMet = false;
                 }
                 else
                 {
                     fishTable.SetLight(2);
-                    fishTable.SetMessage("Unrecognized & unhandled Postgres exception. When querying for fish IDs.");
+                    fishTable.SetMessage("RED: Unrecognized & unhandled Postgres exception. When querying for fish IDs.");
                     conditionsMet = false;
                     throw e;
                 } 
@@ -192,7 +191,7 @@ public class TableImports
         else 
         {
             fishTable.SetLight(2);
-            fishTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName));
+            fishTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName));
             conditionsMet = false;
         }
 
@@ -205,14 +204,13 @@ public class TableImports
         {
             string sql = string.Format("SELECT * FROM information_schema.columns WHERE table_name = '{0}'", tableName);
 
-            // Check by removing the column names from the list if they're found
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
             await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
             {
                 if (!rdr.HasRows)
                 { 
                     fishTable.SetLight(2); 
-                    fishTable.SetMessage("No records were recovered while querying the table schema. Is this table populated? This information is necessary to know which optional columns are present"); 
+                    fishTable.SetMessage("RED: No records were recovered while querying the table schema. Is this table populated? This information is necessary to know which optional columns are present"); 
                     conditionsMet = false; 
                 }
                 else
@@ -225,9 +223,8 @@ public class TableImports
                 }
                 await rdr.CloseAsync();
             }
-        }
+        } 
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", fishTable.tableName, fishTable.lightColor, fishTable.tableMessage, string.Join(", ", fishTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -261,7 +258,7 @@ public class TableImports
                 if (!rdr.HasRows)
                 {
                     heightMapTable.SetLight(2);
-                    heightMapTable.SetMessage("No records were recovered. Is this table populated?");
+                    heightMapTable.SetMessage("RED: No records were recovered. Is this table populated?");
                     conditionsMet = false;
                 }
                 else
@@ -278,7 +275,7 @@ public class TableImports
         else 
         {
             heightMapTable.SetLight(2);
-            heightMapTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName));
+            heightMapTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName));
             conditionsMet = false;
         }
 
@@ -298,7 +295,7 @@ public class TableImports
                 if (!rdr.HasRows)
                 {
                     heightMapTable.SetLight(2);
-                    heightMapTable.SetMessage("No records were recovered when querying the table schema. Is this table populated?");
+                    heightMapTable.SetMessage("RED: No records were recovered when querying the table schema. Is this table populated?");
                     conditionsMet = false;
                 }
                 else
@@ -328,7 +325,7 @@ public class TableImports
                 if (!rdr.HasRows)
                 {
                     heightMapTable.SetLight(2);
-                    heightMapTable.SetMessage("No records were recovered when querying the table schema. Is this table populated?");
+                    heightMapTable.SetMessage("RED: No records were recovered when querying the table schema. Is this table populated?");
                     conditionsMet = false;
                 }
                 else
@@ -368,8 +365,15 @@ public class TableImports
         TableImports.tables[tableName] = positionsTable;
         List<string> requiredColumns = new List<string> {"id", "timestamp", "x", "y", "z"};
 
+        // // If the heightmap failed to import, there's no point in continuing
+        // if (!this.heightMapAccepted)
+        // {
+        //     positionsTable.SetLight(2); 
+        //     positionsTable.SetMessage(string.Format("RED: The successful import of this table is dependent on that of the \"{0}\" table.", TableImports.checkTables[1])); 
+        //     conditionsMet = false; 
+        // }
         // // PRIMARY: The table must be present
-        // if (this.tableNames.Contains(tableName))
+        // else if (this.tableNames.Contains(tableName))
         // {
         //     // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
         //     conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
@@ -385,7 +389,7 @@ public class TableImports
         //             if (!rdr.HasRows)
         //             { 
         //                 positionsTable.SetLight(1); // yellow warning light
-        //                 positionsTable.SetMessage("Was unable to successfully query for bounds testing against the height map bounds.");
+        //                 positionsTable.SetMessage("YELLOW: Was unable to successfully query for bounds testing against the height map bounds.");
         //             }
         //             else
         //             {
@@ -401,13 +405,13 @@ public class TableImports
         //                     if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
         //                     {
         //                         positionsTable.SetLight(1); // yellow warning light
-        //                         positionsTable.SetMessage(string.Format("The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
+        //                         positionsTable.SetMessage(string.Format("YELLOW: The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
         //                     }
 
         //                     if (minZ < minDepth || maxZ > maxDepth)
         //                     {
         //                         positionsTable.SetLight(1); // yellow warning light
-        //                         positionsTable.SetMessage(string.Format("The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
+        //                         positionsTable.SetMessage(string.Format("YELLOW: The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
         //                     }
         //                 };
         //             }
@@ -421,11 +425,10 @@ public class TableImports
         // else
         // { 
         //     positionsTable.SetLight(2); 
-        //     positionsTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+        //     positionsTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
         //     conditionsMet = false; 
         // }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", positionsTable.tableName, positionsTable.lightColor, positionsTable.tableMessage, string.Join(", ", positionsTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -458,11 +461,10 @@ public class TableImports
         else
         { 
             thermoTable.SetLight(2); 
-            thermoTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            thermoTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", thermoTable.tableName, thermoTable.lightColor, thermoTable.tableMessage, string.Join(", ", thermoTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -496,7 +498,7 @@ public class TableImports
                     if (!rdr.HasRows) 
                     {
                         speciesTable.SetLight(1); // yellow warning light
-                        speciesTable.SetMessage("Was unable to successfully query for species types."); 
+                        speciesTable.SetMessage("YELLOW: Was unable to successfully query for species types."); 
                     }
                     else
                     {
@@ -506,7 +508,7 @@ public class TableImports
                             if (unaccountedSpecies > 0)
                             {
                                 speciesTable.SetLight(1); // yellow warning light
-                                speciesTable.SetMessage(string.Format("{0} species exist in the table that aren't currently supported by the renderer. Fish species outside of 'scaled carp', 'catfish', 'pike', 'tench', 'mirror carp', 'perch' and 'roach' will be rendered using the roach in-game model.", unaccountedSpecies)); 
+                                speciesTable.SetMessage(string.Format("YELLOW: {0} species exist in the table that aren't currently supported by the renderer. Fish species outside of 'scaled carp', 'catfish', 'pike', 'tench', 'mirror carp', 'perch' and 'roach' will be rendered using the roach in-game model.", unaccountedSpecies)); 
                             }
                         };
                     }
@@ -520,11 +522,19 @@ public class TableImports
         else
         { 
             speciesTable.SetLight(2); 
-            speciesTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            speciesTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", speciesTable.tableName, speciesTable.lightColor, speciesTable.tableMessage, string.Join(", ", speciesTable.presentColumns)));
+        // The species table is special because it imports as part of an SQL join when collecting the fish metadata (FishManager init)
+        // We can therefore already indicate whether it has "imported" or not immediately since its status and its import are the same thing
+        if (speciesTable.status) { speciesTable.Imported(true); }
+        else 
+        { 
+            speciesTable.SetMessage("All fish will be rendered with the roach model.");
+            speciesTable.Imported(false); 
+        }
+
         return conditionsMet;
     }
 
@@ -555,7 +565,7 @@ public class TableImports
                 if (!rdr.HasRows)
                 { 
                     weatherTable.SetLight(2); 
-                    weatherTable.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
+                    weatherTable.SetMessage("RED: No records were recovered while querying the table schema. Is this table populated?"); 
                     conditionsMet = false; 
                 }
                 else
@@ -572,14 +582,14 @@ public class TableImports
                     if (requiredColumns.Count > 0)
                     {
                         weatherTable.SetLight(2); 
-                        weatherTable.SetMessage(string.Format("The \"{0}\" table must have a column named \"timestamp\". It was not found in the provided table.", tableName));
+                        weatherTable.SetMessage(string.Format("RED: The \"{0}\" table must have a column named \"timestamp\". It was not found in the provided table.", tableName));
                         conditionsMet = false; 
                     }
                     else if (!(weatherTable.presentColumns.Contains("winddirection") && weatherTable.presentColumns.Contains("windspeed")) && 
                     !(weatherTable.presentColumns.Contains("temperature") || weatherTable.presentColumns.Contains("humidity") || weatherTable.presentColumns.Contains("airpressure") || weatherTable.presentColumns.Contains("precipitation")))
                     {
                         weatherTable.SetLight(2); 
-                        weatherTable.SetMessage(string.Format("The \"{1}\" table must have either columns named \"winddirection\" and \"windspeed\" (both must be present), or any column named \"temperature\", \"airpressure\", \"humidity\" or \"precipitation\". Only column(s): \"{0}\", were found in the provided table.", string.Join("\", \"", weatherTable.presentColumns), tableName));
+                        weatherTable.SetMessage(string.Format("RED: The \"{1}\" table must have either columns named \"winddirection\" and \"windspeed\" (both must be present), or any column named \"temperature\", \"airpressure\", \"humidity\" or \"precipitation\". Only column(s): \"{0}\", were found in the provided table.", string.Join("\", \"", weatherTable.presentColumns), tableName));
                         conditionsMet = false; 
                     }
                 }
@@ -600,11 +610,10 @@ public class TableImports
         else
         { 
             weatherTable.SetLight(2); 
-            weatherTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            weatherTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", weatherTable.tableName, weatherTable.lightColor, weatherTable.tableMessage, string.Join(", ", weatherTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -622,8 +631,15 @@ public class TableImports
         TableImports.tables[tableName] = polyTable;
         List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "poly_id", "upper", "lower" };
 
+        // If the heightmap failed to import, there's no point in continuing
+        if (!this.heightMapAccepted)
+        {
+            polyTable.SetLight(2); 
+            polyTable.SetMessage(string.Format("RED: The successful import of this table is dependent on that of the \"{0}\" table.", TableImports.checkTables[1])); 
+            conditionsMet = false; 
+        }
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains(tableName))
+        else if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must match one of the preset configurations.
             conditionsMet = await this.RequiredColumnsCheck(polyTable, requiredColumns);
@@ -637,11 +653,10 @@ public class TableImports
         else
         { 
             polyTable.SetLight(2); 
-            polyTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            polyTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", polyTable.tableName, polyTable.lightColor, polyTable.tableMessage, string.Join(", ", polyTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -659,8 +674,15 @@ public class TableImports
         TableImports.tables[tableName] = heightTable;
         List<string> requiredColumns = new List<string> { "timestamp", "x", "y", "height_m" };
 
+        // If the macromap polygons failed to import, there's no point in continuing
+        if (!this.macroPolysAccepted)
+        {
+            heightTable.SetLight(2); 
+            heightTable.SetMessage(string.Format("RED: The successful import of this table is dependent on that of the \"{0}\" table.", TableImports.checkTables[3])); 
+            conditionsMet = false; 
+        }
         // PRIMARY: The table must be present
-        if (this.tableNames.Contains(tableName))
+        else if (this.tableNames.Contains(tableName))
         {
             // PRIMARY: The table must match one of the preset configurations.
             conditionsMet = await this.RequiredColumnsCheck(heightTable, requiredColumns);
@@ -674,11 +696,10 @@ public class TableImports
         else
         { 
             heightTable.SetLight(2); 
-            heightTable.SetMessage(string.Format("The \"{0}\" table was not found in the provided database.", tableName)); 
+            heightTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
             conditionsMet = false; 
         }
 
-        // Debug.Log(string.Format("Table: {0}; Light: {1}; Message: {2}; Columns: \"{3}\"", heightTable.tableName, heightTable.lightColor, heightTable.tableMessage, string.Join(", ", heightTable.presentColumns)));
         return conditionsMet;
     }
 
@@ -702,7 +723,7 @@ public class TableImports
             if (!rdr.HasRows)
             { 
                 table.SetLight(2); 
-                table.SetMessage("No records were recovered while querying the table schema. Is this table populated?"); 
+                table.SetMessage("RED: No records were recovered while querying the table schema. Is this table populated?"); 
                 conditionsMet = false; 
             }
             else
@@ -719,7 +740,7 @@ public class TableImports
                 if (workingColumns.Count > 0)
                 {
                     table.SetLight(2); 
-                    table.SetMessage(string.Format("The {0} table must have columns named \"{1}\". Column(s): \"{2}\", were not found in the provided table.", table.tableName, string.Join("\", \"", requiredColumns), string.Join("\", \"", workingColumns)));
+                    table.SetMessage(string.Format("RED: The {0} table must have columns named \"{1}\". Column(s): \"{2}\", were not found in the provided table.", table.tableName, string.Join("\", \"", requiredColumns), string.Join("\", \"", workingColumns)));
                     conditionsMet = false; 
                 }
             }
@@ -739,7 +760,7 @@ public class TableImports
             if (!rdr.HasRows)
             { 
                 table.SetLight(1); // yellow warning light
-                table.SetMessage("Was unable to successfully query for bounds testing against the height map bounds.");
+                table.SetMessage("YELLOW: Was unable to successfully query for bounds testing against the height map bounds.");
             }
             else
             {
@@ -753,7 +774,7 @@ public class TableImports
                     if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
                     {
                         table.SetLight(1); // yellow warning light
-                        table.SetMessage(string.Format("The (x, y) values in the provided table exceed the local bounds of the heightmap. This may cause to some fish to appear to be \"swimming\" on land or in empty space."));
+                        table.SetMessage(string.Format("YELLOW: The (x, y) values in the provided table exceed the local bounds of the heightmap. This may cause to some fish to appear to be \"swimming\" on land or in empty space."));
                     }
                 };
             }
@@ -772,7 +793,7 @@ public class TableImports
             if (!rdr.HasRows) 
             {
                 table.SetLight(1); // yellow warning light
-                table.SetMessage("Was unable to successfully query for null counts."); 
+                table.SetMessage("YELLOW: Was unable to successfully query for null counts."); 
             }
             else
             {
@@ -782,7 +803,7 @@ public class TableImports
                     if (nullCount > 0)
                     {
                         table.SetLight(1); // yellow warning light
-                        table.SetMessage(string.Format("{0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); 
+                        table.SetMessage(string.Format("YELLOW: {0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); 
                     }
                 };
             }

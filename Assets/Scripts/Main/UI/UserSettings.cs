@@ -34,11 +34,11 @@ public class UserSettings
         get {return _showWindWeather;} 
         set {_showWindWeather = value; WindWeatherMain.instance.ToggleWind();}
     }
-    public static bool showSatelliteImage 
-    {
-        get {return _showSatelliteImage;} 
-        set {_showSatelliteImage = value; EnvironmentManager.ToggleSatelliteImage(value);}
-    }
+    // public static bool showSatelliteImage 
+    // {
+    //     get {return _showSatelliteImage;} 
+    //     set {_showSatelliteImage = value; EnvironmentManager.ToggleSatelliteImage(value);}
+    // }
     public static bool showContours 
     {
         get { return _showContours; } 
@@ -71,7 +71,7 @@ public class UserSettings
     private static bool _showFishTrails;
     private static bool _showThermocline;
     private static bool _showWindWeather;
-    private static bool _showSatelliteImage;
+    // private static bool _showSatelliteImage;
     private static bool _showContours;
     private static bool _showGradient;
     private static bool _gradedContours;

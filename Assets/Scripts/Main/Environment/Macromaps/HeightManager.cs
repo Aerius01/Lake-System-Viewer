@@ -16,6 +16,7 @@ public class HeightManager : MonoBehaviour
     private bool updating = false, performSyncUpdate = false;
 
     [SerializeField] private Toggle toggle;
+    [SerializeField] private GameObject bufferIcon;
 
     // Properties
     private bool timeBounded
@@ -65,7 +66,9 @@ public class HeightManager : MonoBehaviour
     { 
         this.initialized = Task.Run(() => false);
         this.currentPacket = null;
+        this.bufferIcon.SetActive(false);
         GrassSpawner.instance.Clear();
+        lock(HeightManager.locker) this.performSyncUpdate = false;
 
         this.gameObject.SetActive(false); 
     }
@@ -118,13 +121,17 @@ public class HeightManager : MonoBehaviour
             if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (!this.toggle.interactable && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
             else if (this.toggle.interactable == true) { this.DisableMaps(); }
 
+            // Decide whether or not to show the buffering icon
+            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
+
             // Unity is demanding this be executed from the main thread, hence the workaround
             lock(HeightManager.locker)
             {
                 if (this.performSyncUpdate)
                 {
                     this.performSyncUpdate = false;
-                    GrassSpawner.instance.SpawnGrass();
+                    if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
                 }
             }
         }

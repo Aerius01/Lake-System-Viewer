@@ -9,13 +9,13 @@ public class LocalMeshData
     public static DataTable meshMap;
     public static int rowCount, columnCount, resolution;
     public static Vector3 meshCenter;
-    public static Texture2D NDVI;
+    // public static Texture2D NDVI;
     public static Dictionary<string, int> cutoffs;
 
-    public LocalMeshData(DataTable table, Texture2D NDVI)
+    public LocalMeshData(DataTable table)
     {
         LocalMeshData.meshMap = table;
-        LocalMeshData.NDVI = NDVI;
+        // LocalMeshData.NDVI = NDVI;
         LocalMeshData.columnCount = meshMap.Columns.Count;
         LocalMeshData.rowCount = meshMap.Rows.Count;
 
@@ -60,17 +60,17 @@ public class LocalMeshData
 
         LocalMeshData.meshCenter = new Vector3((cutoffs["minWidth"] + cutoffs["maxWidth"])/ 2, 0f, (cutoffs["minHeight"] + cutoffs["maxHeight"]) / 2);
 
-        // Create NDVI table
-        ndviMax = float.MinValue;
-        ndviMin = float.MaxValue;
-        for (int i = 0; i < NDVI.height; i++)
-        {
-            for (int j = 0; j < NDVI.width; j++)
-            {
-                Color temp = NDVI.GetPixel(i, j);
-                ndviMax = Math.Max(temp.r, ndviMax);
-                ndviMin = Math.Min(temp.r, ndviMin);
-            }
-        }
+        // // Create NDVI table
+        // ndviMax = float.MinValue;
+        // ndviMin = float.MaxValue;
+        // for (int i = 0; i < NDVI.height; i++)
+        // {
+        //     for (int j = 0; j < NDVI.width; j++)
+        //     {
+        //         Color temp = NDVI.GetPixel(i, j);
+        //         ndviMax = Math.Max(temp.r, ndviMax);
+        //         ndviMin = Math.Min(temp.r, ndviMin);
+        //     }
+        // }
     }
 }

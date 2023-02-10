@@ -12,8 +12,9 @@ public class ThermoclineDOMain : MonoBehaviour
     [SerializeField] private Material planeMaterial;
     [SerializeField] private Toggle toggle;
     [SerializeField] private TextMeshProUGUI thermoText;
-    [SerializeField] private GameObject thermoDepth, thermoRootObject, widgetText;
+    [SerializeField] private GameObject thermoDepth, thermoRootObject, widgetText, bufferIcon;
     [SerializeField] private ColorBar TempCB, DOCB;
+    [SerializeField] private List<TextMeshProUGUI> textObjects;
 
     private static ThermoclineDOMain _instance;
     [HideInInspector]
@@ -110,6 +111,8 @@ public class ThermoclineDOMain : MonoBehaviour
         this.initialized = false;
         this.currentPacket = null;
         this.EnableThermoclineDOMain(false);
+        this.bufferIcon.SetActive(false);
+        lock(ThermoclineDOMain.locker) this.performSyncUpdate = false;
 
         if (this.thermoclinePlane != null)
         {
@@ -119,22 +122,20 @@ public class ThermoclineDOMain : MonoBehaviour
 
         this.TempCB.Clear();
         this.DOCB.Clear();
-
         this.gameObject.SetActive(false);
     }
 
 
     private void SetupWidget()
     {
-        // Assemble text elements
-        List<int> textNumbers = new List<int>() { 20, 40, 60, 80, 100 };
-        Dictionary<int, TextMeshProUGUI> textObjects = new Dictionary<int, TextMeshProUGUI>();
-
-        foreach(int id in textNumbers) textObjects[id] = this.widgetText.transform.Find(id.ToString()).GetComponent<TextMeshProUGUI>();
-
         // Update the in-game element
         this.increment = this.deepestReading / 10f;
-        foreach(int id in textNumbers) textObjects[id].text = string.Format("-- {0:#0} -- ", ((float)id) * this.increment);
+        int count = 0;
+        foreach(TextMeshProUGUI textObj in this.textObjects) 
+        {
+            count += 2;
+            textObj.text = string.Format("-- {0:#0} -- ", count * this.increment);
+        }
 
         this.TempCB.StartUp();
         this.DOCB.StartUp();
@@ -160,10 +161,7 @@ public class ThermoclineDOMain : MonoBehaviour
         {
             // Secure the multi-threading
             lock(ThermoclineDOMain.locker) this.updating = true;
-
-            if (this.currentPacket == null) { if (await FetchNewBounds()) this.CallSyncUpdate(); } 
-            else if (!this.timeBounded) { if (await FetchNewBounds()) this.CallSyncUpdate(); }
-
+            if (!this.timeBounded) { if (await FetchNewBounds()) this.CallSyncUpdate(); }
             lock(ThermoclineDOMain.locker) this.updating = false;
         }
 
@@ -189,6 +187,10 @@ public class ThermoclineDOMain : MonoBehaviour
             else if (this.currentThermoDepth == null) { if (this.toggle.interactable) { this.EnableThermoclineDOMain(false); thermoText.text = "Thermocline Depth:\n-"; } }
             else if (this.currentPacket != null) { if (!this.toggle.interactable) { this.EnableThermoclineDOMain(true); } }
 
+            // Decide whether or not to show the buffering icon
+            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
+
             lock(ThermoclineDOMain.locker) 
             {
                 if (this.performSyncUpdate)
@@ -206,8 +208,8 @@ public class ThermoclineDOMain : MonoBehaviour
                     thermoDepth.GetComponent<RectTransform>().anchoredPosition = newPosition;
 
                     // Call color bars to update
-                    TempCB.UpdateCells("temp", this.currentPacket.readings);
-                    DOCB.UpdateCells("oxygen", this.currentPacket.readings);
+                    this.TempCB.UpdateCells("temp", this.currentPacket.readings);
+                    this.DOCB.UpdateCells("oxygen", this.currentPacket.readings);
                 }
             }
         }

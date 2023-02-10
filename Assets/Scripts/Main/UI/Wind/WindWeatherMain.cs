@@ -12,7 +12,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     // Required game objects
     [SerializeField] private TextMeshProUGUI windSpeedText, toolTipDeg;
     [SerializeField] private GameObject[] particleObject;
-    [SerializeField] private GameObject compassDial, compassArrow, weatherText, rootObject, windObject, genObject;
+    [SerializeField] private GameObject compassDial, compassArrow, weatherText, rootObject, windObject, genObject, bufferIcon;
     [SerializeField] private Toggle toggle;
     [SerializeField] private CanvasGroup rootCanvas, toolTipCanvas, compassCanvas;
 
@@ -107,8 +107,10 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         this.gameObject.SetActive(false);
         this.EnableWindWeather(false);
+        this.bufferIcon.SetActive(false);
         this.windChanged = null;
         this.currentPacket = null;
+        lock(WindWeatherMain.locker) this.performSyncUpdate = false;
         this.initialized = false;
     }
 
@@ -150,6 +152,10 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             // Handle synchronous updates
             if (this.currentPacket == null) { if (this.toggle.interactable) this.EnableWindWeather(false); }
             else if (this.currentPacket != null) { if (!this.toggle.interactable) this.EnableWindWeather(true); }
+
+            // Decide whether or not to show the buffering icon
+            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
 
             lock(WindWeatherMain.locker) 
             {

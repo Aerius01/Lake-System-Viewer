@@ -96,6 +96,7 @@ public class FishManager
             return Task.FromResult( AsyncConstructor(tasks.Select(i => i.Result).ToArray(), managerObject)); 
         }
 
+
         // Otherwise, async await all tasks before continuing to next step
         return AwaitFetching(tasks.ToArray());
     }

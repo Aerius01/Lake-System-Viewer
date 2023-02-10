@@ -8,10 +8,10 @@ public class Species : MonoBehaviour
 
     public bool initialized { get; private set; }
 
-    private void Awake() { this.initialized = false; }
+    private void Awake() 
+    { 
+        this.initialized = false; 
 
-    public void WakeUp()
-    {
         prefabDict = new Dictionary<string, GameObject>()
         {
             {"Perch", perch},
@@ -25,6 +25,4 @@ public class Species : MonoBehaviour
 
         this.initialized = true;
     }
-
-    public void Clear() { this.initialized = false; this.gameObject.SetActive(false); }
 }

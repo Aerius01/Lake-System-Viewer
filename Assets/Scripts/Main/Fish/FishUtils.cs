@@ -93,11 +93,14 @@ public class FishUtils : MonoBehaviour
 
         LinePoint.y = waterblock.transform.position.y;
         line.SetPosition(1, LinePoint);
-
-        if (ThermoclineDOMain.instance.currentThermoDepth != null)
+        
+        if (TableImports.tables[TableImports.checkTables[7]].imported)
         {
-            LinePoint.y = (float)-ThermoclineDOMain.instance.currentThermoDepth * UserSettings.verticalScalingFactor;
-            thermoInd.transform.position = LinePoint;
+            if (ThermoclineDOMain.instance.currentThermoDepth != null)
+            {
+                LinePoint.y = (float)-ThermoclineDOMain.instance.currentThermoDepth * UserSettings.verticalScalingFactor;
+                thermoInd.transform.position = LinePoint;
+            }
         }
     }
 

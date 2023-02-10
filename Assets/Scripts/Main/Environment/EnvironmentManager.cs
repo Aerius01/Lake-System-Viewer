@@ -3,19 +3,16 @@ using UnityEngine;
 public class EnvironmentManager : MonoBehaviour
 {
     private static MeshManager meshManager;
-    private static TerrainManager terrainManager;
-    [SerializeField]
-    private GameObject waterBlock;
-    [SerializeField]
-    private MeshManager _meshManager;
-    [SerializeField]
-    private TerrainManager _terrainManager;
+    [SerializeField] private GameObject waterBlock;
+    [SerializeField] private MeshManager _meshManager;
+    // [SerializeField] private TerrainManager _terrainManager;
+    // private static TerrainManager terrainManager;
 
     private void Awake()
     {
         // So that the static variables are assignable in the inspector
         meshManager = _meshManager;
-        terrainManager = _terrainManager;
+        // terrainManager = _terrainManager;
     }
 
     // event handler
@@ -25,9 +22,9 @@ public class EnvironmentManager : MonoBehaviour
         meshManager.gameObject.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
         meshManager.ReZeroMesh();
 
-        // Scale Terrain
-        terrainManager.ResizeTerrain();
-        terrainManager.ReZeroTerrain();
+        // // Scale Terrain
+        // terrainManager.ResizeTerrain();
+        // terrainManager.ReZeroTerrain();
 
         // Adjust water level (scale only)
         AdjustWaterLevel();
@@ -43,7 +40,7 @@ public class EnvironmentManager : MonoBehaviour
 
     public static void ToggleSatelliteImage(bool sat)
     {
-        terrainManager.gameObject.SetActive(sat);
+        // terrainManager.gameObject.SetActive(sat);
         meshManager.gameObject.SetActive(!sat);
     }
 }

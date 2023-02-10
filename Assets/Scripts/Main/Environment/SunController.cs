@@ -6,13 +6,23 @@ public class SunController : MonoBehaviour
     // https://www.youtube.com/watch?v=babgYCTyw3Y
     [SerializeField] private GameObject skyTransform;
     [SerializeField] private Gradient sunColor;
+    [SerializeField] private MoonController moonController;
 
     private float latitude = -1, longitude = -1;
     int timeZone = 1;
 
     private double currentZenithAngleDeg, currentAzimuthAngleDeg;
 
-    private void Start() { skyTransform.transform.position = LocalMeshData.meshCenter; }
+    public void WakeUp(float latitude, float longitude) 
+    { 
+        skyTransform.transform.position = LocalMeshData.meshCenter; 
+
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.gameObject.SetActive(true);
+    }
+
+    public void Clear() { this.gameObject.SetActive(false); }
 
     private void Update()
     {
@@ -21,13 +31,8 @@ public class SunController : MonoBehaviour
             this.CalculateNewSunPos();
             this.gameObject.transform.LookAt(LocalMeshData.meshCenter);
             this.skyTransform.transform.rotation = Quaternion.Euler(new Vector3(-(90 - (float)this.currentZenithAngleDeg), (float)this.currentAzimuthAngleDeg - 90f, 0f));
+            this.moonController.AdjustMoonPosition(this.skyTransform.transform.localEulerAngles);
         }
-    }
-
-    public void SetLatLong(float latitude, float longitude)
-    {
-        this.latitude = latitude;
-        this.longitude = longitude;
     }
 
     private double degrees_to_radians(double degrees) { return (degrees * (Math.PI/180)); }

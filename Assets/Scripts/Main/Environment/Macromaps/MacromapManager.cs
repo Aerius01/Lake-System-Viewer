@@ -69,10 +69,12 @@ public class MacromapManager: MonoBehaviour
 
     public void Clear()
     { 
-        GrassSpawner.instance.Clear();
+        if (GrassSpawner.instance != null) GrassSpawner.instance.Clear();
         this.initialized = Task.Run(() => false);
+        this.bufferIcon.SetActive(false);
         this.intensityMap = null;
         this.currentPacket = null;
+        lock(MacromapManager.locker) this.performSyncUpdate = false;
         this.gameObject.SetActive(false); 
     }
 
@@ -164,7 +166,7 @@ public class MacromapManager: MonoBehaviour
                 if (this.performSyncUpdate)
                 {
                     this.performSyncUpdate = false;
-                    GrassSpawner.instance.SpawnGrass();
+                    if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
                 }
             }
         }

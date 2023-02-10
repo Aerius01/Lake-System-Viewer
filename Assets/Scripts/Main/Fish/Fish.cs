@@ -65,8 +65,10 @@ public class Fish : MonoBehaviour
         this.canvasTextPart2 = string.Format("\nSpecies: {0}\nSex: {1}", this.speciesName, this.male == null ? " ? " : this.male == true ? "M" : "F");
 
         // Create object in-game
-        bool speciesAccountedFor = Species.prefabDict.ContainsKey(this.speciesName);
-        GameObject prefab = speciesAccountedFor ? Species.prefabDict[this.speciesName] : Species.prefabDict["Roach"];
+        GameObject prefab = Species.prefabDict["Roach"];
+        if (this.speciesName != null) { if (Species.prefabDict.ContainsKey(this.speciesName)) prefab = Species.prefabDict[this.speciesName]; }
+        else this.speciesName = "Unspecified";
+
         this.fishObject = (Instantiate (prefab, this.startPos, this.startOrient) as GameObject);
         this.fishObject.transform.parent = manager.transform;
         this.fishObject.name = string.Format("{0}", this.id);

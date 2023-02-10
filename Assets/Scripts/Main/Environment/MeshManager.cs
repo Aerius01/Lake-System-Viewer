@@ -24,7 +24,7 @@ public class MeshManager : MonoBehaviour
     public Task<bool> initialized { get; private set; }
 
     [SerializeField] private Gradient gradient;
-    [SerializeField] private Texture2D NDVI;
+    // [SerializeField] private Texture2D NDVI;
     [SerializeField] private TMP_InputField waterText;
     [SerializeField] private Slider weightSlider;
     [SerializeField] private GradientPicker gradientPicker;
@@ -69,7 +69,7 @@ public class MeshManager : MonoBehaviour
         {
             if(this.meshTable.Rows.Count > 0)
             {
-                LocalMeshData meshData = new LocalMeshData(meshTable, NDVI);
+                LocalMeshData meshData = new LocalMeshData(meshTable);
 
                 mesh = new Mesh();
                 this.gameObject.GetComponent<MeshFilter>().mesh = mesh;
@@ -98,7 +98,7 @@ public class MeshManager : MonoBehaviour
                 this.colorPicker.Awake();
                 GradientPicker.Create(this.gradient, GradientFinished); 
 
-                TerrainManager.instance.SetUpTerrain();
+                // TerrainManager.instance.SetUpTerrain();
                 return true;
             }
             return false;

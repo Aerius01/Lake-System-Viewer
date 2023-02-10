@@ -15,12 +15,12 @@ public class DBHandler : MonoBehaviour
     private TMP_InputField hostInput, usernameInput, passwordInput, DBNameInput;
     private GameObject testBuffer, verifyBuffer;
     private TableImports tableImports;
+    private Color green = new Color(65f/255f, 170f/255f, 55f/255f, 1f), yellow = new Color(1f, 220f/255f, 0f, 1f), red = new Color(220f/255f, 0f, 0f, 1f);
 
     [SerializeField] private Main main;
     [SerializeField] private Button connectButton, verifyButton, startButton;
     [SerializeField] private GameObject menuPanel, messageBox, verifyBox, textPrefab, statusContainer, background;
     [SerializeField] private LoaderBar loadingBar;
-    [SerializeField] private Sprite greenLight, yellowLight, redLight;
 
     private void Awake()
     {
@@ -149,9 +149,9 @@ public class DBHandler : MonoBehaviour
                     // Update those sections
                     Table table = TableImports.tables[key];
 
-                    if (table.lightColor == 0) light.sprite = greenLight;
-                    else if (table.lightColor == 1) light.sprite = yellowLight;
-                    else light.sprite = redLight;
+                    if (table.lightColor == 0) light.color = green;
+                    else if (table.lightColor == 1) light.color = yellow;
+                    else light.color = red;
 
                     name.text = table.tableName;
                     message.text = table.tableMessage;
