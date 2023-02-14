@@ -429,6 +429,12 @@ public class TableImports
         //     conditionsMet = false; 
         // }
 
+
+        // The positions table is special because its a reference table that's queried regularly, and that doesn't require an explicit class init
+        // We can therefore already indicate whether it has "imported" or not since its status and its import are the same thing
+        if (positionsTable.status) { positionsTable.Imported(true); }
+        else { positionsTable.Imported(false); }
+
         return conditionsMet;
     }
 
@@ -527,7 +533,7 @@ public class TableImports
         }
 
         // The species table is special because it imports as part of an SQL join when collecting the fish metadata (FishManager init)
-        // We can therefore already indicate whether it has "imported" or not immediately since its status and its import are the same thing
+        // We can therefore already indicate whether it has "imported" or not since its status and its import are the same thing
         if (speciesTable.status) { speciesTable.Imported(true); }
         else 
         { 

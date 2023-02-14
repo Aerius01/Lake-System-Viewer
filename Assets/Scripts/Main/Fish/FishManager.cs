@@ -55,7 +55,8 @@ public class FishManager
         // Local function to await task completion before calling the faux-construtor
         async Task<bool> AwaitFetching(Task<Dictionary<int, FishPacket>>[] tasks)
         { 
-            Debug.Log("Awaiting fish creation..."); 
+            Debug.Log(string.Format("Awaiting {0} fish creation tasks...", tasks.Length));
+
             try { return AsyncConstructor(await Task.WhenAll(tasks), managerObject); }
             catch (Exception) { return false; }
         }
@@ -95,7 +96,6 @@ public class FishManager
             foreach (Task<Dictionary<int, FishPacket>> item in tasks) { if (item.Status == TaskStatus.Faulted) return Task.Run(() => false); }
             return Task.FromResult( AsyncConstructor(tasks.Select(i => i.Result).ToArray(), managerObject)); 
         }
-
 
         // Otherwise, async await all tasks before continuing to next step
         return AwaitFetching(tasks.ToArray());

@@ -100,7 +100,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
             this.rootObject.SetActive(true);
             this.initialized = true;
         }
-        catch (Exception e) { this.EnableWindWeather(false); Debug.Log(e.Message); Debug.Log(e.StackTrace); }
+        catch (Exception) { this.EnableWindWeather(false); }
     }
 
     public void Clear()

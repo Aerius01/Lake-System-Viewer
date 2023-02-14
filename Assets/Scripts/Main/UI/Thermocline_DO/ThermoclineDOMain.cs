@@ -220,13 +220,13 @@ public class ThermoclineDOMain : MonoBehaviour
         if (UserSettings.showThermocline)
         {
             this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 1;
-            this.thermoclinePlane.TogglePlane(true);
+            if (this.thermoclinePlane != null) this.thermoclinePlane.TogglePlane(true);
         }
         else
         {
             this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 0;
             this.thermoRootObject.GetComponent<RectTransform>().localPosition = this.originContainer;
-            this.thermoclinePlane.TogglePlane(false);
+            if (this.thermoclinePlane != null) this.thermoclinePlane.TogglePlane(false);
         }
     }
 

@@ -26,13 +26,13 @@ public class UserSettings
         set 
         {
             _showThermocline = value; 
-            ThermoclineDOMain.instance.ToggleThermocline();
+            if (ThermoclineDOMain.instance != null) { ThermoclineDOMain.instance.ToggleThermocline(); }
         }
     }
     public static bool showWindWeather 
     {
         get {return _showWindWeather;} 
-        set {_showWindWeather = value; WindWeatherMain.instance.ToggleWind();}
+        set {_showWindWeather = value; if (WindWeatherMain.instance != null) { WindWeatherMain.instance.ToggleWind(); }}
     }
     // public static bool showSatelliteImage 
     // {
@@ -42,27 +42,27 @@ public class UserSettings
     public static bool showContours 
     {
         get { return _showContours; } 
-        set { _showContours = value; MeshManager.instance.EvaluateContours(graded:gradedContours); }
+        set { _showContours = value; if (MeshManager.instance != null) { MeshManager.instance.EvaluateContours(graded:gradedContours); } }
     }
     public static bool showGradient 
     {
         get { return _showGradient; } 
-        set { _showGradient = value; MeshManager.instance.EvaluateGradient(); }
+        set { _showGradient = value; if (MeshManager.instance != null) { MeshManager.instance.EvaluateGradient(); } }
     }
     public static bool gradedContours 
     {
         get { return _gradedContours; } 
-        set { _gradedContours = value; MeshManager.instance.EvaluateContours(graded:gradedContours); }
+        set { _gradedContours = value; if (MeshManager.instance != null) { MeshManager.instance.EvaluateContours(graded:gradedContours); } }
     }
     public static bool macrophyteMaps 
     {
         get { return _macrophyteMaps; } 
-        set { _macrophyteMaps = value; if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); }
+        set { _macrophyteMaps = value; if (MeshManager.instance != null) { if (UserSettings.showGradient) MeshManager.instance.EvaluateGradient(); else MeshManager.instance.EvaluateContours(graded:gradedContours); } }
     }
     public static bool macrophyteHeights 
     {
         get { return _macrophyteHeights; } 
-        set { _macrophyteHeights = value; GrassSpawner.instance.SpawnGrass(); }
+        set { _macrophyteHeights = value; if (GrassSpawner.instance != null) { GrassSpawner.instance.SpawnGrass(); } }
     }
 
 

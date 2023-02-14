@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 public class DBHandler : MonoBehaviour
 {
-    private bool connected = false, verified = false; 
+    private bool connected = false, verified = false, successfulInit = false; 
     private TMP_InputField hostInput, usernameInput, passwordInput, DBNameInput;
     private GameObject testBuffer, verifyBuffer;
     private TableImports tableImports;
@@ -19,7 +19,7 @@ public class DBHandler : MonoBehaviour
 
     [SerializeField] private Main main;
     [SerializeField] private Button connectButton, verifyButton, startButton;
-    [SerializeField] private GameObject menuPanel, messageBox, verifyBox, textPrefab, statusContainer, background;
+    [SerializeField] private GameObject menuPanel, messageBox, verifyBox, textPrefab, statusContainer, background, startBufferer;
     [SerializeField] private LoaderBar loadingBar;
 
     private void Awake()
@@ -198,35 +198,56 @@ public class DBHandler : MonoBehaviour
         this.menuPanel.GetComponent<CanvasGroup>().interactable = false;
         this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
 
-        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};CommandTimeout=0;Pooling=true;MaxPoolSize=5000;Timeout=300", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
+        string connString = string.Format("Host={0};Username={1};Password={2};Database={3};Pooling=true;MaxPoolSize=5000;CommandTimeout=0", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
         DatabaseConnection.SetConnectionString(connString);
 
-        loadingBar.WakeUp(TableImports.checkTables.Count);
-        bool successfulInit = true;
-        try { successfulInit = await this.main.Initialize(loadingBar); }
+        this.startBufferer.SetActive(true);
+        try { this.successfulInit = await this.main.Initialize(); }
         catch (Exception)
         { 
-            successfulInit = false; 
-            loadingBar.ShutDown(); 
-            throw; 
+            this.successfulInit = false; 
+            this.startBufferer.SetActive(false);
         }
 
-        loadingBar.ShutDown();
+        this.startBufferer.SetActive(false);
 
-        if (!successfulInit)
+        if (!this.successfulInit)
         {
-            Debug.Log("Failed init");
             this.main.ClearAll();
             
             messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Import Error";
-            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = string.Format("There was an issue while importing either the \"{0}\" or the \"{1}\" tables. It is likely that the connection was interrupted. Please restart the verification process.", TableImports.checkTables[0], TableImports.checkTables[1]);
+            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = string.Format("There was an issue while importing either the \"{0}\" or the \"{1}\" tables. It is likely that the connection was interrupted or the connected database has a limited number of pooled connections available. Please restart the verification process.", TableImports.checkTables[0], TableImports.checkTables[1]);
             
             messageBox.SetActive(true);
             this.NewInput();
         }
-        else this.gameObject.SetActive(false);
+        else 
+        {
+            List<string> failedTables = new List<string>();
+            foreach (Table table in TableImports.tables.Values) { if (!table.imported) failedTables.Add(table.tableName); }
 
-        foreach (string key in TableImports.tables.Keys) { Debug.Log(string.Format("{0}: {1}", TableImports.tables[key].tableName, TableImports.tables[key].imported)); }
+            string message = "All initializations went as expected!";
+            if (failedTables.Count != 0) 
+            { 
+                if (failedTables.Count > 1) { message = string.Format("Not all tables imported/initialized correctly. The following tables (and the functionality tied to them) will therefore be disabled: \"{0}\". These are optional tables and so the render will still proceed.", string.Join("\", \"", failedTables)); }
+                else { message = string.Format("Not all tables imported/initialized correctly. The following table (and the functionality tied to it) will therefore be disabled: \"{0}\". This is an optional table and so the render will still proceed.", failedTables[0]); }
+            }
+
+            messageBox.transform.Find("Image").transform.Find("Title").GetComponent<TextMeshProUGUI>().text = "Initializations";
+            messageBox.transform.Find("Description").GetComponent<TextMeshProUGUI>().text = message;
+
+            messageBox.SetActive(true);
+        }
+    }
+
+    public void MessageBoxButton ()
+    {
+        if (this.successfulInit)
+        {
+            TimeManager.instance.PlayButton();
+            this.main.GoodToGo(); // allow updates to start
+            this.gameObject.SetActive(false); // disable import canvas
+        }
     }
 
     private void CheckButtonStatuses()

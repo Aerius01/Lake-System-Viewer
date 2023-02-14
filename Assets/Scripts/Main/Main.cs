@@ -22,7 +22,7 @@ public class Main : MonoBehaviour
 
     private float latitude = 53f, longitude = 13.58f;
 
-    public async Task<bool> Initialize(LoaderBar loadingBar)
+    public async Task<bool> Initialize()
     {
         this.gameObject.SetActive(true);
 
@@ -39,21 +39,21 @@ public class Main : MonoBehaviour
             // Polygons (macromapManager)
             if (TableImports.tables[TableImports.checkTables[3]].status)
             {
-                this.macromapManager.gameObject.SetActive(true); // TODO: if init failed, alert user
-                this.macromapManager.WakeUp();
+                this.macromapManager.gameObject.SetActive(true);
+                this.macromapManager.WakeUp(); // a single async statement, immediately yields control back to this thread
             }
             
             // Height Manager (macrophyte "grass" spawner)
             if (TableImports.tables[TableImports.checkTables[4]].status)
             {
-                this.heightManager.gameObject.SetActive(true); // TODO: if init failed, alert user
-                this.heightManager.WakeUp();
+                this.heightManager.gameObject.SetActive(true);
+                this.heightManager.WakeUp(); // a single async statement, immediately yields control back to this thread
             }
 
             // Wind & weather
             if (TableImports.tables[TableImports.checkTables[6]].status)
             {
-                this.weatherObject.gameObject.SetActive(true); // TODO: if init failed, alert user
+                this.weatherObject.gameObject.SetActive(true);
                 await this.weatherObject.WakeUp(); // run synchronously
                 TableImports.tables[TableImports.checkTables[6]].Imported(this.weatherObject.initialized);
                 if (!this.weatherObject.initialized) this.weatherObject.Clear();
@@ -69,7 +69,7 @@ public class Main : MonoBehaviour
 
                 if (TableImports.tables[TableImports.checkTables[7]].status)
                 {
-                    this.thermoObject.gameObject.SetActive(true); // TODO: if init failed, alert user // Depends on meshmap resolution
+                    this.thermoObject.gameObject.SetActive(true); // Depends on meshmap resolution
                     await this.thermoObject.WakeUp(); // run synchronously
                     TableImports.tables[TableImports.checkTables[7]].Imported(this.thermoObject.initialized);
                     if (!this.thermoObject.initialized) this.thermoObject.Clear();
@@ -99,13 +99,10 @@ public class Main : MonoBehaviour
                 this.fishList.WakeUp();
             }
             else throw new Exception();
-
-            TimeManager.instance.PlayButton();
-            this.finishedStartup = true;
         }
         catch (Exception) { return false; }
         
-        return this.finishedStartup;
+        return true;
     }
 
     public void ClearAll()
@@ -129,6 +126,8 @@ public class Main : MonoBehaviour
 
         this.gameObject.SetActive(false);
     }
+
+    public void GoodToGo() { this.finishedStartup = true; }
 
     private async void FixedUpdate()
     {

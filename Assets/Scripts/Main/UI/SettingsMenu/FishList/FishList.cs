@@ -55,8 +55,7 @@ public class FishList : MonoBehaviour
     public void Clear()
     {
         this.listPopulated = false;
-        foreach (SpeciesBox speciesBox in this.speciesList) { speciesBox.Clear(); }
-        this.speciesList = null;
+        if (this.speciesList != null) { foreach (SpeciesBox speciesBox in this.speciesList) { speciesBox.Clear(); }; this.speciesList = null; }
     }
 
     private void FixedUpdate()

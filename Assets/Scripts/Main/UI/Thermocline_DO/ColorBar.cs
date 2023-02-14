@@ -12,7 +12,7 @@ public class ColorBar : MonoBehaviour
     public float upperVal = 25, lowerVal = 0;
 
     private void Awake() { this.DefineGradients(); }
-    public void Clear() { foreach (GameObject gameObject in this.gradientCells) { Destroy(gameObject); } }
+    public void Clear() { if (this.gradientCells != null) { foreach (GameObject gameObject in this.gradientCells) { Destroy(gameObject); } } }
 
     public void StartUp()
     {

@@ -2,6 +2,7 @@ using Npgsql;
 using UnityEngine;
 using System;
 using System.Data;
+using System.Net;   
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
@@ -18,7 +19,7 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = true;
+    private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -174,87 +175,106 @@ public class DatabaseConnection
             {
                 // This connection tends to have problems. Attempt to re-open the connection if it fails
                 int runningCount = 0;
-                while (runningCount < 30)
+                while (runningCount < 10)
                 {
+                    if (token.IsCancellationRequested) break;
+
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException e) { Debug.Log(e.Message); }
+                    catch (NpgsqlException) { ; }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
                 }
             }
 
-            NpgsqlBatch batch = new NpgsqlBatch(connection);
-            foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command);
+            try
+            {   
+                if (connection.State != ConnectionState.Open) throw new Exception(); // The connection could not be opened
 
-            await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
-            {
-                for (int i=0; i < batch.BatchCommands.Count; i++)
-                {
-                    if (token.IsCancellationRequested) break;
+                NpgsqlBatch batch = new NpgsqlBatch(connection);
+                foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command);
 
-                    // No position data could be recovered
-                    if (!rdr.HasRows) { rdr.NextResult(); }
-                    else
+                // Only proceed if we can successfully ping the address
+                Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+                if (pinger.PingHost())
+                {   
+                    await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync(token))
                     {
-                        bool firstRunThrough = true;
-                        int fishID = 0;
-                        List<DataPacket> returnPackets = new List<DataPacket>();
-                        while (await rdr.ReadAsync())
+                        for (int i=0; i < batch.BatchCommands.Count; i++)
                         {
-                            if (token.IsCancellationRequested) break;
+                            if (token.IsCancellationRequested) throw new Exception();
 
-                            // Nullity handled by SQL query
-                            int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-                            DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
-
-                            if (firstRunThrough)
+                            // No position data could be recovered
+                            if (!rdr.HasRows) { rdr.NextResult(); }
+                            else
                             {
-                                fishID = id;
-                                firstRunThrough = false;
+                                bool firstRunThrough = true;
+                                int fishID = 0;
+                                List<DataPacket> returnPackets = new List<DataPacket>();
+                                while (await rdr.ReadAsync())
+                                {
+                                    if (token.IsCancellationRequested) throw new Exception();
+
+                                    // Nullity handled by SQL query
+                                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+                                    DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                                    if (firstRunThrough)
+                                    {
+                                        fishID = id;
+                                        firstRunThrough = false;
+                                    }
+
+                                    float x = 0f;
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                                    try { x = Convert.ToSingle(entry); }
+                                    catch { Debug.Log("Position conversion fail: x"); }
+
+                                    float y = 0f;
+                                    entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                                    try { y = LocalMeshData.rowCount - Convert.ToSingle(entry); }
+                                    catch { Debug.Log("Position conversion fail: y"); }
+
+
+                                    float z = 0f;
+                                    entry = rdr.GetValue(rdr.GetOrdinal("z"));
+                                    try { z = - Convert.ToSingle(entry); }
+                                    catch { Debug.Log("Position conversion fail: z"); }
+
+                                    DataPacket thisPacket = new DataPacket(id, timestamp, x, y, z);
+                                    returnPackets.Add(thisPacket);
+                                };
+
+                                // Task that is completely independent of next iteration
+                                if (!token.IsCancellationRequested)
+                                {
+                                    Task task = Task.Run(() => FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token), token);
+                                    tasks.Add(task);
+
+                                    lock(DatabaseConnection.locker)
+                                    {
+                                        DatabaseConnection.requestedIDs.Remove(fishID);
+                                        // Debug.Log(string.Format("IDs still not put to allocation task:\n{0}", string.Join(", ", DatabaseConnection.requestedIDs)));
+                                    }
+                                }
                             }
 
-                            float x = 0f;
-                            var entry = rdr.GetValue(rdr.GetOrdinal("x"));
-                            try { x = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Position conversion fail: x"); }
-
-                            float y = 0f;
-                            entry = rdr.GetValue(rdr.GetOrdinal("y"));
-                            try { y = LocalMeshData.rowCount - Convert.ToSingle(entry); }
-                            catch { Debug.Log("Position conversion fail: y"); }
-
-
-                            float z = 0f;
-                            entry = rdr.GetValue(rdr.GetOrdinal("z"));
-                            try { z = - Convert.ToSingle(entry); }
-                            catch { Debug.Log("Position conversion fail: z"); }
-
-                            DataPacket thisPacket = new DataPacket(id, timestamp, x, y, z);
-                            returnPackets.Add(thisPacket);
-                        };
-
-                        // Task that is completely independent of next iteration
-                        if (!token.IsCancellationRequested)
-                        {
-                            Task task = Task.Run(() => FishManager.fishDict[returnPackets[0].id].UpdatePositionCache(returnPackets, forwardOnly, token), token);
-                            tasks.Add(task);
-
-                            lock(DatabaseConnection.locker)
-                            {
-                                DatabaseConnection.requestedIDs.Remove(fishID);
-                                // Debug.Log(string.Format("IDs still not put to allocation task:\n{0}", string.Join(", ", DatabaseConnection.requestedIDs)));
-                            }
+                            rdr.NextResult();
                         }
+
+                        await rdr.CloseAsync();
                     }
 
-                    rdr.NextResult();
+                    await connection.CloseAsync();
                 }
-
-                await rdr.CloseAsync();
+                else 
+                {
+                    await connection.CloseAsync();
+                    throw new Exception();
+                }
             }
-
-            await connection.CloseAsync();
+            catch (Exception) when (token.IsCancellationRequested) { ; }
+            catch (Exception) { ; }
         }
 
         // Ensure all fish caches are updated, or have cancelled gracefully
@@ -283,22 +303,32 @@ public class DatabaseConnection
         {
             connection.Open();
             NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            if (connection.State != ConnectionState.Open) throw new Exception();
 
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
             {
-                idList = new List<int>();
-                if (!rdr.HasRows) throw new Exception(); 
-
-                while (rdr.Read())
+                using (NpgsqlDataReader rdr = cmd.ExecuteReader())
                 {
-                    int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-                    idList.Add(id);
-                };
+                    idList = new List<int>();
+                    if (!rdr.HasRows) throw new Exception(); 
 
-                rdr.Close();
+                    while (rdr.Read())
+                    {
+                        int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+                        idList.Add(id);
+                    };
+
+                    rdr.Close();
+                }
+
+                connection.Close();
             }
-
-            connection.Close();
+            else 
+            {
+                connection.Close();
+                throw new Exception();
+            }
         }
 
         Debug.Log(string.Format("Key fetching: {0}; number of keys: {1}", (DateTime.Now - startTime).TotalSeconds, idList.Count));
@@ -344,12 +374,14 @@ public class DatabaseConnection
                 while (runningCount < 30)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException e) { Debug.Log(e.Message); }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
                 }
             }
+
+            if (connection.State != ConnectionState.Open) { Debug.Log("connection state issue"); throw new Exception(); }
 
             // We need to know what to query based on the present columns in the fish import
             List<string> optionalFishColumns = new List<string>() { "species", "length", "tl", "weight", "sex", "comment" };
@@ -359,123 +391,128 @@ public class DatabaseConnection
             NpgsqlBatch batch = new NpgsqlBatch(connection);
             foreach (int key in keyList) { batch.BatchCommands.Add(NewMetadataBatchCommand(key, presentFishColumns)); }
 
-            await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
+
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
             {
-                for (int i=0; i < keyList.Count; i++)
+                await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync())
                 {
-                    // No fish metadata could be recovered
-                    if (!rdr.HasRows) { rdr.NextResult(); }
-                    else
+                    for (int i=0; i < keyList.Count; i++)
                     {
-                        while (await rdr.ReadAsync())
+                        // No fish metadata could be recovered
+                        if (!rdr.HasRows) { rdr.NextResult(); }
+                        else
                         {
-                            int id = rdr.GetInt32(rdr.GetOrdinal("id"));
-
-                            string captureType = null;
-                            if (presentFishColumns.Contains("f.comment"))
+                            while (await rdr.ReadAsync())
                             {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("comment"));
-                                if (!DBNull.Value.Equals(entry))
+                                int id = rdr.GetInt32(rdr.GetOrdinal("id"));
+
+                                string captureType = null;
+                                if (presentFishColumns.Contains("f.comment"))
                                 {
-                                    try
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("comment"));
+                                    if (!DBNull.Value.Equals(entry))
                                     {
-                                        captureType = Convert.ToString(entry);
-                                        if (String.IsNullOrEmpty(captureType)) captureType = null;
+                                        try
+                                        {
+                                            captureType = Convert.ToString(entry);
+                                            if (String.IsNullOrEmpty(captureType)) captureType = null;
+                                        }
+                                        catch { Debug.Log("Metadata conversion fail: capture type"); }
                                     }
-                                    catch { Debug.Log("Metadata conversion fail: capture type"); }
                                 }
-                            }
 
-                            int? length = null;
-                            if (presentFishColumns.Contains("f.tl"))
-                            {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("tl"));
-                                if (!DBNull.Value.Equals(entry))
+                                int? length = null;
+                                if (presentFishColumns.Contains("f.tl"))
                                 {
-                                    try { length = Convert.ToInt32(entry); }
-                                    catch { Debug.Log("Metadata conversion fail: length"); }
-                                }
-                            }
-                            else if (presentFishColumns.Contains("f.length"))
-                            {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("length"));
-                                if (!DBNull.Value.Equals(entry))
-                                {
-                                    try { length = Convert.ToInt32(entry); }
-                                    catch { Debug.Log("Metadata conversion fail: length"); }
-                                }
-                            }
-
-                            int? speciesCode = null;
-                            if (presentFishColumns.Contains("f.species"))
-                            {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("species"));
-                                if (!DBNull.Value.Equals(entry))
-                                {
-                                    try { speciesCode = Convert.ToInt32(entry); }
-                                    catch { Debug.Log("Metadata conversion fail: species code"); }
-                                }
-                            }
-                            
-
-                            int? weight = null;
-                            if (presentFishColumns.Contains("f.weight"))
-                            {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("weight"));
-                                if (!DBNull.Value.Equals(entry))
-                                {
-                                    try { weight = Convert.ToInt32(entry); }
-                                    catch { Debug.Log("Metadata conversion fail: weight"); }
-                                }
-                            }
-
-                            string speciesName = null;
-                            if (TableImports.tables[TableImports.checkTables[5]].imported && presentFishColumns.Contains("f.species"))
-                            { 
-                                var entry = rdr.GetValue(rdr.GetOrdinal("name"));
-                                if (!DBNull.Value.Equals(entry))
-                                {
-                                    try
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("tl"));
+                                    if (!DBNull.Value.Equals(entry))
                                     {
-                                        speciesName = Convert.ToString(entry);
-                                        if (String.IsNullOrEmpty(speciesName)) speciesName = null;
+                                        try { length = Convert.ToInt32(entry); }
+                                        catch { Debug.Log("Metadata conversion fail: length"); }
                                     }
-                                    catch { Debug.Log("Metadata conversion fail: species name"); }
                                 }
-                            }
-
-                            bool? male = null;
-                            if (presentFishColumns.Contains("f.sex"))
-                            {
-                                var entry = rdr.GetValue(rdr.GetOrdinal("sex"));
-                                if (!DBNull.Value.Equals(entry))
+                                else if (presentFishColumns.Contains("f.length"))
                                 {
-                                    string tempString = Convert.ToString(entry);
-                                    if (tempString.Contains('m')) male = true;
-                                    else if (tempString.Contains('f')) male = false;
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("length"));
+                                    if (!DBNull.Value.Equals(entry))
+                                    {
+                                        try { length = Convert.ToInt32(entry); }
+                                        catch { Debug.Log("Metadata conversion fail: length"); }
+                                    }
                                 }
-                            }
 
-                            // Nullity handled by SQL query
-                            DateTime earliestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("minTime"));
-                            DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
+                                int? speciesCode = null;
+                                if (presentFishColumns.Contains("f.species"))
+                                {
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("species"));
+                                    if (!DBNull.Value.Equals(entry))
+                                    {
+                                        try { speciesCode = Convert.ToInt32(entry); }
+                                        catch { Debug.Log("Metadata conversion fail: species code"); }
+                                    }
+                                }
+                                
 
-                            FishPacket thisPacket = new FishPacket(id, captureType, length, speciesCode, weight, speciesName, male, earliestTimestamp, latestTimestamp);
-                            returnDict[id] = thisPacket;
-                        };
+                                int? weight = null;
+                                if (presentFishColumns.Contains("f.weight"))
+                                {
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("weight"));
+                                    if (!DBNull.Value.Equals(entry))
+                                    {
+                                        try { weight = Convert.ToInt32(entry); }
+                                        catch { Debug.Log("Metadata conversion fail: weight"); }
+                                    }
+                                }
+
+                                string speciesName = null;
+                                if (TableImports.tables[TableImports.checkTables[5]].imported && presentFishColumns.Contains("f.species"))
+                                { 
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("name"));
+                                    if (!DBNull.Value.Equals(entry))
+                                    {
+                                        try
+                                        {
+                                            speciesName = Convert.ToString(entry);
+                                            if (String.IsNullOrEmpty(speciesName)) speciesName = null;
+                                        }
+                                        catch { Debug.Log("Metadata conversion fail: species name"); }
+                                    }
+                                }
+
+                                bool? male = null;
+                                if (presentFishColumns.Contains("f.sex"))
+                                {
+                                    var entry = rdr.GetValue(rdr.GetOrdinal("sex"));
+                                    if (!DBNull.Value.Equals(entry))
+                                    {
+                                        string tempString = Convert.ToString(entry);
+                                        if (tempString.Contains('m')) male = true;
+                                        else if (tempString.Contains('f')) male = false;
+                                    }
+                                }
+
+                                // Nullity handled by SQL query
+                                DateTime earliestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("minTime"));
+                                DateTime latestTimestamp = rdr.GetDateTime(rdr.GetOrdinal("maxTime"));
+
+                                FishPacket thisPacket = new FishPacket(id, captureType, length, speciesCode, weight, speciesName, male, earliestTimestamp, latestTimestamp);
+                                returnDict[id] = thisPacket;
+                            };
+                        }
+
+                        rdr.NextResult();
                     }
 
-                    rdr.NextResult();
+                    await rdr.CloseAsync();
                 }
 
-                await rdr.CloseAsync();
+                await connection.CloseAsync();
             }
-
-            try { await connection.CloseAsync(); }
-            catch (NpgsqlException e)
+            else
             {
-                Debug.Log("Catching the exception on other end");
-                Debug.Log(e.Message);
+                await connection.CloseAsync();
+                throw new Exception();
             }
         }
 
@@ -492,133 +529,132 @@ public class DatabaseConnection
         List<string> presentWeatherColumns = new List<string>();
         foreach (string column in optionalWeatherColumns) { if (TableImports.tables[TableImports.checkTables[6]].presentColumns.Contains(column)) { presentWeatherColumns.Add(column); } }
 
-        // string sql = string.Format(
-        // @"SELECT timestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
-        // FROM weatherstation
-        // where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
-        //     AND timestamp IS NOT null
-        //     and (windspeed is not null
-        //         or winddirection is not null
-        //         or temperature is not null
-        //         or humidity is not null
-        //         or airpressure is not null
-        //         or precipitation is not null))
-        // or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{0}', 'YYYY-MM-DD HH24:MI:SS')
-        //     AND timestamp IS NOT null
-        //     and (windspeed is not null
-        //         or winddirection is not null
-        //         or temperature is not null
-        //         or humidity is not null
-        //         or airpressure is not null
-        //         or precipitation is not null))
-        // AND timestamp IS NOT null
-        // order by timestamp
-        // limit 1", strTime);
-
         string sql = string.Format(
-        @"SELECT timestamp, {0}, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
-        FROM weatherstation
-        where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{2}', 'YYYY-MM-DD HH24:MI:SS')
+            @"SELECT timestamp, {0}, LEAD(timestamp, 1) OVER ( ORDER BY timestamp ) next_timestamp
+            FROM weatherstation
+            where timestamp = (select max(timestamp) from weatherstation where timestamp <= TO_TIMESTAMP('{2}', 'YYYY-MM-DD HH24:MI:SS')
+                AND timestamp IS NOT null
+                and ({1} is not null))
+            or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{2}', 'YYYY-MM-DD HH24:MI:SS')
+                AND timestamp IS NOT null
+                and ({1} is not null))
             AND timestamp IS NOT null
-            and ({1} is not null))
-        or timestamp = (select min(timestamp) from weatherstation where timestamp > TO_TIMESTAMP('{2}', 'YYYY-MM-DD HH24:MI:SS')
-            AND timestamp IS NOT null
-            and ({1} is not null))
-        AND timestamp IS NOT null
-        order by timestamp
-        limit 1", string.Join(", ", presentWeatherColumns), string.Join(" is not null or ", presentWeatherColumns), strTime);
+            order by timestamp
+            limit 1", string.Join(", ", presentWeatherColumns), string.Join(" is not null or ", presentWeatherColumns), strTime);
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); throw new Exception(); }
-
-                while (await rdr.ReadAsync())
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
 
-                    DateTime? nextTimestamp = null;
-                    var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { nextTimestamp = Convert.ToDateTime(entry); }
-                        catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
-                    }
-
-                    float? temperature = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { temperature = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Weather data conversion fail: temperature"); }
-                    }
-
-                    float? windspeed = null;
-                    if (presentWeatherColumns.Contains("windspeed"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("windspeed"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { windspeed = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Weather data conversion fail: windspeed"); }
-                        }
-                    }
-
-                    float? winddirection = null;
-                    if (presentWeatherColumns.Contains("winddirection"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("winddirection"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { winddirection = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Weather data conversion fail: winddirection"); }
-                        }
-                    }
-
-                    float? humidity = null;
-                    if (presentWeatherColumns.Contains("humidity"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("humidity"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { humidity = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Weather data conversion fail: humidity"); }
-                        }
-                    }
-
-                    float? airpressure = null;
-                    if (presentWeatherColumns.Contains("airpressure"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("airpressure"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { airpressure = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Weather data conversion fail: airpressure"); }
-                        }
-                    }
-
-                    float? precipitation = null;
-                    if (presentWeatherColumns.Contains("precipitation"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("precipitation"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { precipitation = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Weather data conversion fail: precipitation"); }
-                        }
-                    }
-
-                    returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
-                };
-
-                await rdr.CloseAsync();
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
+                }
             }
 
-            await connection.CloseAsync();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!rdr.HasRows) { Debug.Log("Weather SQL query yielded empty dataset"); throw new Exception(); }
+
+                    while (await rdr.ReadAsync())
+                    {
+                        DateTime timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                        DateTime? nextTimestamp = null;
+                        var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { nextTimestamp = Convert.ToDateTime(entry); }
+                            catch { Debug.Log("Weather data conversion fail: nextTimestamp"); }
+                        }
+
+                        float? temperature = null;
+                        entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { temperature = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Weather data conversion fail: temperature"); }
+                        }
+
+                        float? windspeed = null;
+                        if (presentWeatherColumns.Contains("windspeed"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("windspeed"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { windspeed = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Weather data conversion fail: windspeed"); }
+                            }
+                        }
+
+                        float? winddirection = null;
+                        if (presentWeatherColumns.Contains("winddirection"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("winddirection"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { winddirection = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Weather data conversion fail: winddirection"); }
+                            }
+                        }
+
+                        float? humidity = null;
+                        if (presentWeatherColumns.Contains("humidity"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("humidity"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { humidity = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Weather data conversion fail: humidity"); }
+                            }
+                        }
+
+                        float? airpressure = null;
+                        if (presentWeatherColumns.Contains("airpressure"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("airpressure"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { airpressure = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Weather data conversion fail: airpressure"); }
+                            }
+                        }
+
+                        float? precipitation = null;
+                        if (presentWeatherColumns.Contains("precipitation"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("precipitation"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { precipitation = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Weather data conversion fail: precipitation"); }
+                            }
+                        }
+
+                        returnPacket = new WeatherPacket(timestamp, nextTimestamp, windspeed, winddirection, temperature, humidity, airpressure, precipitation);
+                    };
+
+                    await rdr.CloseAsync();
+                }
+
+                await connection.CloseAsync();
+            }
+            else 
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
 
         return returnPacket;
@@ -640,23 +676,45 @@ public class DatabaseConnection
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); throw new Exception(); }
-
-                while (await rdr.ReadAsync())
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
-                    latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
-                };
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
 
-                await rdr.CloseAsync();
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
+                }
             }
 
-            await connection.CloseAsync();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!rdr.HasRows) { Debug.Log("Weather MaxMin SQL query yielded empty dataset"); throw new Exception(); }
+
+                    while (await rdr.ReadAsync())
+                    {
+                        earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
+                        latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
+                    };
+
+                    await rdr.CloseAsync();
+                }
+
+                await connection.CloseAsync();
+            }
+            else 
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
 
         return new DateTime[2] { earliestTimestamp, latestTimestamp };
@@ -705,70 +763,92 @@ public class DatabaseConnection
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); throw new Exception(); }
-
-                while (await rdr.ReadAsync())
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
 
-                    nextTimestamp = null;
-                    var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { nextTimestamp = Convert.ToDateTime(entry); }
-                        catch { Debug.Log("Thermocline data conversion fail: nextTimestamp"); }
-                    }
-
-                    // Never null by the architecture of the DB
-                    float depth = float.MaxValue;
-                    entry = rdr.GetValue(rdr.GetOrdinal("depth"));
-                    try { depth = Convert.ToSingle(entry); }
-                    catch { Debug.Log("Thermocline data conversion fail: depth"); }
-
-                    float? temperature = null;
-                    entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { temperature = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Thermocline data conversion fail: temperature"); }
-                    }
-
-                    float? oxygen = null;
-                    if (TableImports.tables[TableImports.checkTables[7]].presentColumns.Contains("oxygen"))
-                    {
-                        entry = rdr.GetValue(rdr.GetOrdinal("oxygen"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { oxygen = Convert.ToSingle(entry); }
-                            catch { Debug.Log("Thermocline data conversion fail: oxygen"); }
-                        }
-                    }
-
-                    ThermoReading reading = new ThermoReading(depth, temperature, oxygen);
-
-                    // Check uniqueness of depth entry before adding to list
-                    bool unique = true;
-                    foreach (ThermoReading record in readings)
-                    {
-                        if (record.depth == reading.depth)
-                        {
-                            unique = false;
-                            break;
-                        }
-                    }
-
-                    if (unique) readings.Add(reading);
-                };
-
-                await rdr.CloseAsync();
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
+                }
             }
 
-            await connection.CloseAsync();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!rdr.HasRows) { Debug.Log("Thermo SQL query yielded empty dataset"); throw new Exception(); }
+
+                    while (await rdr.ReadAsync())
+                    {
+                        timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                        nextTimestamp = null;
+                        var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { nextTimestamp = Convert.ToDateTime(entry); }
+                            catch { Debug.Log("Thermocline data conversion fail: nextTimestamp"); }
+                        }
+
+                        // Never null by the architecture of the DB
+                        float depth = float.MaxValue;
+                        entry = rdr.GetValue(rdr.GetOrdinal("depth"));
+                        try { depth = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Thermocline data conversion fail: depth"); }
+
+                        float? temperature = null;
+                        entry = rdr.GetValue(rdr.GetOrdinal("temperature"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { temperature = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Thermocline data conversion fail: temperature"); }
+                        }
+
+                        float? oxygen = null;
+                        if (TableImports.tables[TableImports.checkTables[7]].presentColumns.Contains("oxygen"))
+                        {
+                            entry = rdr.GetValue(rdr.GetOrdinal("oxygen"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { oxygen = Convert.ToSingle(entry); }
+                                catch { Debug.Log("Thermocline data conversion fail: oxygen"); }
+                            }
+                        }
+
+                        ThermoReading reading = new ThermoReading(depth, temperature, oxygen);
+
+                        // Check uniqueness of depth entry before adding to list
+                        bool unique = true;
+                        foreach (ThermoReading record in readings)
+                        {
+                            if (record.depth == reading.depth)
+                            {
+                                unique = false;
+                                break;
+                            }
+                        }
+
+                        if (unique) readings.Add(reading);
+                    };
+
+                    await rdr.CloseAsync();
+                }
+
+                await connection.CloseAsync();
+            }
+            else
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
 
         if (readings.Any()) return new ThermoPacket(timestamp, nextTimestamp, readings);
@@ -799,24 +879,46 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); throw new Exception(); }
-
-                while (rdr.Read())
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
-                    latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
-                    maxDepth = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_depth")));
-                };
+                    try { connection.Open(); }
+                    catch (NpgsqlException) { ; }
 
-                rdr.Close();
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
+                }
             }
 
-            connection.Close();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+                {
+                    if (!rdr.HasRows) { Debug.Log("Thermo MaxMin SQL query yielded empty dataset"); throw new Exception(); }
+
+                    while (rdr.Read())
+                    {
+                        earliestTimestamp = DateTime.Compare(earliestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) < 0 ? earliestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("min"));
+                        latestTimestamp = DateTime.Compare(latestTimestamp, rdr.GetDateTime(rdr.GetOrdinal("min"))) > 0 ? latestTimestamp : rdr.GetDateTime(rdr.GetOrdinal("max"));
+                        maxDepth = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_depth")));
+                    };
+
+                    rdr.Close();
+                }
+
+                connection.Close();
+            }
+            else
+            {
+                connection.Close();
+                throw new Exception();
+            }
         }
 
         return new Tuple<DateTime, DateTime, float>(earliestTimestamp, latestTimestamp, maxDepth);
@@ -829,56 +931,78 @@ public class DatabaseConnection
         
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                // No fish metadata could be recovered
-                if (!rdr.HasRows)
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    Debug.Log("Meshmap SQL query yielded empty dataset");
-                    throw new Exception();
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
+
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
                 }
-                else
-                {
-                    meshTable = new DataTable();
-                    int columnCount = rdr.FieldCount;
-                    int rowCount = 0;
-
-                    // Add the appropriate number of columns
-                    for (int i=0; i<columnCount; i++) { meshTable.Columns.Add(i.ToString(), typeof(float)); }
-
-                    while (await rdr.ReadAsync())
-                    {
-                        DataRow row = meshTable.NewRow();
-                        for (int i=0; i<columnCount; i++)
-                        {
-                            // Read and set the row value
-                            float value = 0f;
-                            var entry = rdr.GetValue(i);
-                            if (!DBNull.Value.Equals(entry))
-                            {
-                                try { value = Convert.ToSingle(entry); }
-                                catch { Debug.Log(string.Format("Meshmap column data conversion fail at row: {0}, column: {1}", rowCount, i)); }
-                            }
-                            else value = float.MaxValue; // Make it visible
-
-                            row[i] = value;
-                        }
-
-                        // Add the entire row to the table
-                        meshTable.Rows.Add(row);
-                        rowCount++;
-                    };
-
-                    meshTable.AcceptChanges();
-                }
-                await rdr.CloseAsync();
             }
-            await connection.CloseAsync();
+
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    // No fish metadata could be recovered
+                    if (!rdr.HasRows)
+                    {
+                        Debug.Log("Meshmap SQL query yielded empty dataset");
+                        throw new Exception();
+                    }
+                    else
+                    {
+                        meshTable = new DataTable();
+                        int columnCount = rdr.FieldCount;
+                        int rowCount = 0;
+
+                        // Add the appropriate number of columns
+                        for (int i=0; i<columnCount; i++) { meshTable.Columns.Add(i.ToString(), typeof(float)); }
+
+                        while (await rdr.ReadAsync())
+                        {
+                            DataRow row = meshTable.NewRow();
+                            for (int i=0; i<columnCount; i++)
+                            {
+                                // Read and set the row value
+                                float value = 0f;
+                                var entry = rdr.GetValue(i);
+                                if (!DBNull.Value.Equals(entry))
+                                {
+                                    try { value = Convert.ToSingle(entry); }
+                                    catch { Debug.Log(string.Format("Meshmap column data conversion fail at row: {0}, column: {1}", rowCount, i)); }
+                                }
+                                else value = float.MaxValue; // Make it visible
+
+                                row[i] = value;
+                            }
+
+                            // Add the entire row to the table
+                            meshTable.Rows.Add(row);
+                            rowCount++;
+                        };
+
+                        meshTable.AcceptChanges();
+                    }
+                    await rdr.CloseAsync();
+                }
+                await connection.CloseAsync();
+            }
+            else
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
-    
+
         return meshTable;
     }
 
@@ -889,18 +1013,40 @@ public class DatabaseConnection
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            connection.Open();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log(string.Format("Problem getting earliest date from table {0}", tableName)); throw new Exception(); }
-                while (rdr.Read()) { timestamp = rdr.GetDateTime(rdr.GetOrdinal("min")); }
+                int runningCount = 0;
+                while (runningCount < 10)
+                {
+                    try { connection.Open(); }
+                    catch (NpgsqlException) { ; }
 
-                rdr.Close();
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
+                }
             }
 
-            connection.Close();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                using (NpgsqlDataReader rdr = cmd.ExecuteReader())
+                {
+                    if (!rdr.HasRows) { Debug.Log(string.Format("Problem getting earliest date from table {0}", tableName)); throw new Exception(); }
+                    while (rdr.Read()) { timestamp = rdr.GetDateTime(rdr.GetOrdinal("min")); }
+
+                    rdr.Close();
+                }
+
+                connection.Close();
+            }
+            else
+            {
+                connection.Close();
+                throw new Exception();
+            }
         }
 
         return timestamp;
@@ -939,71 +1085,92 @@ public class DatabaseConnection
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows)
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    Debug.Log("polygon SQL query yielded empty dataset");
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
 
-                    // Query for earliest TS and make dummy return packet with accurate next_timestamp
-                    // TODO: query failure returns DateTime.MaxValue, error handle if earliestTS is this value
-                    DateTime earliestTS = DatabaseConnection.EarliestDate("macromap_polygons_local");
-                    return new PolygonPacket(null, earliestTS);
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
                 }
-
-                while (await rdr.ReadAsync())
-                {
-                    timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
-
-                    nextTimestamp = null;
-                    var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
-                    if (!DBNull.Value.Equals(entry))
-                    {
-                        try { nextTimestamp = Convert.ToDateTime(entry); }
-                        catch { Debug.Log("Polygonal macromap data conversion fail: nextTimestamp"); }
-                    }
-
-                    // Never null by the architecture of the query
-                    int polyID = 0;
-                    entry = rdr.GetValue(rdr.GetOrdinal("poly_id"));
-                    try { polyID = Convert.ToInt32(entry); }
-                    catch { Debug.Log("Polygonal macromap data conversion fail: poly_ID"); }
-
-                    int lower = 0;
-                    entry = rdr.GetValue(rdr.GetOrdinal("lower"));
-                    try { lower = Convert.ToInt32(entry); }
-                    catch { Debug.Log("Polygonal macromap data conversion fail: lower"); }
-
-                    int upper = 0;
-                    entry = rdr.GetValue(rdr.GetOrdinal("upper"));
-                    try { upper = Convert.ToInt32(entry); }
-                    catch { Debug.Log("Polygonal macromap data conversion fail: upper"); }
-
-                    float x = 0;
-                    entry = rdr.GetValue(rdr.GetOrdinal("x"));
-                    try { x = Convert.ToSingle(entry); }
-                    catch { Debug.Log("Polygonal macromap data conversion fail: x"); }
-
-                    float y = 0;
-                    entry = rdr.GetValue(rdr.GetOrdinal("y"));
-                    try { y = Convert.ToSingle(entry); }
-                    catch { Debug.Log("Polygonal macromap data conversion fail: y"); }
-
-                    // Send off to MacromapPolygon to process
-                    if (returnPacket == null) { returnPacket = new PolygonPacket(timestamp, nextTimestamp); }
-                    returnPacket.CataloguePacket(polyID, lower, upper, x, y);
-                };
-
-                await rdr.CloseAsync();
             }
 
-            await connection.CloseAsync();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!rdr.HasRows)
+                    {
+                        Debug.Log("polygon SQL query yielded empty dataset");
+
+                        // Query for earliest TS and make dummy return packet with accurate next_timestamp
+                        // TODO: query failure returns DateTime.MaxValue, error handle if earliestTS is this value
+                        DateTime earliestTS = DatabaseConnection.EarliestDate("macromap_polygons_local");
+                        return new PolygonPacket(null, earliestTS);
+                    }
+
+                    while (await rdr.ReadAsync())
+                    {
+                        timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                        nextTimestamp = null;
+                        var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                        if (!DBNull.Value.Equals(entry))
+                        {
+                            try { nextTimestamp = Convert.ToDateTime(entry); }
+                            catch { Debug.Log("Polygonal macromap data conversion fail: nextTimestamp"); }
+                        }
+
+                        // Never null by the architecture of the query
+                        int polyID = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("poly_id"));
+                        try { polyID = Convert.ToInt32(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: poly_ID"); }
+
+                        int lower = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("lower"));
+                        try { lower = Convert.ToInt32(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: lower"); }
+
+                        int upper = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("upper"));
+                        try { upper = Convert.ToInt32(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: upper"); }
+
+                        float x = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                        try { x = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: x"); }
+
+                        float y = 0;
+                        entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                        try { y = Convert.ToSingle(entry); }
+                        catch { Debug.Log("Polygonal macromap data conversion fail: y"); }
+
+                        // Send off to MacromapPolygon to process
+                        if (returnPacket == null) { returnPacket = new PolygonPacket(timestamp, nextTimestamp); }
+                        returnPacket.CataloguePacket(polyID, lower, upper, x, y);
+                    };
+
+                    await rdr.CloseAsync();
+                }
+
+                await connection.CloseAsync();
+            }
+            else 
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
 
-        // returnPacket.ProcessConvexHulls();
         return returnPacket;
     }
 
@@ -1033,53 +1200,75 @@ public class DatabaseConnection
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
-            await connection.OpenAsync();
-            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-
-            await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+            if (connection.State != ConnectionState.Open)
             {
-                if (!rdr.HasRows) { Debug.Log("macromap height SQL query yielded empty dataset"); }
-                else
+                int runningCount = 0;
+                while (runningCount < 10)
                 {
-                    while (await rdr.ReadAsync())
-                    {
-                        timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+                    try { await connection.OpenAsync(); }
+                    catch (NpgsqlException) { ; }
 
-                        nextTimestamp = null;
-                        var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
-                        if (!DBNull.Value.Equals(entry))
-                        {
-                            try { nextTimestamp = Convert.ToDateTime(entry); }
-                            catch { Debug.Log("Height macromap data conversion fail: nextTimestamp"); }
-                        }
-
-                        // Never null by the architecture of the query
-                        float x = 0;
-                        entry = rdr.GetValue(rdr.GetOrdinal("x"));
-                        try { x = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Height macromap data conversion fail: x"); }
-
-                        float y = 0;
-                        entry = rdr.GetValue(rdr.GetOrdinal("y"));
-                        try { y = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Height macromap data conversion fail: y"); }
-
-                        float height = 0;
-                        entry = rdr.GetValue(rdr.GetOrdinal("height_m"));
-                        try { height = Convert.ToSingle(entry); }
-                        catch { Debug.Log("Height macromap data conversion fail: height"); }
-
-                        if (returnPacket == null) { returnPacket = new MacroHeightPacket(timestamp, nextTimestamp); }
-                        returnPacket.AddPoint(x, y, height);
-                    };
+                    if (connection.State == ConnectionState.Open) break;
+                    runningCount++;
                 }
-                await rdr.CloseAsync();
             }
 
-            await connection.CloseAsync();
+            if (connection.State != ConnectionState.Open) throw new Exception();
+
+            NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+            Pinger pinger = new Pinger(IPAddress.Parse(connection.Host));
+            if (pinger.PingHost())
+            {
+                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+                {
+                    if (!rdr.HasRows) { Debug.Log("macromap height SQL query yielded empty dataset"); }
+                    else
+                    {
+                        while (await rdr.ReadAsync())
+                        {
+                            timestamp = rdr.GetDateTime(rdr.GetOrdinal("timestamp"));
+
+                            nextTimestamp = null;
+                            var entry = rdr.GetValue(rdr.GetOrdinal("next_timestamp"));
+                            if (!DBNull.Value.Equals(entry))
+                            {
+                                try { nextTimestamp = Convert.ToDateTime(entry); }
+                                catch { Debug.Log("Height macromap data conversion fail: nextTimestamp"); }
+                            }
+
+                            // Never null by the architecture of the query
+                            float x = 0;
+                            entry = rdr.GetValue(rdr.GetOrdinal("x"));
+                            try { x = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Height macromap data conversion fail: x"); }
+
+                            float y = 0;
+                            entry = rdr.GetValue(rdr.GetOrdinal("y"));
+                            try { y = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Height macromap data conversion fail: y"); }
+
+                            float height = 0;
+                            entry = rdr.GetValue(rdr.GetOrdinal("height_m"));
+                            try { height = Convert.ToSingle(entry); }
+                            catch { Debug.Log("Height macromap data conversion fail: height"); }
+
+                            if (returnPacket == null) { returnPacket = new MacroHeightPacket(timestamp, nextTimestamp); }
+                            returnPacket.AddPoint(x, y, height);
+                        };
+                    }
+                    await rdr.CloseAsync();
+                }
+
+                await connection.CloseAsync();
+            }
+            else
+            {
+                await connection.CloseAsync();
+                throw new Exception();
+            }
         }
 
-        returnPacket.CoalesceDictionary();
+        if (returnPacket != null) returnPacket.CoalesceDictionary();
         return returnPacket;
     }
 }
