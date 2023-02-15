@@ -4,14 +4,20 @@ using System;
 
 public class FishList : MonoBehaviour
 {
-    private float listSize;
     private bool listPopulated = false;
 
     private List<SpeciesBox> speciesList;
     [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
 
+    private static FishList _instance;
+    [HideInInspector] public static FishList instance {get { return _instance; } set {_instance = value; }}
+
     public void WakeUp()
     {
+        // Destroy duplicate instances
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+
         speciesList = new List<SpeciesBox>();
 
         // Populate the list
@@ -60,32 +66,30 @@ public class FishList : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (listPopulated)
+        if (this.listPopulated)
         {
             // Harmonize time across entire update time window
             DateTime updateTime = TimeManager.instance.currentTime;
 
-            listSize = 250; // Toggle group size + titles
             foreach (SpeciesBox speciesBox in speciesList)
             {
-                listSize += speciesBox.open ? speciesBox.contentSize : 60f;
+                bool reorder = false;
                 foreach (FishBox fishBox in speciesBox.components)
                 {
                     if (fishBox.fish.FishShouldExist(updateTime))
                     {
                         fishBox.UpdateText();
-                        if (fishBox.greyedOut) { fishBox.RestoreColor(); }
+                        if (fishBox.greyedOut) { fishBox.RestoreColor(); reorder = true; }
                     }
                     else
                     {
                         fishBox.UpdateText(active:false);
-                        if (!fishBox.greyedOut) { fishBox.Greyout(); }
+                        if (!fishBox.greyedOut) { fishBox.Greyout(); reorder = true; }
                     }
                 }
-            }
 
-            RectTransform recter = this.GetComponent<RectTransform>();
-            recter.sizeDelta += new Vector2(0f, listSize - recter.rect.height);
+                if (reorder) speciesBox.ReorderBoxes();
+            }
         }
     }
 }

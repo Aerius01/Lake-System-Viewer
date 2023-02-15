@@ -9,7 +9,7 @@ public class CategoricalFilterHandler : MonoBehaviour
     [SerializeField] private bool _isSexHandler;
     [SerializeField] private TextMeshProUGUI header;
     [SerializeField] private GameObject togglePrefab;
-    [SerializeField] private RectTransform contentPanel;
+    [SerializeField] private RectTransform contentRect;
 
     public float contentSize { get { return this.gameObject.GetComponent<RectTransform>().rect.height; } }
 
@@ -49,9 +49,6 @@ public class CategoricalFilterHandler : MonoBehaviour
         RectTransform rect = this.GetComponent<RectTransform>();
         float diff = (75 + toggleCount * 35 + (toggleCount - 1) * 10 + 30 + 15) - rect.rect.height;
         rect.sizeDelta += new Vector2(0, diff);
-
-        this.contentPanel.sizeDelta += new Vector2(0, this.contentSize - this.initialStartSize);
-        LayoutRebuilder.ForceRebuildLayoutImmediate(this.contentPanel);
     }
 
     private void Start()
@@ -59,8 +56,8 @@ public class CategoricalFilterHandler : MonoBehaviour
         if (this.isSexHandler) { this.header.text = "Sex"; }
         else { this.header.text = "Capture Type"; }
 
-        contentPanel.position = new Vector3(0,0,0);
         initialStartSize = this.contentSize;
+        LayoutRebuilder.ForceRebuildLayoutImmediate(this.contentRect);
     }
 
     public bool PassesFilters(Fish fish)

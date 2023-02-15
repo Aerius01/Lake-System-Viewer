@@ -97,10 +97,9 @@ public class ThermoclineDOMain : MonoBehaviour
             this.SetupWidget();
 
             // Update
-            this.ToggleThermocline();
             await this.UpdateThermoclineDOMain();
 
-            this.thermoRootObject.SetActive(true);
+            this.ToggleThermocline();
             this.initialized = true;
         }
         catch (Exception) { this.EnableThermoclineDOMain(false); }
@@ -219,12 +218,12 @@ public class ThermoclineDOMain : MonoBehaviour
     {
         if (UserSettings.showThermocline)
         {
-            this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 1;
+            this.thermoRootObject.SetActive(true);
             if (this.thermoclinePlane != null) this.thermoclinePlane.TogglePlane(true);
         }
         else
         {
-            this.thermoRootObject.GetComponent<CanvasGroup>().alpha = 0;
+            this.thermoRootObject.SetActive(false);
             this.thermoRootObject.GetComponent<RectTransform>().localPosition = this.originContainer;
             if (this.thermoclinePlane != null) this.thermoclinePlane.TogglePlane(false);
         }

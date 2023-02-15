@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
+using System.Linq;
 
 public class SpeciesBox : ListBox
 {
@@ -28,6 +29,33 @@ public class SpeciesBox : ListBox
     {
         foreach (FishBox fishBox in components) { Destroy(fishBox.gameObject); }
         Destroy(this.gameObject);
+    }
+
+    public void ReorderBoxes()
+    {
+        List<FishBox> activeObjects = new List<FishBox>();
+        List<FishBox> inactiveObjects = new List<FishBox>();
+
+        foreach (FishBox fishBox in this.components)
+        {
+            if (!fishBox.greyedOut) activeObjects.Add(fishBox);
+            else inactiveObjects.Add(fishBox);
+        }
+
+        List<FishBox> sortedActive = activeObjects.OrderBy(o=>o.fish.id).ToList();
+        List<FishBox> sortedInactive = inactiveObjects.OrderBy(o=>o.fish.id).ToList();
+
+        int index = 0;
+        foreach (FishBox fishBox in sortedActive)
+        {
+            fishBox.transform.SetSiblingIndex(index);
+            index++;
+        }
+        foreach (FishBox fishBox in sortedInactive)
+        {
+            fishBox.transform.SetSiblingIndex(index);
+            index++;
+        }
     }
 
     // METHODS

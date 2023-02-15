@@ -7,7 +7,7 @@ public class FishBox : ListBox
 {
     public Fish fish {get; private set;}
     public float contentSize { get { return 266f; } }
-    private SpeciesBox parentBox;
+    public SpeciesBox parentBox { get; private set; }
 
     // Text updating
     private string initText;

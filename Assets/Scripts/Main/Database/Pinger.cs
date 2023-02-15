@@ -1,5 +1,6 @@
 using System.Net.NetworkInformation;   
 using System.Net;   
+using System.Threading.Tasks;
 
 public class Pinger
 {
@@ -13,12 +14,29 @@ public class Pinger
     public bool PingHost()
     {
         bool pingable = false;
-        System.Net.NetworkInformation.Ping pinger = null;
+        Ping pinger = null;
 
         try
         {
-            pinger = new System.Net.NetworkInformation.Ping();
+            pinger = new Ping();
             PingReply reply = pinger.Send(this.host);
+            pingable = reply.Status == IPStatus.Success;
+        }
+        catch (PingException) { ; } // Discard PingExceptions and return false
+        finally { if (pinger != null) { pinger.Dispose(); } }
+
+        return pingable;
+    }
+
+    public async Task<bool> PingHostAsync()
+    {
+        bool pingable = false;
+        Ping pinger = null;
+
+        try
+        {
+            pinger = new Ping();
+            PingReply reply = await pinger.SendPingAsync(this.host);
             pingable = reply.Status == IPStatus.Success;
         }
         catch (PingException) { ; } // Discard PingExceptions and return false

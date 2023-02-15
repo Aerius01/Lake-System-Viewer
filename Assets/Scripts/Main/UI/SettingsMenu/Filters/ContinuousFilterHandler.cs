@@ -1,12 +1,14 @@
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.UI;
 
 public class ContinuousFilterHandler : MonoBehaviour
 {
     [SerializeField] private bool _isLengthHandler;
     [SerializeField] private TwoEndedSlider slider;
     [SerializeField] private TextMeshProUGUI header;
+    [SerializeField] private RectTransform contentRect;
 
     public bool isLengthHandler { get { return _isLengthHandler; } }
     private int counter = 0;
@@ -26,6 +28,8 @@ public class ContinuousFilterHandler : MonoBehaviour
 
         if (this.isLengthHandler) { this.header.text =  "Length";}
         else { this.header.text = "Weight";}
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(this.contentRect);
     }
 
     public bool PassesFilters(Fish fish)

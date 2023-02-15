@@ -7,6 +7,8 @@ public class FilterManager : MonoBehaviour
     public static CategoricalFilterHandler sexFilterHandler { get; private set; }
     public static CategoricalFilterHandler captureTypeFilterHandler { get; private set; }
 
+    [SerializeField] Transform contentTransform;
+
     public static void AddContHandler(ContinuousFilterHandler handler)
     {
         if (handler.isLengthHandler) lengthFilterHandler = handler;
@@ -21,7 +23,7 @@ public class FilterManager : MonoBehaviour
 
     public static bool PassesAllFilters(Fish fish)
     {
-        // Running check of all filters
+        // Running check of all active filters
         return lengthFilterHandler.PassesFilters(fish) ? 
         (
             weightFilterHandler.PassesFilters(fish) ? 

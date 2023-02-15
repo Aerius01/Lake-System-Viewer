@@ -14,7 +14,7 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private GameObject[] particleObject;
     [SerializeField] private GameObject compassDial, compassArrow, weatherText, rootObject, windObject, genObject, bufferIcon;
     [SerializeField] private Toggle toggle;
-    [SerializeField] private CanvasGroup rootCanvas, toolTipCanvas, compassCanvas;
+    [SerializeField] private CanvasGroup toolTipCanvas, compassCanvas;
 
     // Singleton
     private static WindWeatherMain _instance;
@@ -94,10 +94,10 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
             if (this.earliestWeatherTimestamp == DateTime.MaxValue || this.latestWeatherTimestamp == DateTime.MinValue) throw new Exception();
 
-            this.ToggleWind();
+            this.rootObject.SetActive(true);
             await this.UpdateWindWeather();
 
-            this.rootObject.SetActive(true);
+            this.ToggleWind();
             this.initialized = true;
         }
         catch (Exception) { this.EnableWindWeather(false); }
@@ -203,14 +203,19 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         if (UserSettings.showWindWeather)
         {
-            this.rootCanvas.alpha = 1;
+            // this.rootCanvas.alpha = 1;
+            this.windObject.SetActive(true);
+            this.genObject.SetActive(true);
             foreach (GameObject obj in particleObject) { obj.SetActive(true); }
         }
         else
         {
-            this.rootCanvas.alpha = 0;
+            // this.rootCanvas.alpha = 0;
             this.windObject.GetComponent<RectTransform>().localPosition = windStartPos;
             this.genObject.GetComponent<RectTransform>().localPosition = weatherStartPos;
+            this.windObject.SetActive(false);
+            this.genObject.SetActive(false);
+
             foreach (GameObject obj in particleObject) { obj.SetActive(false); }
         }
     }

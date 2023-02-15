@@ -199,7 +199,7 @@ public class DBHandler : MonoBehaviour
         this.menuPanel.GetComponent<CanvasGroup>().alpha = 0.3f;
 
         string connString = string.Format("Host={0};Username={1};Password={2};Database={3};Pooling=true;MaxPoolSize=5000;CommandTimeout=0", hostInput.text, usernameInput.text, passwordInput.text, DBNameInput.text);
-        DatabaseConnection.SetConnectionString(connString);
+        DatabaseConnection.SetConnectionString(connString, this.hostInput.text);
 
         this.startBufferer.SetActive(true);
         try { this.successfulInit = await this.main.Initialize(); }

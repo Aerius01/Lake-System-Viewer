@@ -13,13 +13,14 @@ public class DatabaseConnection
 {
     private static int counter = 0;
     private static string connString;
+    public static string host { get; private set; }
     public static List<int> requestedIDs {get; private set;}
     private static List<CommandWrapper> forwardBatch, doubleSidedBatch;
     private static readonly object locker = new object();
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = null;
+    private static bool? smallSample = false;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -32,7 +33,7 @@ public class DatabaseConnection
         DatabaseConnection.requestedIDs = new List<int>();
     }
 
-    public static void SetConnectionString(string connString) { DatabaseConnection.connString = connString; }
+    public static void SetConnectionString(string connString, string host) { DatabaseConnection.connString = connString; DatabaseConnection.host = host;}
 
     public static void QueuePositionBatchCommand(int id, DateTime queryRootTimestamp, bool forwardOnly=true)
     {
@@ -180,7 +181,7 @@ public class DatabaseConnection
                     if (token.IsCancellationRequested) break;
 
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -550,7 +551,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -682,7 +683,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -769,7 +770,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -937,7 +938,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -1091,7 +1092,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
@@ -1206,7 +1207,7 @@ public class DatabaseConnection
                 while (runningCount < 10)
                 {
                     try { await connection.OpenAsync(); }
-                    catch (NpgsqlException) { ; }
+                    catch (NpgsqlException) { await Task.Delay(3000); }
 
                     if (connection.State == ConnectionState.Open) break;
                     runningCount++;
