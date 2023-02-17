@@ -92,4 +92,52 @@ public class FishList : MonoBehaviour
             }
         }
     }
+
+    public void FocusBox(int id)
+    {
+        foreach (SpeciesBox speciesBox in this.speciesList) 
+        { 
+            foreach (FishBox fishBox in speciesBox.components) 
+            { 
+                if (fishBox.fish.id == id) 
+                {
+                    // Open species box if not already open
+                    if (!speciesBox.open) speciesBox.OpenCloseBox();
+
+                    // Check if the fish box is currently framed by the viewport
+                    float lower = Math.Abs(
+                        fishBox.GetComponent<RectTransform>().localPosition.y +
+                        fishBox.transform.parent.GetComponent<RectTransform>().localPosition.y +
+                        fishBox.transform.parent.transform.parent.GetComponent<RectTransform>().localPosition.y +
+                        speciesBox.GetComponent<RectTransform>().localPosition.y
+                    );
+                    
+                    float upper = lower + 40f; // adding the size of the header
+
+                    RectTransform rectTransform = this.GetComponent<RectTransform>();
+                    float windowPos = rectTransform.localPosition.y;
+
+                    if (windowPos > lower || windowPos < upper - 1020f)
+                    {
+                        // Eclipsed by the viewport bounds, shift the content window so that the header is in view
+                        if (windowPos > lower)
+                        {
+                            float diff = windowPos - lower;
+                            if (rectTransform.localPosition.y - diff >= 510f) rectTransform.localPosition = new Vector3(rectTransform.localPosition.x, rectTransform.localPosition.y - diff - 510f, rectTransform.localPosition.z);
+                            else rectTransform.localPosition = new Vector3(rectTransform.localPosition.x, 0f, rectTransform.localPosition.z);
+                        }
+                        if (windowPos < upper - 1020f)
+                        {
+                            float diff = upper - 1020f - windowPos;
+                            if (rectTransform.rect.height - (rectTransform.localPosition.y + diff) >= 510f) rectTransform.localPosition = new Vector3(rectTransform.localPosition.x, rectTransform.localPosition.y + diff + 510f, rectTransform.localPosition.z);
+                            else rectTransform.localPosition = new Vector3(rectTransform.localPosition.x, rectTransform.rect.height, rectTransform.localPosition.z);
+                        }
+                    }
+
+                    // Make the box flash
+                    speciesBox.FlashHeader();
+                } 
+            }
+        }
+    }
 }

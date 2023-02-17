@@ -82,7 +82,7 @@ public class SpeciesBox : ListBox
         countField.GetComponent<TextMeshProUGUI>().text = string.Format("Count: {0}", this.currentRank);
     }
 
-    private void OpenCloseBox()
+    public void OpenCloseBox()
     {
         // Only register the toggle if the box isn't currently mid-animation
         if (this.opening == null)
@@ -118,6 +118,11 @@ public class SpeciesBox : ListBox
     {
         ColorPicker.ShowMenu(true);
         foreach (FishBox box in components) { if (!box.greyedOut) { ColorPicker.colorAcceptedEvent += box.SetIndividualColor; } }
+    }
+
+    public void FlashHeader()
+    {
+        
     }
 
     public void RemoveSpeciesColor() { foreach (FishBox box in components) { box.RemoveIndividualColor(); } }

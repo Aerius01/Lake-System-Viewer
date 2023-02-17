@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 public class FishUtils : MonoBehaviour 
 {
@@ -8,6 +10,7 @@ public class FishUtils : MonoBehaviour
     [SerializeField] private Material deflt, blue, lBlue, green, purple, orange, red, pink, yellow, occluded;
     private BoxCollider boxCollider;
     private GameObject scaleDummy;
+    private Fish fish;
 
     private TextMeshProUGUI textElement;
     public float baseExtent { get; private set; }
@@ -18,8 +21,9 @@ public class FishUtils : MonoBehaviour
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
     public Color fishColor { get { return renderers[0].material.color; } } 
 
-    public void Setup(int fishLayer)
+    public void Setup(int fishLayer, Fish fish)
     {
+        this.fish = fish;
         this.scaleDummy = this.transform.Find("ScaleDummy").gameObject;
         this.boxCollider = this.scaleDummy.GetComponent<BoxCollider>();
         this.baseExtent = Mathf.Max(renderers[0].localBounds.extents.x, renderers[0].localBounds.extents.y, renderers[0].localBounds.extents.z);
@@ -43,6 +47,20 @@ public class FishUtils : MonoBehaviour
 
         // Extents represent only half the size
         this.boxCollider.size = renderers[0].localBounds.extents * 2;
+        RectTransform canvasRect = this.canvas.GetComponent<RectTransform>();
+        canvasRect.localPosition = new Vector3(canvasRect.localPosition.x, renderers[0].bounds.size.y + 2f, canvasRect.localPosition.z);
+    }
+    public void SeeFishInList()
+    {
+        // Open the menu if it's hidden
+        ButtonTriggerAnimation animator = GameObject.Find("MenuPanel").GetComponent<ButtonTriggerAnimation>();
+        if (animator.menuClosed) animator.ToggleBool();
+        
+        // Open relevant tab
+        TabController.TriggerTabChange();
+
+        // Navigate to relevant fish box
+        FishList.instance.FocusBox(this.fish.id);
     }
 
     private void Awake()
@@ -53,10 +71,10 @@ public class FishUtils : MonoBehaviour
 
     private void Start()
     {
-        if (UserSettings.showFishTags) ActivateTag(true);
-        if (UserSettings.showFishDepthLines) ActivateDepthLine(true);
-        if (UserSettings.showFishTrails) ActivateTrail(true);
-        if (UserSettings.showThermocline) ActivateThermoBob(true);
+        this.ActivateDepthLine(UserSettings.showFishDepthLines);
+        this.ActivateTrail(UserSettings.showFishTrails);
+        this.ActivateThermoBob(UserSettings.showThermocline);
+        this.ActivateTag(UserSettings.showFishTags);
         this.occluded.color = green.color;
     }
 
@@ -70,7 +88,7 @@ public class FishUtils : MonoBehaviour
         else this.thermoInd.SetActive(false);
     }
 
-    public void ActivateTag(bool activationStatus) { canvas.SetActive(activationStatus); }
+    public void ActivateTag(bool activationStatus) { canvas.SetActive(activationStatus); if (activationStatus) StartCoroutine(this.RebuildLayout()); }
     public void ActivateDepthLine(bool activationStatus) { depthLine.SetActive(activationStatus); }
     public void ActivateTrail(bool activationStatus) { trail.SetActive(activationStatus); }
     public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); }
@@ -105,6 +123,15 @@ public class FishUtils : MonoBehaviour
     }
 
     public void setNewText(string val) { textElement.text = val; }
+
+    private IEnumerator RebuildLayout()
+    {
+        for (int i = 0; i < 4; i++) 
+        { 
+            LayoutRebuilder.ForceRebuildLayoutImmediate(this.canvas.GetComponent<RectTransform>());
+            yield return new WaitForSeconds(2); 
+        }
+    }
 
     // Color-handling
     public void ResetColor() 

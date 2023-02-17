@@ -11,7 +11,7 @@ public class ConnectivityChecker : MonoBehaviour
 
     [SerializeField] TextMeshProUGUI textObject;
 
-    private void Start() { this.pinger = new Pinger(IPAddress.Parse(DatabaseConnection.host)); }
+    private void Start() { this.pinger = new Pinger(); }
 
     private async void FixedUpdate()
     {

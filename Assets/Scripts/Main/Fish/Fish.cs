@@ -39,7 +39,6 @@ public class Fish : MonoBehaviour
     public bool? male {get; private set;}
     public DateTime earliestTime {get; private set;}
     public DateTime latestTime {get; private set;}
-    private string canvasTextPart1, canvasTextPart2;
     private PositionCache positionCache;
 
     // Changing information
@@ -61,9 +60,6 @@ public class Fish : MonoBehaviour
         this.male = packet.male;
         this.captureType = packet.captureType;
 
-        this.canvasTextPart1 = string.Format("Fish ID: {0}\nDepth: ", this.id);
-        this.canvasTextPart2 = string.Format("\nSpecies: {0}\nSex: {1}", this.speciesName, this.male == null ? " ? " : this.male == true ? "M" : "F");
-
         // Create object in-game
         GameObject prefab = Species.prefabDict["Roach"];
         if (this.speciesName != null) { if (Species.prefabDict.ContainsKey(this.speciesName)) prefab = Species.prefabDict[this.speciesName]; }
@@ -79,7 +75,7 @@ public class Fish : MonoBehaviour
         int fishLayer = LayerMask.NameToLayer(layerName);
 
         this.utils = this.fishObject.GetComponent<FishUtils>();
-        this.utils.Setup(fishLayer);
+        this.utils.Setup(fishLayer, this);
         this.UpdateFishScale();
         this.positionCache = new PositionCache(this.id);
 
@@ -122,11 +118,7 @@ public class Fish : MonoBehaviour
 
     public void UpdateCanvasText()
     {
-        string fullText =
-            this.canvasTextPart1 +
-            string.Format("{0:##0.00}", this.currentDepth) +
-            this.canvasTextPart2;
-
+        string fullText = string.Format("ID: {0}\n{1}{2}\nDepth: {3:##0.00}", this.id, this.speciesName, this.male == null ? "" : this.male == true ? " (Male)" : " (Female)", this.currentDepth);
         this.utils.setNewText(fullText);
     }
 

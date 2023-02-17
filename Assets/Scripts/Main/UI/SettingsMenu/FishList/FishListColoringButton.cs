@@ -5,10 +5,8 @@ using TMPro;
 public class FishListColoringButton : MonoBehaviour
 {
     // Inputs
-    [SerializeField]
-    private GameObject colorButton;
-    [SerializeField]
-    private ButtonClickHandler clickHandler;
+    [SerializeField] private GameObject colorButton;
+    [SerializeField] private ButtonClickHandler clickHandler;
 
     // For button disabling
     public bool colorApplied {get; private set;} = false;

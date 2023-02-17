@@ -7,10 +7,6 @@ public class Pinger
     // A simple ping is enough since we will have already confirmed by this point whether the DB exists.
     // We're simply wondering about whether the bridge to this address is still up.
 
-    private IPAddress host;
-
-    public Pinger(IPAddress host) { this.host = host; }
-
     public bool PingHost()
     {
         bool pingable = false;
@@ -19,7 +15,7 @@ public class Pinger
         try
         {
             pinger = new Ping();
-            PingReply reply = pinger.Send(this.host);
+            PingReply reply = pinger.Send(IPAddress.Parse(DatabaseConnection.host));
             pingable = reply.Status == IPStatus.Success;
         }
         catch (PingException) { ; } // Discard PingExceptions and return false
@@ -36,7 +32,7 @@ public class Pinger
         try
         {
             pinger = new Ping();
-            PingReply reply = await pinger.SendPingAsync(this.host);
+            PingReply reply = await pinger.SendPingAsync(IPAddress.Parse(DatabaseConnection.host));
             pingable = reply.Status == IPStatus.Success;
         }
         catch (PingException) { ; } // Discard PingExceptions and return false
