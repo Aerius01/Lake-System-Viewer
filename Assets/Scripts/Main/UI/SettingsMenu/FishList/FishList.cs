@@ -135,7 +135,7 @@ public class FishList : MonoBehaviour
                     }
 
                     // Make the box flash
-                    speciesBox.FlashHeader();
+                    fishBox.FlashHeader();
                 } 
             }
         }

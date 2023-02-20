@@ -137,6 +137,8 @@ public class FishBox : ListBox
         }
     }
 
+    public void FlashHeader() { this.colorHandler.FlashHeader(); }
+
     public void ActivateTag() { this.fish.ActivateTag(this.tagToggle.isOn, TimeManager.instance.currentTime); }
     public void ActivateDepthLine() { this.fish.ActivateDepthLine(this.depthToggle.isOn, TimeManager.instance.currentTime); }
     public void ActivateTrail() { this.fish.ActivateTrail(this.trailToggle.isOn, TimeManager.instance.currentTime); }

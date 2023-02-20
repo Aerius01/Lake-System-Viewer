@@ -120,10 +120,6 @@ public class SpeciesBox : ListBox
         foreach (FishBox box in components) { if (!box.greyedOut) { ColorPicker.colorAcceptedEvent += box.SetIndividualColor; } }
     }
 
-    public void FlashHeader()
-    {
-        
-    }
 
     public void RemoveSpeciesColor() { foreach (FishBox box in components) { box.RemoveIndividualColor(); } }
     public void ActivateTags() { foreach (FishBox box in components) { if (box.tagStatus != this.tagToggle.isOn) box.ToggleTag(this.tagToggle.isOn); box.ActivateTag(); } }
