@@ -110,8 +110,8 @@ public class FishListColoringButton : MonoBehaviour
     private IEnumerator FlashCoroutine()
     {
         Color currentColor = this.headerImage.color;
-        float slowRamp = 0.3f;
-        float fastRamp = 0.1f;
+        float slowRamp = 0.2f;
+        float fastRamp = 0.07f;
 
         float rDist = 1f - currentColor.r;
         float gDist = 1f - currentColor.g;

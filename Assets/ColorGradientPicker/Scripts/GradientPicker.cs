@@ -207,6 +207,7 @@ public class GradientPicker : MonoBehaviour
             positionComponent.text = Mathf.RoundToInt(time * 100f).ToString();
         }
     }
+    
     //accessed by position InputField
     public void SetTime()
     {
@@ -221,10 +222,11 @@ public class GradientPicker : MonoBehaviour
         CalculateTexture();
         interact = true;
     }
+
     //choose color button call
     public void ChooseColor()
     {
-        ColorPickerImported.Create(instance.colorKeys[selectedColorKey].color, "Gradient Color Key", (c) => UpdateColor(selectedColorKey, c), null);
+        ColorPickerImported.instance.Create(instance.colorKeys[selectedColorKey].color, "Gradient Color Key", (c) => UpdateColor(selectedColorKey, c), null);
     }
 
     private void UpdateColor(int index, Color c)

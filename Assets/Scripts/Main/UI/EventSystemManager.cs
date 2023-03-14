@@ -62,6 +62,7 @@ public class EventSystemManager : MonoBehaviour
         {
             UserSettings.waterLevel = float.Parse(waterLevelInput.text);
             waterLevelEvent?.Invoke();
+            if (ThermoclineDOMain.instance != null) if (ThermoclineDOMain.instance.initialized) ThermoclineDOMain.instance.UpdatePlaneDepth();
         }
     }
 

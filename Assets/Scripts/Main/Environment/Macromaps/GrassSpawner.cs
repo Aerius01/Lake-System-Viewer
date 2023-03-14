@@ -53,6 +53,7 @@ public class GrassSpawner: MonoBehaviour
                                         // The model looks very weird if the macrophytes are too short
                                         if (HeightManager.instance.currentPacket.heightArray[c, r] > 0.1f)
                                         {
+                                            // Empirical grass spawning roll of the die
                                             if (MacromapManager.instance.intensityMap[c, r] / 20f >= (float)rand.NextDouble())
                                             {
                                                 GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 using System;
 
 public class FishList : MonoBehaviour
@@ -93,7 +94,7 @@ public class FishList : MonoBehaviour
         }
     }
 
-    public void FocusBox(int id)
+    public IEnumerator FocusBox(int id)
     {
         foreach (SpeciesBox speciesBox in this.speciesList) 
         { 
@@ -103,6 +104,7 @@ public class FishList : MonoBehaviour
                 {
                     // Open species box if not already open
                     if (!speciesBox.open) speciesBox.OpenCloseBox();
+                    yield return new WaitForSeconds(0.2f); // to let the SpeciesBox open fully if it was closed
 
                     // Check if the fish box is currently framed by the viewport
                     float lower = Math.Abs(

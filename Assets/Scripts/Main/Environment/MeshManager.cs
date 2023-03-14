@@ -46,6 +46,8 @@ public class MeshManager : MonoBehaviour
 
     private void CalculateContourBounds(float tolerance=0.07f)
     {
+        // The threshold dictates how thick the contour line will be, since lines are defined between two elevations (at a distance of "threshold" apart)
+
         // Contour operations; There are 10 partitions and 11 thresholds.
         this.contourBoundaries = new (float, float)[MeshManager.instance.numberOfContourPartitions]; // (min, max)
         float increment = LocalMeshData.maxDiff / (float)MeshManager.instance.numberOfContourPartitions;
@@ -95,7 +97,7 @@ public class MeshManager : MonoBehaviour
 
                 // Create gradient for height map toggling
                 this.gradientPicker.Awake();
-                this.colorPicker.Awake();
+                this.colorPicker.Woke();
                 GradientPicker.Create(this.gradient, GradientFinished); 
 
                 // TerrainManager.instance.SetUpTerrain();
@@ -186,17 +188,6 @@ public class MeshManager : MonoBehaviour
                 }
             }
         }
-
-        // // Perlin noise for investigation of smoothness
-        // for (int i = 0, y = 0; y < this.resolution; y++)
-        // {
-        //     for (int x = 0; x < this.resolution; x++, i++)
-        //     {
-        //         float xCoord = ((float)x / (float)this.resolution);
-        //         float yCoord = ((float)y / (float)this.resolution);
-        //         this.vertices[i].y = - Mathf.PerlinNoise(xCoord * 20f, yCoord * 20f) * LocalMeshData.maxDiff;
-        //     }
-        // }
 
         // Set the UVs & colors
         uv = new Vector2[totalVertices];

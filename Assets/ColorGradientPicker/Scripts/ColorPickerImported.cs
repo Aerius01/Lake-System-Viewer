@@ -12,7 +12,9 @@ public class ColorPickerImported : MonoBehaviour
     /// <param name="c">received Color</param>
     public delegate void ColorEvent(Color c);
 
-    private static ColorPickerImported instance;
+    private static ColorPickerImported _instance;
+    [HideInInspector]
+    public static ColorPickerImported instance {get { return _instance; } set {_instance = value; }}
     /// <returns>
     /// True when the ColorPickerImported is closed
     /// </returns>
@@ -40,12 +42,14 @@ public class ColorPickerImported : MonoBehaviour
     public TMP_InputField hexaComponent;
     public RawImage colorComponent;
 
-    public void Awake()
+    // For some reason the standard Awake() function was being called twice (which should be impossible)
+    // Renamed to control this phenomenon, and for expected behavior
+    public void Woke()
     {
-        instance = this;
-        gameObject.SetActive(false);
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+        ColorPickerImported.instance.gameObject.SetActive(false);
     }
-
 
     /// <summary>
     /// Creates a new ColorpickerImported
@@ -57,9 +61,9 @@ public class ColorPickerImported : MonoBehaviour
     /// <returns>
     /// False if the instance is already running
     /// </returns>
-    public static bool Create(Color original, string message, ColorEvent onColorChanged, ColorEvent onColorSelected, bool useAlpha = false)
+    public bool Create(Color original, string message, ColorEvent onColorChanged, ColorEvent onColorSelected, bool useAlpha = false)
     {   
-        if(instance is null)
+        if(ColorPickerImported.instance is null)
         {
             Debug.LogError("No ColorpickerImported prefab active on 'Start' in scene");
             return false;
@@ -71,10 +75,10 @@ public class ColorPickerImported : MonoBehaviour
             modifiedColor = original;
             onCC = onColorChanged;
             onCS = onColorSelected;
-            instance.gameObject.SetActive(true);
-            instance.transform.GetChild(0).GetChild(0).GetComponent<TextMeshProUGUI>().text = message;
-            instance.RecalculateMenu(true);
-            instance.hexaComponent.placeholder.GetComponent<TextMeshProUGUI>().text = "RRGGBB";
+            ColorPickerImported.instance.gameObject.SetActive(true);
+            ColorPickerImported.instance.transform.GetChild(0).GetChild(0).GetComponent<TextMeshProUGUI>().text = message;
+            ColorPickerImported.instance.RecalculateMenu(true);
+            ColorPickerImported.instance.hexaComponent.placeholder.GetComponent<TextMeshProUGUI>().text = "RRGGBB";
             return true;
         }
         else
@@ -218,11 +222,11 @@ public class ColorPickerImported : MonoBehaviour
     }
 
     //gets hexa TMP_InputField value
-    public void SetHexa(string value)
+    public void SetHexa()
     {
         if (interact)
         {
-            if (ColorUtility.TryParseHtmlString("#" + value, out Color c))
+            if (ColorUtility.TryParseHtmlString("#" + hexaComponent.text, out Color c))
             {
                 c.a = 1;
                 modifiedColor = c;
@@ -260,7 +264,7 @@ public class ColorPickerImported : MonoBehaviour
         done = true;
         onCC?.Invoke(modifiedColor);
         onCS?.Invoke(modifiedColor);
-        instance.transform.gameObject.SetActive(false);
+        instance.gameObject.SetActive(false);
     }
     //HSV helper class
     private sealed class HSV

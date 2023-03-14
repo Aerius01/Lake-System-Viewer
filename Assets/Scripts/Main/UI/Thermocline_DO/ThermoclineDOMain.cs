@@ -177,6 +177,8 @@ public class ThermoclineDOMain : MonoBehaviour
         }
     }
 
+    public void UpdatePlaneDepth() { thermoclinePlane.RecalculatePlane((float)currentThermoDepth); }
+
     private void Update()
     {
         if (this.initialized)

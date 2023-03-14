@@ -20,7 +20,7 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = false;
+    private static bool? smallSample = true;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -222,7 +222,11 @@ public class DatabaseConnection
 
                                         float z = 0f;
                                         entry = rdr.GetValue(rdr.GetOrdinal("z"));
-                                        try { z = - Convert.ToSingle(entry); }
+                                        try 
+                                        { 
+                                            z = Convert.ToSingle(entry); 
+                                            if (z > 0) z = -z;
+                                        }
                                         catch { Debug.Log("Position conversion fail: z"); }
 
                                         DataPacket thisPacket = new DataPacket(id, timestamp, x, y, z);
@@ -453,8 +457,8 @@ public class DatabaseConnection
                                         if (!DBNull.Value.Equals(entry))
                                         {
                                             string tempString = Convert.ToString(entry);
-                                            if (tempString.Contains('m')) male = true;
-                                            else if (tempString.Contains('f')) male = false;
+                                            if (tempString.Contains('f')) male = false;
+                                            else if (tempString.Contains('m')) male = true;
                                         }
                                     }
 
@@ -731,7 +735,11 @@ public class DatabaseConnection
                             // Never null by the architecture of the DB
                             float depth = float.MaxValue;
                             entry = rdr.GetValue(rdr.GetOrdinal("depth"));
-                            try { depth = Convert.ToSingle(entry); }
+                            try 
+                            { 
+                                depth = Convert.ToSingle(entry);
+                                if (depth < 0) depth = - depth;
+                            }
                             catch { Debug.Log("Thermocline data conversion fail: depth"); }
 
                             float? temperature = null;

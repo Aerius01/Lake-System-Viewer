@@ -43,7 +43,7 @@ public class Fish : MonoBehaviour
 
     // Changing information
     public Vector3 currentPosition {get {return this.fishObject.transform.position;} }
-    public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor; } }
+    public float currentDepth { get { return this.currentPosition.y / UserSettings.verticalScalingFactor - UserSettings.waterLevel; } }
     private DataPacket[] currentPacket = null;
     // private Thread fetchingThread;
    
@@ -158,12 +158,12 @@ public class Fish : MonoBehaviour
         }
         
         this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                workingStartVector.z * UserSettings.verticalScalingFactor, 
+                (workingStartVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
                 LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
         ;
 
         this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                workingEndVector.z * UserSettings.verticalScalingFactor, 
+                (workingEndVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
                 LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
         ;
 

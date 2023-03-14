@@ -45,7 +45,7 @@ public class FishUtils : MonoBehaviour
         float scalingFactor = length / 1000f / this.baseExtent * newVal;
         this.scaleDummy.transform.localScale = new Vector3(scalingFactor, scalingFactor, scalingFactor);
 
-        // Extents represent only half the size
+        // Extents represent only half the size, move the fish tag
         this.boxCollider.size = renderers[0].localBounds.extents * 2;
         RectTransform canvasRect = this.canvas.GetComponent<RectTransform>();
         canvasRect.localPosition = new Vector3(canvasRect.localPosition.x, renderers[0].bounds.size.y + 2f, canvasRect.localPosition.z);
@@ -60,7 +60,7 @@ public class FishUtils : MonoBehaviour
         TabController.TriggerTabChange();
 
         // Navigate to relevant fish box
-        FishList.instance.FocusBox(this.fish.id);
+        StartCoroutine(FishList.instance.FocusBox(this.fish.id));
     }
 
     private void Awake()
@@ -93,7 +93,7 @@ public class FishUtils : MonoBehaviour
     public void ActivateTrail(bool activationStatus) { trail.SetActive(activationStatus); }
     public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); }
 
-    public void ToggleTag() { canvas.SetActive(!canvas.activeSelf); }
+    public void ToggleTag() { canvas.SetActive(!canvas.activeSelf); LayoutRebuilder.ForceRebuildLayoutImmediate(this.canvas.GetComponent<RectTransform>()); }
     public void ToggleDepthLine() { depthLine.SetActive(!depthLine.activeSelf); }
     public void ToggleTrail() { trail.SetActive(!trail.activeSelf); }
     public void ToggleThermoBob() { thermoInd.SetActive(!thermoInd.activeSelf); }
@@ -116,7 +116,7 @@ public class FishUtils : MonoBehaviour
         {
             if (ThermoclineDOMain.instance.currentThermoDepth != null)
             {
-                LinePoint.y = (float)-ThermoclineDOMain.instance.currentThermoDepth * UserSettings.verticalScalingFactor;
+                LinePoint.y = ((float)-ThermoclineDOMain.instance.currentThermoDepth + UserSettings.waterLevel) * UserSettings.verticalScalingFactor;
                 thermoInd.transform.position = LinePoint;
             }
         }
