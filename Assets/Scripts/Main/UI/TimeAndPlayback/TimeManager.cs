@@ -10,8 +10,7 @@ public class TimeManager : MonoBehaviour
     private PlaybackController playbackController;
 
     private static TimeManager _instance;
-    [HideInInspector]
-    public static TimeManager instance {get { return _instance; } set {_instance = value; }}
+    [HideInInspector] public static TimeManager instance {get { return _instance; } set {_instance = value; }}
 
     private void Awake()
     {
