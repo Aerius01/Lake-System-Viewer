@@ -49,7 +49,6 @@ public class EventSystemManager : MonoBehaviour
     public void TrailToggle() { UserSettings.showFishTrails = trailToggle.isOn ? true : false; }
     public void ThermoToggle() { UserSettings.showThermocline = thermoToggle.isOn ? true : false; }
     public void WindWeatherToggle() { UserSettings.showWindWeather = windWeatherToggle.isOn ? true : false; }
-    // public void SatelliteToggle() { UserSettings.showSatelliteImage = satelliteToggle.isOn ? true : false; }
     public void ContourToggle() { UserSettings.showContours = contourToggle.isOn ? true : false; }
     public void GradientToggle() { UserSettings.showGradient = gradientToggle.isOn ? true : false; }
     public void GradedContourLineToggle() { UserSettings.gradedContours = gradedCLineToggle.isOn ? true : false; }
@@ -70,9 +69,7 @@ public class EventSystemManager : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(scalingFactorInput.text) || !string.IsNullOrWhiteSpace(scalingFactorInput.text))
         {
-            // GameObject meshObject = heightMapObject.transform.Find("MeshMap").gameObject;
             float scaleValue = float.Parse(scalingFactorInput.text);
-
             if (scaleValue <= 0)
             {
                 // we only want positive scaling factors
