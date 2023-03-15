@@ -12,7 +12,7 @@ public class EnvironmentManager : MonoBehaviour
         meshManager = _meshManager;
     }
 
-    // event handler
+    // Called by EventSystemManager
     public void AdjustScales()
     {
         // Scale & position mesh

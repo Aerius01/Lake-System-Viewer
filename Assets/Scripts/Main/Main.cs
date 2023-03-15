@@ -34,28 +34,28 @@ public class Main : MonoBehaviour
             this.fishManager = new FishManager(fishManagerObject);
 
             // positions
-            TableImports.tables[TableImports.checkTables[2]].Imported(TableImports.tables[TableImports.checkTables[2]].status);
+            TableProofings.tables[TableProofings.checkTables[2]].Imported(TableProofings.tables[TableProofings.checkTables[2]].status);
 
             // Polygons (macromapManager)
-            if (TableImports.tables[TableImports.checkTables[3]].status)
+            if (TableProofings.tables[TableProofings.checkTables[3]].status)
             {
                 this.macromapManager.gameObject.SetActive(true);
                 this.macromapManager.WakeUp(); // a single async statement, immediately yields control back to this thread
             }
             
             // Height Manager (macrophyte "grass" spawner)
-            if (TableImports.tables[TableImports.checkTables[4]].status)
+            if (TableProofings.tables[TableProofings.checkTables[4]].status)
             {
                 this.heightManager.gameObject.SetActive(true);
                 this.heightManager.WakeUp(); // a single async statement, immediately yields control back to this thread
             }
 
             // Wind & weather
-            if (TableImports.tables[TableImports.checkTables[6]].status)
+            if (TableProofings.tables[TableProofings.checkTables[6]].status)
             {
                 this.weatherObject.gameObject.SetActive(true);
                 await this.weatherObject.WakeUp(); // run synchronously
-                TableImports.tables[TableImports.checkTables[6]].Imported(this.weatherObject.initialized);
+                TableProofings.tables[TableProofings.checkTables[6]].Imported(this.weatherObject.initialized);
                 if (!this.weatherObject.initialized) this.weatherObject.Clear();
             }
 
@@ -65,35 +65,35 @@ public class Main : MonoBehaviour
             if (await this.meshObject.initialized)
             {
                 if (!this.meshObject.SetUpMeshSync()) throw new Exception();
-                else TableImports.tables[TableImports.checkTables[1]].Imported(true);
+                else TableProofings.tables[TableProofings.checkTables[1]].Imported(true);
 
-                if (TableImports.tables[TableImports.checkTables[7]].status)
+                if (TableProofings.tables[TableProofings.checkTables[7]].status)
                 {
                     this.thermoObject.gameObject.SetActive(true); // Depends on meshmap resolution
                     await this.thermoObject.WakeUp(); // run synchronously
-                    TableImports.tables[TableImports.checkTables[7]].Imported(this.thermoObject.initialized);
+                    TableProofings.tables[TableProofings.checkTables[7]].Imported(this.thermoObject.initialized);
                     if (!this.thermoObject.initialized) this.thermoObject.Clear();
                 }
             }
             else throw new Exception(); 
 
             // Wait for the inits to finish and then attribute import statuses
-            if (TableImports.tables[TableImports.checkTables[3]].status)
+            if (TableProofings.tables[TableProofings.checkTables[3]].status)
             {
-                if (await this.macromapManager.initialized) TableImports.tables[TableImports.checkTables[3]].Imported(true); 
+                if (await this.macromapManager.initialized) TableProofings.tables[TableProofings.checkTables[3]].Imported(true); 
                 else this.macromapManager.Clear();
             }
 
-            if (TableImports.tables[TableImports.checkTables[4]].status)
+            if (TableProofings.tables[TableProofings.checkTables[4]].status)
             {
-                if (await this.heightManager.initialized) TableImports.tables[TableImports.checkTables[4]].Imported(true);
+                if (await this.heightManager.initialized) TableProofings.tables[TableProofings.checkTables[4]].Imported(true);
                 else this.heightManager.Clear();
             }
 
             // FishManager dependents
             if (await FishManager.initialized)
             {
-                TableImports.tables[TableImports.checkTables[0]].Imported(await FishManager.initialized);
+                TableProofings.tables[TableProofings.checkTables[0]].Imported(await FishManager.initialized);
 
                 this.gameCanvas.SetActive(true); // activates FishList and the Categorical/ContinuousFilterHandler Awake() methods, which are dependents on the FishManager
                 this.fishList.WakeUp();
@@ -115,10 +115,10 @@ public class Main : MonoBehaviour
         // filters too ? 
 
         this.sunController.Clear();
-        if (TableImports.tables[TableImports.checkTables[7]].status) this.thermoObject.Clear();
-        if (TableImports.tables[TableImports.checkTables[6]].status) this.weatherObject.Clear();
-        if (TableImports.tables[TableImports.checkTables[3]].status) this.macromapManager.Clear(); 
-        if (TableImports.tables[TableImports.checkTables[4]].status) this.heightManager.Clear();
+        if (TableProofings.tables[TableProofings.checkTables[7]].status) this.thermoObject.Clear();
+        if (TableProofings.tables[TableProofings.checkTables[6]].status) this.weatherObject.Clear();
+        if (TableProofings.tables[TableProofings.checkTables[3]].status) this.macromapManager.Clear(); 
+        if (TableProofings.tables[TableProofings.checkTables[4]].status) this.heightManager.Clear();
 
         this.meshObject.Clear();
         this.fishManager.Clear();
@@ -131,8 +131,6 @@ public class Main : MonoBehaviour
 
     private async void FixedUpdate()
     {
-        // TODO: error handling for interrupted DB connection
-
         if (this.finishedStartup)
         {
             fishManager.UpdateFish();
@@ -142,8 +140,8 @@ public class Main : MonoBehaviour
 
             if (this.thermoObject.initialized) updateTasks.Add(Task.Run(() => this.thermoObject.UpdateThermoclineDOMain()));
             if (this.weatherObject.initialized) updateTasks.Add(Task.Run(() => this.weatherObject.UpdateWindWeather()));
-            if (TableImports.tables[TableImports.checkTables[3]].imported) { if (await this.macromapManager.initialized) updateTasks.Add(Task.Run(() => this.macromapManager.UpdateMaps())); }
-            if (TableImports.tables[TableImports.checkTables[4]].imported) { if (await this.heightManager.initialized) updateTasks.Add(Task.Run(() => this.heightManager.UpdateHeights())); }
+            if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (await this.macromapManager.initialized) updateTasks.Add(Task.Run(() => this.macromapManager.UpdateMaps())); }
+            if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (await this.heightManager.initialized) updateTasks.Add(Task.Run(() => this.heightManager.UpdateHeights())); }
 
             Task completionTask = Task.WhenAll(updateTasks.ToArray());
             await completionTask;

@@ -112,7 +112,7 @@ public class FishUtils : MonoBehaviour
         LinePoint.y = waterblock.transform.position.y;
         line.SetPosition(1, LinePoint);
         
-        if (TableImports.tables[TableImports.checkTables[7]].imported)
+        if (TableProofings.tables[TableProofings.checkTables[7]].imported)
         {
             if (ThermoclineDOMain.instance.currentThermoDepth != null)
             {
