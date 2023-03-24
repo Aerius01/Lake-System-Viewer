@@ -19,6 +19,7 @@ public class FishUtils : MonoBehaviour
     public bool depthLineActive {get { return depthLine.activeSelf; }} 
     public bool trailActive {get { return trail.activeSelf; }} 
     public bool thermoIndActive {get { return thermoInd.activeSelf; }} 
+    private bool firstTagActivation = true; 
     public Color fishColor { get { return renderers[0].material.color; } } 
 
     public void Setup(int fishLayer, Fish fish)
@@ -88,7 +89,15 @@ public class FishUtils : MonoBehaviour
         else this.thermoInd.SetActive(false);
     }
 
-    public void ActivateTag(bool activationStatus) { canvas.SetActive(activationStatus); if (activationStatus) StartCoroutine(this.RebuildLayout()); }
+    public void ActivateTag(bool activationStatus)
+    { 
+        canvas.SetActive(activationStatus); 
+        if (activationStatus && this.firstTagActivation)
+        {
+            StartCoroutine(this.RebuildLayout()); 
+            this.firstTagActivation = false;
+        }
+    }
     public void ActivateDepthLine(bool activationStatus) { depthLine.SetActive(activationStatus); }
     public void ActivateTrail(bool activationStatus) { trail.SetActive(activationStatus); }
     public void ActivateThermoBob(bool activationStatus) { thermoInd.SetActive(activationStatus); }
@@ -126,10 +135,10 @@ public class FishUtils : MonoBehaviour
 
     private IEnumerator RebuildLayout()
     {
-        for (int i = 0; i < 4; i++) 
+        for (int i = 0; i < 6; i++) 
         { 
             LayoutRebuilder.ForceRebuildLayoutImmediate(this.canvas.GetComponent<RectTransform>());
-            yield return new WaitForSeconds(2); 
+            yield return new WaitForSeconds(0.5f); 
         }
     }
 

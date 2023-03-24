@@ -11,7 +11,7 @@ public class SpeciesBox : ListBox
     [SerializeField] private GameObject colorButton, removeButton;
 
     public List<FishBox> components {get; private set;}
-    private int currentRank = 0;
+    private int totalIndividuals = 0, activeIndividuals = 0;
     public string speciesName {get; private set;}
 
     public float contentSize
@@ -56,6 +56,8 @@ public class SpeciesBox : ListBox
             fishBox.transform.SetSiblingIndex(index);
             index++;
         }
+
+        this.RecountIndividuals();
     }
 
     // METHODS
@@ -64,7 +66,7 @@ public class SpeciesBox : ListBox
         this.speciesName = name;
 
         this.headerText = this.transform.Find("Header").transform.Find("SpeciesName").GetComponent<TextMeshProUGUI>();
-        headerText.text = name;
+        this.headerText.text = name;
 
         components = new List<FishBox>();
         this.rect = this.GetComponent<RectTransform>();
@@ -74,12 +76,12 @@ public class SpeciesBox : ListBox
     public void AddFish(Fish fish, FishBox box)
     {
         // rank also serves as counter of individuals
-        this.currentRank += 1;
+        this.totalIndividuals += 1;
         this.components.Add(box);
         box.transform.SetParent(fishBoxes.transform, worldPositionStays: false);
         box.SetUpBox(fish);
 
-        countField.GetComponent<TextMeshProUGUI>().text = string.Format("Count: {0}", this.currentRank);
+        countField.GetComponent<TextMeshProUGUI>().text = string.Format("Count: {0}", this.totalIndividuals);
     }
 
     public void OpenCloseBox()
@@ -112,6 +114,15 @@ public class SpeciesBox : ListBox
             box.Activate(this.activeToggle.isOn);
             this.ToggleInteractable(this.activeToggle.isOn);
         }
+    }
+
+    private void RecountIndividuals()
+    {
+        this.activeIndividuals = 0;
+        foreach (FishBox fishBox in this.components) { if (!fishBox.greyedOut) this.activeIndividuals++; }
+
+        countField.GetComponent<TextMeshProUGUI>().text = string.Format("Total: {0}; Active: {1}", this.totalIndividuals, this.activeIndividuals);
+        this.headerText.text = string.Format("{0} ({1})", this.speciesName, this.activeIndividuals);
     }
 
     public void SetSpeciesColor()

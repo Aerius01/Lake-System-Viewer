@@ -77,6 +77,7 @@ public class FishList : MonoBehaviour
                 bool reorder = false;
                 foreach (FishBox fishBox in speciesBox.components)
                 {
+                    // If at least one fish box has changed active/inactive status, re-order
                     if (fishBox.fish.FishShouldExist(updateTime))
                     {
                         fishBox.UpdateText();

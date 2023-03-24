@@ -19,7 +19,10 @@ public class DatabaseConnection
     private static readonly object listLocker = new object();
     public static bool queuedQueries { get { return forwardBatch.Any() || doubleSidedBatch.Any(); } }
     public static bool querying { get; private set; }
-    private static bool? smallSample = null;
+
+    // Fish sample size limiter for testing purposes
+
+    // private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -272,16 +275,16 @@ public class DatabaseConnection
         List<int> idList = null;
         string sql = "select distinct fish.id from fish where fish.id is not null";
 
-        if (DatabaseConnection.smallSample == true)
-        {
-            string addon = " and (fish.id = 2033 or fish.id = 2037)";
-            sql = sql + addon;
-        }
-        else if (DatabaseConnection.smallSample == false)
-        {
-            string addon = " limit 30";
-            sql = sql + addon;
-        }
+        // if (DatabaseConnection.smallSample == true)
+        // {
+        //     string addon = " and (fish.id = 2033 or fish.id = 2037)";
+        //     sql = sql + addon;
+        // }
+        // else if (DatabaseConnection.smallSample == false)
+        // {
+        //     string addon = " limit 30";
+        //     sql = sql + addon;
+        // }
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
