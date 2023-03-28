@@ -22,7 +22,7 @@ public class DatabaseConnection
 
     // Fish sample size limiter for testing purposes
 
-    // private static bool? smallSample = null;
+    private static bool? smallSample = null;
     // true: 2033 & 2037
     // false: 30 fish
     // null: all fish
@@ -112,6 +112,8 @@ public class DatabaseConnection
                 Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token), cts.Token);
                 queryingTasks.Add(runner);
             }
+
+            Debug.Log(string.Format("Pull {0}: {1} forward tasks queried.", thisIteration, partialBatchLists.Count));
         }
 
         // Parallelize double-sided queries
@@ -137,6 +139,8 @@ public class DatabaseConnection
                 Task runner = Task.Run(() => RunQueuedPositionQueries(partialBatch, cts.Token, false), cts.Token);
                 queryingTasks.Add(runner);
             }
+
+            Debug.Log(string.Format("Pull {0}: {1} two-sided tasks queried.", thisIteration, partialBatchLists.Count));
         }
 
         // Synch fall-back condition (in case all tasks finish immediately)
@@ -170,6 +174,11 @@ public class DatabaseConnection
     {
         // Actually execute the batch query
         List<Task> tasks = new List<Task>();
+        int queryCount = 0;
+        int totalQueries = 0;
+        string batchCode = Tools.RandomString(10);
+
+        string outputLog = string.Format("Batch {0}: ", batchCode);
 
         await using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {
@@ -178,7 +187,7 @@ public class DatabaseConnection
                 try
                 {   
                     NpgsqlBatch batch = new NpgsqlBatch(connection);
-                    foreach (NpgsqlBatchCommand command in queries.BatchCommands) batch.BatchCommands.Add(command);
+                    foreach (NpgsqlBatchCommand command in queries.BatchCommands) { batch.BatchCommands.Add(command); totalQueries++; }
 
                     // Only proceed if we can successfully ping the address
                     Pinger pinger = new Pinger();
@@ -186,6 +195,7 @@ public class DatabaseConnection
                     {   
                         await using (NpgsqlDataReader rdr = await batch.ExecuteReaderAsync(token))
                         {
+                            outputLog = outputLog + "Connected";
                             for (int i=0; i < batch.BatchCommands.Count; i++)
                             {
                                 if (token.IsCancellationRequested) throw new Exception();
@@ -194,9 +204,11 @@ public class DatabaseConnection
                                 if (!rdr.HasRows) { await rdr.NextResultAsync(token); }
                                 else
                                 {
+                                    queryCount++;
                                     bool firstRunThrough = true;
                                     int fishID = 0;
                                     List<DataPacket> returnPackets = new List<DataPacket>();
+
                                     while (await rdr.ReadAsync(token))
                                     {
                                         if (token.IsCancellationRequested) throw new Exception();
@@ -249,6 +261,7 @@ public class DatabaseConnection
                             }
 
                             await rdr.CloseAsync();
+                            outputLog = outputLog + "; Disconnected";
                         }
 
                         await connection.CloseAsync();
@@ -259,10 +272,13 @@ public class DatabaseConnection
                         throw new Exception();
                     }
                 }
-                catch (Exception) when (token.IsCancellationRequested) { ; }
-                catch (Exception) { ; }
+                catch (Exception) when (token.IsCancellationRequested) { Debug.Log(outputLog + string.Format("; Auto-token cancellation, {0}", token.IsCancellationRequested)); throw; }
+                catch (Exception) { Debug.Log(outputLog + "; Connection failure"); throw; }
             }
         }
+
+        outputLog = outputLog + string.Format("; {1}/{2} queries processed", batchCode, queryCount, totalQueries);
+        Debug.Log(outputLog);
 
         // Ensure all fish caches are updated, or have cancelled gracefully
         await Task.WhenAll(tasks.ToArray());
@@ -275,16 +291,16 @@ public class DatabaseConnection
         List<int> idList = null;
         string sql = "select distinct fish.id from fish where fish.id is not null";
 
-        // if (DatabaseConnection.smallSample == true)
-        // {
-        //     string addon = " and (fish.id = 2033 or fish.id = 2037)";
-        //     sql = sql + addon;
-        // }
-        // else if (DatabaseConnection.smallSample == false)
-        // {
-        //     string addon = " limit 30";
-        //     sql = sql + addon;
-        // }
+        if (DatabaseConnection.smallSample == true)
+        {
+            string addon = " and (fish.id = 2033 or fish.id = 2037)";
+            sql = sql + addon;
+        }
+        else if (DatabaseConnection.smallSample == false)
+        {
+            string addon = " limit 30";
+            sql = sql + addon;
+        }
 
         using (NpgsqlConnection connection = new NpgsqlConnection(connString))
         {

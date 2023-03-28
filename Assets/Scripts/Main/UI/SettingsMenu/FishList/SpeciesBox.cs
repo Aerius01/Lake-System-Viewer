@@ -9,6 +9,7 @@ public class SpeciesBox : ListBox
     // Game objects and components
     [SerializeField] private GameObject fishBoxes, countField;
     [SerializeField] private GameObject colorButton, removeButton;
+    [SerializeField] private GameObject contentWindow;
 
     public List<FishBox> components {get; private set;}
     private int totalIndividuals = 0, activeIndividuals = 0;
@@ -65,12 +66,14 @@ public class SpeciesBox : ListBox
     {
         this.speciesName = name;
 
-        this.headerText = this.transform.Find("Header").transform.Find("SpeciesName").GetComponent<TextMeshProUGUI>();
+        this.headerText = this.transform.Find("Canvas").transform.Find("Header").transform.Find("SpeciesName").GetComponent<TextMeshProUGUI>();
         this.headerText.text = name;
 
         components = new List<FishBox>();
         this.rect = this.GetComponent<RectTransform>();
         this.parentRect = this.transform.parent.GetComponent<RectTransform>();
+
+        this.contentWindow.SetActive(false);
     }
 
     public void AddFish(Fish fish, FishBox box)
@@ -92,7 +95,7 @@ public class SpeciesBox : ListBox
             if (this.open) this.opening = false;
             else this.opening = true;
 
-            StartCoroutine(AnimateChange(60f, this.contentSize));
+            StartCoroutine(AnimateChange(60f, this.contentSize, this.contentWindow));
         }
     }
             

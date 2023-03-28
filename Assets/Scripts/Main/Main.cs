@@ -98,7 +98,8 @@ public class Main : MonoBehaviour
                 this.gameCanvas.SetActive(true); // activates FishList and the Categorical/ContinuousFilterHandler Awake() methods, which are dependents on the FishManager
                 this.fishList.WakeUp();
             }
-            else throw new Exception();
+            else 
+            { Debug.Log(FishManager.initialized); throw new Exception(); }
         }
         catch (Exception) { return false; }
         
@@ -129,7 +130,7 @@ public class Main : MonoBehaviour
 
     public void GoodToGo() { this.finishedStartup = true; }
 
-    private async void FixedUpdate()
+    private async void Update()
     {
         if (this.finishedStartup)
         {
@@ -143,8 +144,8 @@ public class Main : MonoBehaviour
             if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (await this.macromapManager.initialized) updateTasks.Add(Task.Run(() => this.macromapManager.UpdateMaps())); }
             if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (await this.heightManager.initialized) updateTasks.Add(Task.Run(() => this.heightManager.UpdateHeights())); }
 
-            Task completionTask = Task.WhenAll(updateTasks.ToArray());
-            await completionTask;
+            // Task completionTask = Task.WhenAll(updateTasks.ToArray());
+            // await completionTask;
         }
     }
 }

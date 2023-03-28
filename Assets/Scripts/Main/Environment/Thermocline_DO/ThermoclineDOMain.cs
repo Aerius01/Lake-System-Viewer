@@ -159,9 +159,12 @@ public class ThermoclineDOMain : MonoBehaviour
         if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
         {
             // Secure the multi-threading
-            lock(ThermoclineDOMain.locker) this.updating = true;
-            if (!this.timeBounded) { if (await FetchNewBounds()) this.CallSyncUpdate(); }
-            lock(ThermoclineDOMain.locker) this.updating = false;
+            if (!this.timeBounded)
+            {
+                lock(ThermoclineDOMain.locker) this.updating = true;
+                if (await FetchNewBounds()) this.CallSyncUpdate(); 
+                lock(ThermoclineDOMain.locker) this.updating = false;
+            }
         }
 
         if (this.beforeFirstTS) this.currentPacket = null;
@@ -177,7 +180,7 @@ public class ThermoclineDOMain : MonoBehaviour
         }
     }
 
-    public void UpdatePlaneDepth() { thermoclinePlane.RecalculatePlane((float)currentThermoDepth); }
+    public void UpdatePlaneDepth() { if (this.thermoclinePlane != null && this.currentThermoDepth != null) this.thermoclinePlane.RecalculatePlane((float)currentThermoDepth); }
 
     private void Update()
     {

@@ -13,7 +13,7 @@ public class ConnectivityChecker : MonoBehaviour
 
     private void Start() { this.pinger = new Pinger(); }
 
-    private async void FixedUpdate()
+    private async void Update()
     {
         this.timer += Time.deltaTime;
 

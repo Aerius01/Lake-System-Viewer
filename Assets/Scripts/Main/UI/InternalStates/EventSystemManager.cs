@@ -28,11 +28,11 @@ public class EventSystemManager : MonoBehaviour
         Transform baseToggles = settingsMenu.transform.Find("Toggles");
         Transform baseInputs = settingsMenu.transform.Find("Inputs");
 
-        scalingFactorInput = baseInputs.transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
-        speedUpInput = baseInputs.transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
-        waterLevelInput = baseInputs.transform.Find("WaterLevel").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>();
-        fishScaleInput = baseInputs.transform.Find("FishScale").transform.Find("FishScaleInput").GetComponent<TMP_InputField>();
-        cutoffInput = baseInputs.transform.Find("Cutoff").transform.Find("CutoffInput").GetComponent<TMP_InputField>();
+        scalingFactorInput = baseInputs.transform.Find("Canvas - Dynamic").transform.Find("ScalingFactor").transform.Find("ScalingFactorInput").GetComponent<TMP_InputField>();
+        speedUpInput = baseInputs.transform.Find("Canvas - Dynamic").transform.Find("SpeedUpCoeff").transform.Find("SpeedUpInput").GetComponent<TMP_InputField>();
+        waterLevelInput = baseInputs.transform.Find("Canvas - Dynamic").transform.Find("WaterLevel").transform.Find("WaterLevelInput").GetComponent<TMP_InputField>();
+        fishScaleInput = baseInputs.transform.Find("Canvas - Dynamic").transform.Find("FishScale").transform.Find("FishScaleInput").GetComponent<TMP_InputField>();
+        cutoffInput = baseInputs.transform.Find("Canvas - Dynamic").transform.Find("Cutoff").transform.Find("CutoffInput").GetComponent<TMP_InputField>();
     }
 
     private void Start()

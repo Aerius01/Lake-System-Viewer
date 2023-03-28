@@ -134,9 +134,12 @@ public class WindWeatherMain : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
         {
             // Secure the multi-threading
-            lock(WindWeatherMain.locker) this.updating = true;
-            if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(WindWeatherMain.locker) { this.performSyncUpdate = true; } }
-            lock(WindWeatherMain.locker) this.updating = false;
+            if (!this.timeBounded)
+            { 
+                lock(WindWeatherMain.locker) this.updating = true;
+                if (await this.FetchNewBounds()) lock(WindWeatherMain.locker) { this.performSyncUpdate = true; } 
+                lock(WindWeatherMain.locker) this.updating = false;
+            }
         }
         
         if (this.beforeFirstTS) this.currentPacket = null;

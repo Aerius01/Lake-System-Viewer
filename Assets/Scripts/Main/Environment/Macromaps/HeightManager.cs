@@ -67,7 +67,7 @@ public class HeightManager : MonoBehaviour
         this.initialized = Task.Run(() => false);
         this.currentPacket = null;
         this.bufferIcon.SetActive(false);
-        GrassSpawner.instance.Clear();
+        if (GrassSpawner.instance != null) GrassSpawner.instance.Clear();
         lock(HeightManager.locker) this.performSyncUpdate = false;
 
         this.gameObject.SetActive(false); 
@@ -104,9 +104,12 @@ public class HeightManager : MonoBehaviour
         if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
         {
             // Check whether we need to requery
-            lock(HeightManager.locker) this.updating = true;
-            if (!this.timeBounded) { if (await this.FetchNewBounds()) lock(HeightManager.locker) this.performSyncUpdate = true; }
-            lock(HeightManager.locker) this.updating = false;
+            if (!this.timeBounded) 
+            {
+                lock(HeightManager.locker) this.updating = true;
+                if (await this.FetchNewBounds()) lock(HeightManager.locker) this.performSyncUpdate = true; 
+                lock(HeightManager.locker) this.updating = false;
+            }
         }
 
         if (this.beforeFirstTS) this.currentPacket = null;

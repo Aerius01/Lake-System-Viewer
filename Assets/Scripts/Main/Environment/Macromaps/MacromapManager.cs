@@ -109,11 +109,10 @@ public class MacromapManager: MonoBehaviour
         // We don't want to senselessly overload the system with queries that return nothing
         if (!this.beforeFirstTS && !this.updating && !this.performSyncUpdate)
         {
-            // Secure the multi-threading
-            lock(MacromapManager.locker) this.updating = true;
-
             if (!this.timeBounded) 
             { 
+                // Secure the multi-threading
+                lock(MacromapManager.locker) this.updating = true;
                 if (await this.FetchNewBounds()) 
                 {
                     lock(MacromapManager.mapLocker)
@@ -140,8 +139,9 @@ public class MacromapManager: MonoBehaviour
                     lock(MacromapManager.locker) { this.performSyncUpdate = true; } 
                 }
                 else { this.intensityMap = null; }
+
+                lock(MacromapManager.locker) this.updating = false;
             }
-            lock(MacromapManager.locker) this.updating = false;
         }
 
         if (this.beforeFirstTS) { this.currentPacket = null; this.intensityMap = null; }

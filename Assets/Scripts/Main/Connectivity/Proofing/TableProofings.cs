@@ -372,62 +372,62 @@ public class TableProofings
             positionsTable.SetMessage(string.Format("RED: The successful import of this table is dependent on that of the \"{0}\" table.", TableProofings.checkTables[1])); 
             conditionsMet = false; 
         }
-        // PRIMARY: The table must be present
-        else if (this.tableNames.Contains(tableName))
-        {
-            // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
-            conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
+        // // PRIMARY: The table must be present
+        // else if (this.tableNames.Contains(tableName))
+        // {
+        //     // PRIMARY: The table must have all of an id, timestamp, x, y and z columns
+        //     conditionsMet = await this.RequiredColumnsCheck(positionsTable, requiredColumns);
 
-            // WARNING: The max/min x, y and z should fall within the boundaries of the height map
-            if (conditionsMet)
-            {
-                string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y, max(z) max_z, min(z) min_z from {0}", tableName);
+        //     // WARNING: The max/min x, y and z should fall within the boundaries of the height map
+        //     if (conditionsMet)
+        //     {
+        //         string sql = string.Format("SELECT max(x) max_x, min(x) min_x, max(y) max_y, min(y) min_y, max(z) max_z, min(z) min_z from {0}", tableName);
 
-                NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
-                await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
-                {
-                    if (!rdr.HasRows)
-                    { 
-                        positionsTable.SetLight(1); // yellow warning light
-                        positionsTable.SetMessage("YELLOW: Was unable to successfully query for bounds testing against the height map bounds.");
-                    }
-                    else
-                    {
-                        while (await rdr.ReadAsync())
-                        {
-                            float maxX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_x")));
-                            float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
-                            float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
-                            float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
-                            float maxZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_z")));
-                            float minZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_z")));
+        //         NpgsqlCommand cmd = new NpgsqlCommand(sql, connection);
+        //         await using (NpgsqlDataReader rdr = await cmd.ExecuteReaderAsync())
+        //         {
+        //             if (!rdr.HasRows)
+        //             { 
+        //                 positionsTable.SetLight(1); // yellow warning light
+        //                 positionsTable.SetMessage("YELLOW: Was unable to successfully query for bounds testing against the height map bounds.");
+        //             }
+        //             else
+        //             {
+        //                 while (await rdr.ReadAsync())
+        //                 {
+        //                     float maxX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_x")));
+        //                     float minX = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_x")));
+        //                     float maxY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_y")));
+        //                     float minY = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_y")));
+        //                     float maxZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("max_z")));
+        //                     float minZ = Convert.ToSingle(rdr.GetValue(rdr.GetOrdinal("min_z")));
 
-                            if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
-                            {
-                                positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("YELLOW: The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
-                            }
+        //                     if (minX < 0 || maxX > columnCount || minY < 0 || maxY > rowCount)
+        //                     {
+        //                         positionsTable.SetLight(1); // yellow warning light
+        //                         positionsTable.SetMessage(string.Format("YELLOW: The (x, y) position values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" on land or in empty space."));
+        //                     }
 
-                            if (minZ < minDepth || maxZ > maxDepth)
-                            {
-                                positionsTable.SetLight(1); // yellow warning light
-                                positionsTable.SetMessage(string.Format("YELLOW: The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
-                            }
-                        };
-                    }
-                    await rdr.CloseAsync();
-                }
-            }
+        //                     if (minZ < minDepth || maxZ > maxDepth)
+        //                     {
+        //                         positionsTable.SetLight(1); // yellow warning light
+        //                         positionsTable.SetMessage(string.Format("YELLOW: The depth values in the provided table exceed the local bounds of the heightmap. This will cause some fish to appear to be \"swimming\" above or below the lake."));
+        //                     }
+        //                 };
+        //             }
+        //             await rdr.CloseAsync();
+        //         }
+        //     }
 
-            // WARNING: Check for null values
-            if (conditionsMet) await this.NullCountCheck(positionsTable, requiredColumns);
-        }
-        else
-        { 
-            positionsTable.SetLight(2); 
-            positionsTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
-            conditionsMet = false; 
-        }
+        //     // WARNING: Check for null values
+        //     if (conditionsMet) await this.NullCountCheck(positionsTable, requiredColumns);
+        // }
+        // else
+        // { 
+        //     positionsTable.SetLight(2); 
+        //     positionsTable.SetMessage(string.Format("RED: The \"{0}\" table was not found in the provided database.", tableName)); 
+        //     conditionsMet = false; 
+        // }
 
 
         // The positions table is special because its a reference table that's queried regularly, and that doesn't require an explicit class init
@@ -809,7 +809,13 @@ public class TableProofings
                     if (nullCount > 0)
                     {
                         table.SetLight(1); // yellow warning light
-                        table.SetMessage(string.Format("YELLOW: {0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); 
+
+                        // Message is different for the weather table, which has a more complex relationship to null values.
+                        if (table.tableName == TableProofings.checkTables[6])
+                        {
+                            table.SetMessage(string.Format("YELLOW: {0} records were found to have a null value in at least one of the required columns. Note that some of these records may be ignored when rendering, subject to the configuration requirements of the weather table.", nullCount)); 
+                        }
+                        else { table.SetMessage(string.Format("YELLOW: {0} records were found to have a null value in at least one of the required columns. Note that these records will be ignored when rendering.", nullCount)); }
                     }
                 };
             }

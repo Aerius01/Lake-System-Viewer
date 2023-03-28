@@ -8,7 +8,7 @@ public class FishList : MonoBehaviour
     private bool listPopulated = false;
 
     private List<SpeciesBox> speciesList;
-    [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate;
+    [SerializeField] private GameObject speciesBoxTemplate, fishBoxTemplate, speciesListParent;
 
     private static FishList _instance;
     [HideInInspector] public static FishList instance {get { return _instance; } set {_instance = value; }}
@@ -43,16 +43,16 @@ public class FishList : MonoBehaviour
             if (!attributed) // create the species box if it doesn't exist
             {
                 GameObject obj = (Instantiate (speciesBoxTemplate) as GameObject);
-                obj.transform.SetParent(this.gameObject.transform, worldPositionStays: false);
+                obj.transform.SetParent(speciesListParent.transform, worldPositionStays: false);
 
-                SpeciesBox box = obj.GetComponent<SpeciesBox>();
-                box.SetUpBox(fish.speciesName);
-                speciesList.Add(box);
+                SpeciesBox newSpeciesBox = obj.GetComponent<SpeciesBox>();
+                newSpeciesBox.SetUpBox(fish.speciesName);
+                speciesList.Add(newSpeciesBox);
 
                 // Add the fish to the new SpeciesBox
                 GameObject fishBoxObj = (Instantiate (fishBoxTemplate) as GameObject);
                 FishBox fishBox = fishBoxObj.GetComponent<FishBox>();
-                box.AddFish(fish, fishBox);
+                newSpeciesBox.AddFish(fish, fishBox);
             }
         }
 
@@ -65,7 +65,7 @@ public class FishList : MonoBehaviour
         if (this.speciesList != null) { foreach (SpeciesBox speciesBox in this.speciesList) { speciesBox.Clear(); }; this.speciesList = null; }
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         if (this.listPopulated)
         {
@@ -112,7 +112,9 @@ public class FishList : MonoBehaviour
                         fishBox.GetComponent<RectTransform>().localPosition.y +
                         fishBox.transform.parent.GetComponent<RectTransform>().localPosition.y +
                         fishBox.transform.parent.transform.parent.GetComponent<RectTransform>().localPosition.y +
-                        speciesBox.GetComponent<RectTransform>().localPosition.y
+                        fishBox.transform.parent.transform.parent.transform.parent.GetComponent<RectTransform>().localPosition.y +
+                        speciesBox.GetComponent<RectTransform>().localPosition.y + 
+                        speciesBox.transform.parent.GetComponent<RectTransform>().localPosition.y
                     );
                     
                     float upper = lower + 40f; // adding the size of the header

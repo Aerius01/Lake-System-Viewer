@@ -23,18 +23,21 @@ public class FishBox : ListBox
     public bool depthStatus { get { return this.depthToggle.isOn; } }
     public bool trailStatus { get { return this.trailToggle.isOn; } }
 
+    [SerializeField] private GameObject contentWindow;
+
+
     // ----------    METHODS    -------------
     public void SetUpBox(Fish fish)
     {
         this.fish = fish;
         this.rect = this.GetComponent<RectTransform>();
         this.parentRect = this.transform.parent.GetComponent<RectTransform>();
-        this.parentBox = this.transform.parent.transform.parent.transform.parent.GetComponent<SpeciesBox>();
+        this.parentBox = this.transform.parent.transform.parent.transform.parent.transform.parent.GetComponent<SpeciesBox>();
         this.colorHandler = this.GetComponent<FishListColoringButton>();
         this.colorHandler.DefineParameters(fish);
 
-        gameText = this.transform.Find("Content").transform.Find("FishDetails").GetComponent<TextMeshProUGUI>();
-        this.headerText = this.transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>();
+        gameText = this.contentWindow.transform.Find("FishDetails").GetComponent<TextMeshProUGUI>();
+        this.headerText = this.transform.Find("Canvas").transform.Find("Header").transform.Find("FishID").GetComponent<TextMeshProUGUI>();
         headerText.text = string.Format("{0}", fish.id);
 
         // This information never changes
@@ -45,6 +48,8 @@ public class FishBox : ListBox
             fish.length == null ? "?" : ((int)fish.length).ToString());
 
         gameText.text = string.Format("{0}{1:0.00}m", initText, fish.currentDepth);
+
+        this.contentWindow.SetActive(false);
     }
 
     public void OpenCloseBox()
@@ -55,12 +60,15 @@ public class FishBox : ListBox
             if (this.open) this.opening = false;
             else this.opening = true;
 
-            StartCoroutine(AnimateChange(40f, this.contentSize));
+            StartCoroutine(AnimateChange(40f, this.contentSize, this.contentWindow));
         }
     }
 
-    protected override IEnumerator AnimateChange(float headerSize, float contentSize)
+    protected override IEnumerator AnimateChange(float headerSize, float contentSize, GameObject contentWindow)
     {       
+        // if currently closed, activate the canvases before opening
+        if (!this.open) contentWindow.SetActive(true); 
+
         // if currently open, the position differential is negative
         float diff = this.open ? headerSize - contentSize : contentSize - headerSize;
         float rotDiff = this.open ? 90f : -90f;
@@ -85,6 +93,10 @@ public class FishBox : ListBox
 
         if (this.opening == true) this.open = true;
         else this.open = false;
+
+        // if currently closed now, then deactivate the canvases
+        if (!this.open) contentWindow.SetActive(false); 
+
         this.opening = null;
     }
 

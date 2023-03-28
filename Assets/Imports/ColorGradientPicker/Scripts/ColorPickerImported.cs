@@ -42,12 +42,32 @@ public class ColorPickerImported : MonoBehaviour
     public TMP_InputField hexaComponent;
     public RawImage colorComponent;
 
+    // Handle window clicking
+    private RectTransform recter;
+    private bool clickedInWindow
+    {
+        get
+        {
+            if (Input.mousePosition.x >= recter.position.x + recter.rect.xMin && Input.mousePosition.x <= recter.position.x + recter.rect.xMax)
+            {
+                if (Input.mousePosition.y >= recter.position.y + recter.rect.yMin && Input.mousePosition.y <= recter.position.y + recter.rect.yMax)
+                {
+                    return true;
+                }
+                else return false;
+            }
+            else return false;
+        }
+    }
+
     // For some reason the standard Awake() function was being called twice (which should be impossible)
     // Renamed to control this phenomenon, and for expected behavior
     public void Woke()
     {
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
+
+        ColorPickerImported.instance.recter = ColorPickerImported.instance.gameObject.GetComponent<RectTransform>();
         ColorPickerImported.instance.gameObject.SetActive(false);
     }
 
@@ -91,15 +111,11 @@ public class ColorPickerImported : MonoBehaviour
     private void Update()
     {
         // Cancel if clicking outside of the color picker
-        if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
+        if (ColorPickerImported.instance.gameObject.activeSelf)
         {
-            if (ColorPickerImported.instance.gameObject.activeSelf)
+            if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
             {
-                bool clickedColorPicker = false;
-                foreach (RaycastResult result in CanvasRaycast.clickedUIElements)
-                { if (result.gameObject.name == ColorPickerImported.instance.gameObject.name) { clickedColorPicker = true; break; } }
-
-                if (!clickedColorPicker) ColorPickerImported.instance.CCancel(); 
+                if (!ColorPickerImported.instance.clickedInWindow) ColorPickerImported.instance.CCancel(); 
             }
         }
     }

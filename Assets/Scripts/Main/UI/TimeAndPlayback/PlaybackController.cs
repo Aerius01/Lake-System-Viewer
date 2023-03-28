@@ -19,7 +19,7 @@ public class PlaybackController : MonoBehaviour
         PlaybackController.totalTicks = FishManager.latestOverallTime.Ticks - FishManager.earliestOverallTime.Ticks;
     }
 
-    void FixedUpdate()
+    void Update()
     {
         if (!TimeManager.instance.paused)
         {

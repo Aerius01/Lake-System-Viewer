@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using TMPro;
+using Unity;
 
 public class ListBox : MonoBehaviour
 {
@@ -17,8 +18,11 @@ public class ListBox : MonoBehaviour
     protected TextMeshProUGUI headerText;
 
 
-    protected virtual IEnumerator AnimateChange(float headerSize, float contentSize)
+    protected virtual IEnumerator AnimateChange(float headerSize, float contentSize, GameObject contentWindow)
     {
+        // if currently closed, activate the canvases before opening
+        if (!this.open) contentWindow.SetActive(true); 
+
         // if currently open, the position differential is negative
         float diff = this.open ? headerSize - contentSize : contentSize - headerSize;
         float rotDiff = this.open ? 90f : -90f;
@@ -42,6 +46,10 @@ public class ListBox : MonoBehaviour
 
         if (this.opening == true) this.open = true;
         else this.open = false;
+
+        // if currently closed now, then deactivate the canvases
+        if (!this.open) contentWindow.SetActive(false); 
+
         this.opening = null;
     }
 

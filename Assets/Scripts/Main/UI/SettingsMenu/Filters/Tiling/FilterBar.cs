@@ -28,11 +28,11 @@ public class FilterBar : MonoBehaviour
         FilterBar.filterRows = new List<FiltersRow>();
 
         // Subscribe to animation menu close/open for refreshing filter positions
-        FilterBar.menuPanel = this.transform.parent.GetComponent<ButtonTriggerAnimation>();
+        FilterBar.menuPanel = this.transform.parent.transform.parent.GetComponent<ButtonTriggerAnimation>();
         menuPanel.menuChange += RecalculateRows;
     }
 
-    private void FixedUpdate() { if (triggerRecalculate && !calculating) RecalculateRows(); }
+    private void Update() { if (triggerRecalculate && !calculating) RecalculateRows(); }
 
     public void AddCont(ContinuousFilter filter)
     {

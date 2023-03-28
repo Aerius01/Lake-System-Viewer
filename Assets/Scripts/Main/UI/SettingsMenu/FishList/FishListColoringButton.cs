@@ -8,6 +8,8 @@ public class FishListColoringButton : MonoBehaviour
 {
     // Inputs
     [SerializeField] private GameObject colorButton;
+    [SerializeField] private TextMeshProUGUI colorButtonText;
+    [SerializeField] private Image headerImage;
     [SerializeField] private ButtonClickHandler clickHandler;
 
     // For button disabling
@@ -16,8 +18,6 @@ public class FishListColoringButton : MonoBehaviour
     private Button trackingButton;
 
     // Core functionality
-    private TextMeshProUGUI colorButtonText;
-    private Image headerImage;
     private Fish fish;
     private Color trackingColor;
     private string stringColor;
@@ -26,9 +26,6 @@ public class FishListColoringButton : MonoBehaviour
     public void DefineParameters(Fish fish)
     {
         this.fish = fish;
-        colorButtonText = colorButton.transform.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
-
-        headerImage = this.gameObject.transform.Find("Header").GetComponent<Image>();
         trackingButton = colorButton.GetComponent<Button>();
     }
 
