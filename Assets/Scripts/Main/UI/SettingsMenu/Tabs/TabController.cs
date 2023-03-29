@@ -1,15 +1,42 @@
 using UnityEngine;
-
-public delegate void NewTabSelected(Tab tab);
+using System.Collections.Generic;
 
 public class TabController : MonoBehaviour
 {
-    [SerializeField] private Tab[] tabs;
-    private static bool changeTab;
+    [SerializeField] private List<Tab> tabs;
+    [SerializeField] private int firstTab = 0;
+    private Tab activeTab;
 
-    private void Awake() { TabController.changeTab = false; foreach (Tab tab in tabs) { tab.tabController = this; } }
-    public void ChangeTab(Tab newTab) { foreach (Tab tab in tabs) { if (tab != newTab) tab.Activate(false); } }
+    private static TabController _instance;
+    [HideInInspector] public static TabController instance {get { return _instance; } set {_instance = value; }}
 
-    private void Update() { if (TabController.changeTab) { TabController.changeTab = false; this.tabs[1].ButtonClick(); } }
-    public static void TriggerTabChange() { TabController.changeTab = true; }
+    private void Awake() 
+    { 
+        if (_instance != null && _instance != this) { Destroy(this.gameObject); }
+        else { _instance = this; }
+    }
+    
+    private void Start()
+    {
+        foreach (Tab tab in this.tabs)
+        { 
+            if (tab == this.tabs[this.firstTab]) 
+            {
+                this.activeTab = tab; 
+                tab.ActivateTab(true);
+            }
+            else { tab.ActivateTab(false); }
+        } 
+    }
+
+    public void NewTab(Tab newTab)
+    {
+        foreach (Tab tab in this.tabs)
+        {
+            if (tab == newTab) { tab.ActivateTab(true); }
+            else if (tab.active) { tab.ActivateTab(false); }
+        }
+    }
+
+    public void FishTab() { this.NewTab(this.tabs[1]); }
 }

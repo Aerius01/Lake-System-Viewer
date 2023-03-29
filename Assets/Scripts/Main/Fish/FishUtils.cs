@@ -22,6 +22,9 @@ public class FishUtils : MonoBehaviour
     private bool firstTagActivation = true; 
     public Color fishColor { get { return renderers[0].material.color; } } 
 
+    private GameObject waterBlock;
+    private LineRenderer line;
+
     public void Setup(int fishLayer, Fish fish)
     {
         this.fish = fish;
@@ -29,6 +32,7 @@ public class FishUtils : MonoBehaviour
         this.boxCollider = this.scaleDummy.GetComponent<BoxCollider>();
         this.baseExtent = Mathf.Max(renderers[0].localBounds.extents.x, renderers[0].localBounds.extents.y, renderers[0].localBounds.extents.z);
 
+        this.canvas.GetComponent<Canvas>().worldCamera = Camera.main.transform.Find("UICamera").GetComponent<Camera>();
         this.ChangeLayersRecursively(this.scaleDummy.transform, fishLayer);
     }
 
@@ -58,10 +62,10 @@ public class FishUtils : MonoBehaviour
         if (animator.menuClosed) animator.ToggleBool();
         
         // Open relevant tab
-        TabController.TriggerTabChange();
+        TabController.instance.FishTab();
 
         // Navigate to relevant fish box
-        StartCoroutine(FishList.instance.FocusBox(this.fish.id));
+        StartCoroutine(FishList.instance.FocusBox(this.fish));
     }
 
     private void Awake()
@@ -77,17 +81,12 @@ public class FishUtils : MonoBehaviour
         this.ActivateThermoBob(UserSettings.showThermocline);
         this.ActivateTag(UserSettings.showFishTags);
         this.occluded.color = green.color;
+        this.line = depthLine.GetComponent<LineRenderer>();
+        this.waterBlock = GameObject.Find("WaterBlock");
     }
 
     // Called via Event Trigger component on the ScaleDummy child object of the fish
     public void ColliderHit() { if (!CanvasRaycast.hoveringOverUI) this.ToggleTag(); }
-
-    private void Update()
-    {
-        // Check if the thermobob should be spawned
-        if (this.depthLine.activeSelf && UserSettings.showThermocline) this.thermoInd.SetActive(true);
-        else this.thermoInd.SetActive(false);
-    }
 
     public void ActivateTag(bool activationStatus)
     { 
@@ -111,15 +110,11 @@ public class FishUtils : MonoBehaviour
 
     public void UpdateDepthIndicatorLine(Vector3 LinePoint)
     {
-        // TODO: find the lake depth at the position of the fish
-        LineRenderer line = depthLine.GetComponent<LineRenderer>();
-        GameObject waterblock = GameObject.Find("WaterBlock");
-        
         LinePoint.y = - Mathf.Abs(LocalMeshData.minDepth) * UserSettings.verticalScalingFactor;
-        line.SetPosition(0, LinePoint);
+        this.line.SetPosition(0, LinePoint);
 
-        LinePoint.y = waterblock.transform.position.y;
-        line.SetPosition(1, LinePoint);
+        LinePoint.y = this.waterBlock.transform.position.y;
+        this.line.SetPosition(1, LinePoint);
         
         if (TableProofings.tables[TableProofings.checkTables[7]].imported)
         {
@@ -129,6 +124,10 @@ public class FishUtils : MonoBehaviour
                 thermoInd.transform.position = LinePoint;
             }
         }
+
+        // Check if the thermobob should be spawned
+        if (this.depthLine.activeSelf && UserSettings.showThermocline) this.thermoInd.SetActive(true);
+        else this.thermoInd.SetActive(false);
     }
 
     public void setNewText(string val) { textElement.text = val; }

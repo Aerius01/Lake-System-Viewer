@@ -7,11 +7,11 @@ using System.Linq;
 public class SpeciesBox : ListBox
 {
     // Game objects and components
-    [SerializeField] private GameObject fishBoxes, countField;
+    [SerializeField] private GameObject fishBoxParent, countField;
     [SerializeField] private GameObject colorButton, removeButton;
     [SerializeField] private GameObject contentWindow;
 
-    public List<FishBox> components {get; private set;}
+    public Dictionary<int, FishBox> fishBoxes {get; private set;}
     private int totalIndividuals = 0, activeIndividuals = 0;
     public string speciesName {get; private set;}
 
@@ -20,7 +20,7 @@ public class SpeciesBox : ListBox
         get
         {
             float totalSize = 0f;
-            foreach (FishBox box in components) { totalSize += box.open ? box.contentSize : 40f; }
+            foreach (FishBox box in this.fishBoxes.Values) { totalSize += box.open ? box.contentSize : 40f; }
             totalSize += 298f;
             return totalSize;
         }
@@ -28,7 +28,7 @@ public class SpeciesBox : ListBox
 
     public void Clear()
     {
-        foreach (FishBox fishBox in components) { Destroy(fishBox.gameObject); }
+        foreach (FishBox fishBox in this.fishBoxes.Values) { Destroy(fishBox.gameObject); }
         Destroy(this.gameObject);
     }
 
@@ -37,7 +37,7 @@ public class SpeciesBox : ListBox
         List<FishBox> activeObjects = new List<FishBox>();
         List<FishBox> inactiveObjects = new List<FishBox>();
 
-        foreach (FishBox fishBox in this.components)
+        foreach (FishBox fishBox in this.fishBoxes.Values)
         {
             if (!fishBox.greyedOut) activeObjects.Add(fishBox);
             else inactiveObjects.Add(fishBox);
@@ -69,7 +69,7 @@ public class SpeciesBox : ListBox
         this.headerText = this.transform.Find("Canvas").transform.Find("Header").transform.Find("SpeciesName").GetComponent<TextMeshProUGUI>();
         this.headerText.text = name;
 
-        components = new List<FishBox>();
+        this.fishBoxes = new Dictionary<int, FishBox>();
         this.rect = this.GetComponent<RectTransform>();
         this.parentRect = this.transform.parent.GetComponent<RectTransform>();
 
@@ -80,8 +80,8 @@ public class SpeciesBox : ListBox
     {
         // rank also serves as counter of individuals
         this.totalIndividuals += 1;
-        this.components.Add(box);
-        box.transform.SetParent(fishBoxes.transform, worldPositionStays: false);
+        this.fishBoxes[fish.id] = box;
+        box.transform.SetParent(fishBoxParent.transform, worldPositionStays: false);
         box.SetUpBox(fish);
 
         countField.GetComponent<TextMeshProUGUI>().text = string.Format("Count: {0}", this.totalIndividuals);
@@ -112,7 +112,7 @@ public class SpeciesBox : ListBox
         this.removeButton.GetComponent<Button>().interactable = this.colorButton.GetComponent<Button>().interactable =
             this.activeToggle.isOn;
 
-        foreach (FishBox box in components)
+        foreach (FishBox box in this.fishBoxes.Values)
         {
             box.Activate(this.activeToggle.isOn);
             this.ToggleInteractable(this.activeToggle.isOn);
@@ -122,7 +122,7 @@ public class SpeciesBox : ListBox
     private void RecountIndividuals()
     {
         this.activeIndividuals = 0;
-        foreach (FishBox fishBox in this.components) { if (!fishBox.greyedOut) this.activeIndividuals++; }
+        foreach (FishBox fishBox in this.fishBoxes.Values) { if (!fishBox.greyedOut) this.activeIndividuals++; }
 
         countField.GetComponent<TextMeshProUGUI>().text = string.Format("Total: {0}; Active: {1}", this.totalIndividuals, this.activeIndividuals);
         this.headerText.text = string.Format("{0} ({1})", this.speciesName, this.activeIndividuals);
@@ -131,12 +131,12 @@ public class SpeciesBox : ListBox
     public void SetSpeciesColor()
     {
         ColorPicker.ShowMenu(true);
-        foreach (FishBox box in components) { if (!box.greyedOut) { ColorPicker.colorAcceptedEvent += box.SetIndividualColor; } }
+        foreach (FishBox box in this.fishBoxes.Values) { if (!box.greyedOut) { ColorPicker.colorAcceptedEvent += box.SetIndividualColor; } }
     }
 
 
-    public void RemoveSpeciesColor() { foreach (FishBox box in components) { box.RemoveIndividualColor(); } }
-    public void ActivateTags() { foreach (FishBox box in components) { if (box.tagStatus != this.tagToggle.isOn) box.ToggleTag(this.tagToggle.isOn); box.ActivateTag(); } }
-    public void ActivateDepths() { foreach (FishBox box in components) { if (box.depthStatus != this.depthToggle.isOn) box.ToggleDepthLine(this.depthToggle.isOn); box.ActivateDepthLine(); } }
-    public void ActivateTrails() { foreach (FishBox box in components) { if (box.trailStatus != this.trailToggle.isOn) box.ToggleTrail(this.trailToggle.isOn); box.ActivateTrail(); } }
+    public void RemoveSpeciesColor() { foreach (FishBox box in this.fishBoxes.Values) { box.RemoveIndividualColor(); } }
+    public void ActivateTags() { foreach (FishBox box in this.fishBoxes.Values) { if (box.tagStatus != this.tagToggle.isOn) box.ToggleTag(this.tagToggle.isOn); box.ActivateTag(); } }
+    public void ActivateDepths() { foreach (FishBox box in this.fishBoxes.Values) { if (box.depthStatus != this.depthToggle.isOn) box.ToggleDepthLine(this.depthToggle.isOn); box.ActivateDepthLine(); } }
+    public void ActivateTrails() { foreach (FishBox box in this.fishBoxes.Values) { if (box.trailStatus != this.trailToggle.isOn) box.ToggleTrail(this.trailToggle.isOn); box.ActivateTrail(); } }
 }

@@ -158,19 +158,23 @@ public class FishManager
         // localScaler prevents the scale change going into effect halfway through an update
         bool localScaler = vertScaleChange ? true : false;
 
+        List<Fish> changedFish = new List<Fish>();
         foreach (Fish currentFish in fishDict.Values)
         {
             // Check whether the fish should be currently spawned or not
-            if (!currentFish.FishShouldExist(updateTime)) { if (currentFish.fishCurrentlyExists) currentFish.Deactivate(); }
+            if (!currentFish.FishShouldExist(updateTime)) { if (currentFish.fishCurrentlyExists) { currentFish.Deactivate(); changedFish.Add(currentFish); } }
             else
             {
                 // spawn the fish if it isn't already
-                if (!currentFish.fishCurrentlyExists) currentFish.Activate();
+                if (!currentFish.fishCurrentlyExists) { currentFish.Activate(); changedFish.Add(currentFish); }
 
                 // Update position if already spawned
                 else currentFish.UpdateFishPosition(localScaler, updateTime);
             }
         }
+
+        // If any fish have changed active/inactive status, let the interested parties know
+        if (changedFish.Any()) { FishList.instance.ChangeGreyouts(changedFish, updateTime); }
 
         if (vertScaleChange && localScaler) vertScaleChange = false;
     }

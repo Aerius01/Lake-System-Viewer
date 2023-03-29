@@ -19,6 +19,7 @@ public class Main : MonoBehaviour
     [SerializeField] private FishList fishList;
     [SerializeField] private Species species;
     private bool finishedStartup = false;
+    private float highResTimer = 0f, lowResTimer = 0f;
 
     private float latitude = 53f, longitude = 13.58f;
 
@@ -134,18 +135,25 @@ public class Main : MonoBehaviour
     {
         if (this.finishedStartup)
         {
-            fishManager.UpdateFish();
-            
-            // Parallelized updates
-            List<Task> updateTasks = new List<Task>();
+            // Update the fish at high resolution
+            if (this.highResTimer >= 0.033f) // 30fps
+            {
+                this.highResTimer = 0f;
+                fishManager.UpdateFish();
+            }
+            else this.highResTimer += Time.deltaTime;
 
-            if (this.thermoObject.initialized) updateTasks.Add(Task.Run(() => this.thermoObject.UpdateThermoclineDOMain()));
-            if (this.weatherObject.initialized) updateTasks.Add(Task.Run(() => this.weatherObject.UpdateWindWeather()));
-            if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (await this.macromapManager.initialized) updateTasks.Add(Task.Run(() => this.macromapManager.UpdateMaps())); }
-            if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (await this.heightManager.initialized) updateTasks.Add(Task.Run(() => this.heightManager.UpdateHeights())); }
+            // Update the environment at a lower resolution
+            if (this.lowResTimer >= 1f) // 1fps
+            {
+                this.lowResTimer = 0f;
 
-            // Task completionTask = Task.WhenAll(updateTasks.ToArray());
-            // await completionTask;
+                if (this.thermoObject.initialized) Task.Run(() => this.thermoObject.UpdateThermoclineDOMain());
+                if (this.weatherObject.initialized) Task.Run(() => this.weatherObject.UpdateWindWeather());
+                if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (await this.macromapManager.initialized) Task.Run(() => this.macromapManager.UpdateMaps()); }
+                if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (await this.heightManager.initialized) Task.Run(() => this.heightManager.UpdateHeights()); }
+            }
+            else this.lowResTimer += Time.deltaTime;
         }
     }
 }

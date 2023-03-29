@@ -79,6 +79,9 @@ public class Fish : MonoBehaviour
         this.UpdateFishScale();
         this.positionCache = new PositionCache(this.id);
 
+        string fullText = string.Format("ID: {0}\n{1}{2}\nDepth: -", this.id, this.speciesName, this.male == null ? "" : this.male == true ? " (Male)" : " (Female)");
+        this.utils.setNewText(fullText);
+
         this.fishObject.SetActive(false);
     }
 
@@ -125,7 +128,6 @@ public class Fish : MonoBehaviour
     public Task UpdatePositionCache(List<DataPacket> newPackets, bool forwardOnly, CancellationToken token)
     {
         this.positionCache.AllocateNewPackets(newPackets, forwardOnly, token);
-        // Debug.Log(string.Format("Allocated packets for ID: {0}", this.id));
         return Task.CompletedTask; 
     }
 
@@ -138,35 +140,36 @@ public class Fish : MonoBehaviour
         if (this.Timebounded(updateTime)) this.CalculatePositions(updateTime);
 
         // Fetch a new set of packets and wait for update to circle back
-        else lock(this.locker) this.currentPacket = this.positionCache.GetCachedBounds(updateTime);
+        else lock(this.locker)
+        {
+            this.currentPacket = this.positionCache.GetCachedBounds(updateTime);
+            if (this.currentPacket != null)
+            {
+                Vector3 workingStartVector = this.currentPacket[0].pos;
+                Vector3 workingEndVector = this.currentPacket[1].pos;
+
+                this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+                        (workingStartVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
+                        LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+                ;
+
+                this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+                        (workingEndVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
+                        LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+                ;
+            }
+        }
     }
 
     private void CalculatePositions(DateTime updateTime)
     {
+        float oldDepth = this.currentDepth;
         bool levelFish = false;
-        this.startOrient = this.fishObject.transform.rotation;
+
         float ratio = Convert.ToSingle((double)(updateTime - this.currentPacket[0].timestamp).Ticks 
             / (double)(this.currentPacket[1].timestamp - this.currentPacket[0].timestamp).Ticks);
 
-        Vector3 workingStartVector = new Vector3();
-        Vector3 workingEndVector = new Vector3();
-
-        lock(this.locker)
-        {
-            workingStartVector = this.currentPacket[0].pos;
-            workingEndVector = this.currentPacket[1].pos;
-        }
-        
-        this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                (workingStartVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
-                LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-        ;
-
-        this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                (workingEndVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
-                LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-        ;
-
+        this.startOrient = this.fishObject.transform.rotation;
         if (this.endPos - this.startPos == new Vector3(0f, 0f, 0f)) this.endOrient = this.fishObject.transform.rotation;
         else this.endOrient = Quaternion.LookRotation(this.endPos - this.startPos, Vector3.up);
 
@@ -211,8 +214,12 @@ public class Fish : MonoBehaviour
         // use an exponentiated interpolator for rotation (1 - e^-10x), and linear for position. SLERP AND LERP!!
         else { this.fishObject.transform.rotation = Quaternion.Slerp(this.startOrient, this.endOrient, (float)(1 - Math.Pow(Math.E,(-10*ratio)))); }
 
-        // Update info text
-        this.UpdateCanvasText();
+        // Update info text if there's a change
+        if (oldDepth != this.currentDepth)
+        {
+            this.UpdateCanvasText();
+            FishList.instance.UpdateText(this, updateTime);
+        }
     }
 
     public void ResetFishColor() { this.utils.ResetColor(); }
