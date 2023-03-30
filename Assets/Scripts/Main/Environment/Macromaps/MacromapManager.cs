@@ -117,16 +117,16 @@ public class MacromapManager: MonoBehaviour
                 {
                     lock(MacromapManager.mapLocker)
                     {    
-                        this.intensityMap = new float[LocalMeshData.resolution, LocalMeshData.resolution];
-                        for (int y = 0; y < LocalMeshData.resolution; y++)
+                        this.intensityMap = new float[MeshManager.instance.reducedResolution, MeshManager.instance.reducedResolution];
+                        for (int y = 0; y < MeshManager.instance.reducedResolution; y++)
                         {
-                            for (int x = 0; x < LocalMeshData.resolution; x++)
+                            for (int x = 0; x < MeshManager.instance.reducedResolution; x++)
                             {
                                 this.intensityMap[y, x] = 0f;
                                 foreach (MacromapPolygon polygon in this.currentPacket.polygons)
                                 {
                                     // Apply average intensity
-                                    if (polygon.PointInPolygon(new Vector2(x, y)))
+                                    if (polygon.PointInPolygon(new Vector2(x * MeshManager.instance.vertexReductionFactor, y * MeshManager.instance.vertexReductionFactor)))
                                     {
                                         this.intensityMap[y, x] = (polygon.lowerCoverage + polygon.upperCoverage) / 2f / 100f;
                                         break;
@@ -149,24 +149,27 @@ public class MacromapManager: MonoBehaviour
 
     private async void Update()
     {
-        if (await this.initialized)
+        if (this.initialized.IsCompleted)
         {
-            // Constantly checked whether to enable or disable
-            // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
-            if (!this.beforeFirstTS) { if (!this.toggle.interactable && !this.updating && this.intensityMap != null) { this.EnableMaps(); } }
-            else if (this.toggle.interactable == true) { this.DisableMaps(); }
-
-            // Decide whether or not to show the buffering icon
-            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
-            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
-
-            // Unity is demanding this be executed from the main thread, hence the workaround
-            lock (MacromapManager.locker)
+            if (await this.initialized)
             {
-                if (this.performSyncUpdate)
+                // Constantly checked whether to enable or disable
+                // These Unity operations are separated from the manual UpdateMaps() call because they need to be conducted on the main thread
+                if (!this.beforeFirstTS) { if (!this.toggle.interactable && !this.updating && this.intensityMap != null) { this.EnableMaps(); } }
+                else if (this.toggle.interactable == true) { this.DisableMaps(); }
+
+                // Decide whether or not to show the buffering icon
+                if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+                else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
+
+                // Unity is demanding this be executed from the main thread, hence the workaround
+                lock (MacromapManager.locker)
                 {
-                    this.performSyncUpdate = false;
-                    if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
+                    if (this.performSyncUpdate)
+                    {
+                        this.performSyncUpdate = false;
+                        if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
+                    }
                 }
             }
         }

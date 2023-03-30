@@ -150,8 +150,8 @@ public class Main : MonoBehaviour
 
                 if (this.thermoObject.initialized) Task.Run(() => this.thermoObject.UpdateThermoclineDOMain());
                 if (this.weatherObject.initialized) Task.Run(() => this.weatherObject.UpdateWindWeather());
-                if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (await this.macromapManager.initialized) Task.Run(() => this.macromapManager.UpdateMaps()); }
-                if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (await this.heightManager.initialized) Task.Run(() => this.heightManager.UpdateHeights()); }
+                if (TableProofings.tables[TableProofings.checkTables[3]].imported) { if (this.macromapManager.initialized.IsCompleted) { if (await this.macromapManager.initialized) Task.Run(() => this.macromapManager.UpdateMaps()); } }
+                if (TableProofings.tables[TableProofings.checkTables[4]].imported) { if (this.heightManager.initialized.IsCompleted) { if (await this.heightManager.initialized) Task.Run(() => this.heightManager.UpdateHeights()); } }
             }
             else this.lowResTimer += Time.deltaTime;
         }

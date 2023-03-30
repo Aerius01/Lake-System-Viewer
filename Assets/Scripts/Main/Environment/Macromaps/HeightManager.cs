@@ -117,24 +117,27 @@ public class HeightManager : MonoBehaviour
 
     private async void Update()
     {
-        if (await this.initialized)
+        if (this.initialized.IsCompleted)
         {
-            // Constantly check whether to enable or disable interactability
-            // The macroheights toggle should only be enabled if MacromapManager is not updating, hence the lock
-            if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (!this.toggle.interactable && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
-            else if (this.toggle.interactable == true) { this.DisableMaps(); }
-
-            // Decide whether or not to show the buffering icon
-            if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
-            else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
-
-            // Unity is demanding this be executed from the main thread, hence the workaround
-            lock(HeightManager.locker)
+            if (await this.initialized)
             {
-                if (this.performSyncUpdate)
+                // Constantly check whether to enable or disable interactability
+                // The macroheights toggle should only be enabled if MacromapManager is not updating, hence the lock
+                if (!this.beforeFirstTS) { lock(MacromapManager.mapLocker) { if (!this.toggle.interactable && !this.updating && MacromapManager.instance.intensityMap != null && this.currentPacket != null) { this.EnableMaps(); } } }
+                else if (this.toggle.interactable == true) { this.DisableMaps(); }
+
+                // Decide whether or not to show the buffering icon
+                if (this.updating && !this.bufferIcon.activeSelf) this.bufferIcon.SetActive(true);
+                else if (!this.updating && this.bufferIcon.activeSelf) this.bufferIcon.SetActive(false);
+
+                // Unity is demanding this be executed from the main thread, hence the workaround
+                lock(HeightManager.locker)
                 {
-                    this.performSyncUpdate = false;
-                    if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
+                    if (this.performSyncUpdate)
+                    {
+                        this.performSyncUpdate = false;
+                        if (GrassSpawner.instance != null) GrassSpawner.instance.SpawnGrass();
+                    }
                 }
             }
         }

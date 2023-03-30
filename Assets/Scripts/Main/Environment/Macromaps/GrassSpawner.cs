@@ -50,18 +50,21 @@ public class GrassSpawner: MonoBehaviour
                                 {
                                     if (c >= LocalMeshData.cutoffs["minWidth"] && c < LocalMeshData.cutoffs["maxWidth"])
                                     {
-                                        // The model looks very weird if the macrophytes are too short
-                                        if (HeightManager.instance.currentPacket.heightArray[c, r] > 0.1f)
+                                        if (r % MeshManager.instance.vertexReductionFactor == 0 && c % MeshManager.instance.vertexReductionFactor == 0)
                                         {
-                                            // Empirical grass spawning roll of the die
-                                            if (MacromapManager.instance.intensityMap[c, r] / 20f >= (float)rand.NextDouble())
+                                            // The model looks very weird if the macrophytes are too short
+                                            if (HeightManager.instance.currentPacket.heightArray[c, r] > 0.1f)
                                             {
-                                                GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
-                                                grass.transform.parent = this.gameObject.transform;
+                                                // Empirical grass spawning roll of the die
+                                                if (MacromapManager.instance.intensityMap[c / MeshManager.instance.vertexReductionFactor, r / MeshManager.instance.vertexReductionFactor] / 20f >= (float)rand.NextDouble())
+                                                {
+                                                    GameObject grass = (Instantiate (this.grassPrefab, new Vector3(c, MeshManager.PointDepth(c, r) * UserSettings.verticalScalingFactor, r), new Quaternion()) as GameObject);
+                                                    grass.transform.parent = this.gameObject.transform;
 
-                                                float scalingFactor = HeightManager.instance.currentPacket.heightArray[c, r] / this.baseExtent * UserSettings.verticalScalingFactor;
-                                                grass.transform.localScale = new Vector3(5f, scalingFactor, 5f);
-                                                this.currentPrefabs.Add(grass);
+                                                    float scalingFactor = HeightManager.instance.currentPacket.heightArray[c, r] / this.baseExtent * UserSettings.verticalScalingFactor;
+                                                    grass.transform.localScale = new Vector3(5f, scalingFactor, 5f);
+                                                    this.currentPrefabs.Add(grass);
+                                                }
                                             }
                                         }
                                     }

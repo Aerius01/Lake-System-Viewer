@@ -11,9 +11,10 @@ public class MeshManager : MonoBehaviour
     private Mesh mesh;
     private int[] triangles;
     private Color[] colors;
-    private Vector3[] vertices;
+    private Vector3[] allVertices, reducedVertices;
     private Vector2[] uv;
     private int resolution;
+    public int reducedResolution { get; private set; }
     private float depthOffset = 0.2f;
     public GameObject waterObject;
 
@@ -30,6 +31,8 @@ public class MeshManager : MonoBehaviour
     [SerializeField] private GradientPicker gradientPicker;
     [SerializeField] private ColorPickerImported colorPicker;
 
+    public int vertexReductionFactor {get; private set; }
+
     private static MeshManager _instance;
     [HideInInspector]
     public static MeshManager instance {get { return _instance; } set {_instance = value; }}
@@ -40,7 +43,9 @@ public class MeshManager : MonoBehaviour
         if (_instance != null && _instance != this) { Destroy(this.gameObject); }
         else { _instance = this; }
 
-        weightSlider.normalizedValue = 0.07f;
+        this.weightSlider.normalizedValue = 0.07f;
+        this.vertexReductionFactor = 2;
+
         this.initialized = Task.Run(() => this.ImportMap());
     }
 
@@ -100,7 +105,6 @@ public class MeshManager : MonoBehaviour
                 this.colorPicker.Woke();
                 GradientPicker.Create(this.gradient, GradientFinished); 
 
-                // TerrainManager.instance.SetUpTerrain();
                 return true;
             }
             return false;
@@ -127,15 +131,18 @@ public class MeshManager : MonoBehaviour
     {
         // the vertices and the intensity color map are both in mesh coordinates
         // both are also already oriented to the bottom left corner
-        return MeshManager.instance.vertices[y * LocalMeshData.resolution + x].y;
+        return MeshManager.instance.allVertices[y * LocalMeshData.resolution + x].y;
     }
 
     private void CreateShape()
     {
         int totalVertices = resolution * resolution;
-        int totalQuads = (resolution - 1) * (resolution - 1);
+        this.allVertices = new Vector3[totalVertices];
 
-        vertices = new Vector3[totalVertices];
+        this.reducedResolution = ((resolution - 1)/this.vertexReductionFactor + 1);
+        int reducedVerticesQ = this.reducedResolution * this.reducedResolution;
+        int reducedQuads = (this.reducedResolution - 1) * (this.reducedResolution - 1);
+        this.reducedVertices = new Vector3[reducedVerticesQ];
 
         for (int r = 0; r < resolution; r++)
         {
@@ -149,29 +156,62 @@ public class MeshManager : MonoBehaviour
                         if (depthVal != 0f)
                         {
                             // Create list as though reading from bottom left to right and then up (to invert it)
-                            vertices[(resolution - 1 - r) * resolution + c] = new Vector3(
+                            // ALL VERTICES
+                            this.allVertices[(resolution - 1 - r) * resolution + c] = new Vector3(
                                 resolution - (resolution - r),
                                 depthVal - depthOffset,
                                 resolution - (resolution - c)
                             );
+
+                            // REDUCED VERTICES
+                            if (r % this.vertexReductionFactor == 0 && c % this.vertexReductionFactor == 0)
+                            {
+                                this.reducedVertices[(this.reducedResolution - 1 - r/this.vertexReductionFactor) * this.reducedResolution + c/this.vertexReductionFactor] = new Vector3(
+                                    resolution - (resolution - r),
+                                    depthVal - depthOffset,
+                                    resolution - (resolution - c)
+                                );
+                            }
                         }
                         else
                         {
-                            vertices[(resolution - 1 - r) * resolution + c] = new Vector3(
+                            // ALL VERTICES
+                            this.allVertices[(resolution - 1 - r) * resolution + c] = new Vector3(
                                 resolution - (resolution - r),
                                 0f,
                                 resolution - (resolution - c)
                             );
+
+                            // REDUCED VERTICES
+                            if (r % this.vertexReductionFactor == 0 && c % this.vertexReductionFactor == 0)
+                            {
+                                this.reducedVertices[(this.reducedResolution - 1 - r/this.vertexReductionFactor) * this.reducedResolution + c/this.vertexReductionFactor] = new Vector3(
+                                    resolution - (resolution - r),
+                                    0f,
+                                    resolution - (resolution - c)
+                                );
+                            }
                         }
                     }
                     // Outside of meaningful resolution
                     else
                     {
-                        vertices[(resolution - 1 - r) * resolution + c] = new Vector3(
+                        // ALL VERTICES
+                        this.allVertices[(resolution - 1 - r) * resolution + c] = new Vector3(
                             resolution - (resolution - r),
                             0f,
                             resolution - (resolution - c)
                         );
+
+                        // REDUCED VERTICES
+                        if (r % this.vertexReductionFactor == 0 && c % this.vertexReductionFactor == 0)
+                        {
+                            this.reducedVertices[(this.reducedResolution - 1 - r/this.vertexReductionFactor) * this.reducedResolution + c/this.vertexReductionFactor] = new Vector3(
+                                resolution - (resolution - r),
+                                0f,
+                                resolution - (resolution - c)
+                            );
+                        }
                     }
                 }
             }
@@ -180,49 +220,70 @@ public class MeshManager : MonoBehaviour
                 // Outside of meaningful resolution
                 for (int c = 0; c < resolution; c++) 
                 {
-                    vertices[(resolution - 1 - r) * resolution + c] = new Vector3(
+                    // ALL VERTICES
+                    this.allVertices[(resolution - 1 - r) * resolution + c] = new Vector3(
                         resolution - (resolution - r),
                         0f,
                         resolution - (resolution - c)
                     );
+
+                    // REDUCED VERTICES
+                    if (r % this.vertexReductionFactor == 0 && c % this.vertexReductionFactor == 0)
+                    {
+                        this.reducedVertices[(this.reducedResolution - 1 - r/this.vertexReductionFactor) * this.reducedResolution + c/this.vertexReductionFactor] = new Vector3(
+                            resolution - (resolution - r),
+                            0f,
+                            resolution - (resolution - c)
+                        );
+                    }
                 }
             }
         }
 
         // Set the UVs & colors
-        uv = new Vector2[totalVertices];
-        this.colors = new Color[totalVertices];
+        uv = new Vector2[reducedVerticesQ];
+        this.colors = new Color[reducedVerticesQ];
 
-		for (int i = 0, y = 0; y < resolution; y++) {
-			for (int x = 0; x < resolution; x++, i++) {
-				uv[i] = new Vector2((float)x / resolution, (float)y / resolution);
+		for (int i = 0, y = 0; y < this.reducedResolution; y++) 
+        {
+			for (int x = 0; x < this.reducedResolution; x++, i++) 
+            {
+                uv[i] = new Vector2((float)x / this.reducedResolution, (float)y / this.reducedResolution);
 			}
 		}
 
         UserSettings.showContours = true; // Also executes EvaluateContours()
 
-        triangles = new int [totalQuads * 6];
-        for (int vert = 0, tris = 0, z = 0; z < resolution - 1; z++)
+        triangles = new int [reducedQuads * 6];
+        for (int vert = 0, tris = 0, r = 0; r < this.reducedResolution - 1; r++)
         {
-            for (int x = 0; x < resolution - 1; x++)
+            for (int c = 0; c < this.reducedResolution - 1; c++)
             {
-                triangles[tris + 0] = vert + resolution - 1;
-                triangles[tris + 1] = vert + resolution;
-                triangles[tris + 2] = vert;
-                triangles[tris + 3] = vert;
-                triangles[tris + 4] = vert + resolution;
+                // triangles[tris + 0] = vert + resolution / this.vertexReductionFactor - 1;
+                // triangles[tris + 1] = vert + resolution / this.vertexReductionFactor;
+                // triangles[tris + 2] = vert;
+                // triangles[tris + 3] = vert;
+                // triangles[tris + 4] = vert + resolution / this.vertexReductionFactor;
+                // triangles[tris + 5] = vert + 1;
+
+                triangles[tris + 0] = vert;
+                triangles[tris + 1] = vert + this.reducedResolution;
+                triangles[tris + 2] = vert + 1;
+                triangles[tris + 3] = vert + this.reducedResolution;
+                triangles[tris + 4] = vert + this.reducedResolution + 1;
                 triangles[tris + 5] = vert + 1;
 
                 vert++;
                 tris+=6;
             }
+            vert++;
         }
     }
 
     void UpdateMesh()
     {
         mesh.Clear();
-        mesh.vertices = vertices;
+        mesh.vertices = this.reducedVertices;
         mesh.colors = this.colors;
         mesh.triangles = triangles;
         mesh.uv = uv;
@@ -237,11 +298,11 @@ public class MeshManager : MonoBehaviour
         float[,] intensityMapSnapshot = null;
         if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
 
-        for (int i = 0, y = 0; y < resolution; y++)
+        for (int i = 0, y = 0; y < this.reducedResolution; y++)
         {
-            for (int x = 0; x < resolution; x++, i++)
+            for (int x = 0; x < this.reducedResolution; x++, i++)
             {
-                this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y));
+                this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, this.reducedVertices[i].y));
 
                 // Apply macrophyte color mix
                 if (UserSettings.macrophyteMaps && intensityMapSnapshot != null)
@@ -261,11 +322,11 @@ public class MeshManager : MonoBehaviour
             float[,] intensityMapSnapshot = null;
             if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
 
-            for (int i = 0, y = 0; y < resolution; y++)
+            for (int i = 0, y = 0; y < this.reducedResolution; y++)
             { 
-                for (int x = 0; x < resolution; x++, i++)
+                for (int x = 0; x < this.reducedResolution; x++, i++)
                 {
-                    this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, vertices[i].y)); 
+                    this.colors[i] = this.gradient.Evaluate(Mathf.InverseLerp(LocalMeshData.maxDepth, LocalMeshData.minDepth, this.reducedVertices[i].y)); 
 
                     // Apply macrophyte color mix
                     if (UserSettings.macrophyteMaps && intensityMapSnapshot != null)
@@ -294,15 +355,15 @@ public class MeshManager : MonoBehaviour
             if (UserSettings.macrophyteMaps) lock (MacromapManager.mapLocker) { intensityMapSnapshot = (float[,])MacromapManager.instance.intensityMap.Clone(); }
 
             // Apply based on depths
-            for (int i = 0, y = 0; y < this.resolution; y++)
+            for (int i = 0, y = 0; y < this.reducedResolution; y++)
             {
-                for (int x = 0; x < this.resolution; x++, i++)
+                for (int x = 0; x < this.reducedResolution; x++, i++)
                 {
                     bool colorApplied = false;
                     int counter = 0;
                     foreach((float, float) bounds in this.contourBoundaries)
                     {
-                        if (this.vertices[i].y >= bounds.Item1 && this.vertices[i].y <= bounds.Item2)
+                        if (this.reducedVertices[i].y >= bounds.Item1 && this.reducedVertices[i].y <= bounds.Item2)
                         {
                             colorApplied = true;
                             this.colors[i] = contourColors[counter];
