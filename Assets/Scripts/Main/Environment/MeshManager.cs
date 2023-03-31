@@ -44,7 +44,7 @@ public class MeshManager : MonoBehaviour
         else { _instance = this; }
 
         this.weightSlider.normalizedValue = 0.07f;
-        this.vertexReductionFactor = 2;
+        this.vertexReductionFactor = 2; // needs to be 1 (no reduction), or a power of 2
 
         this.initialized = Task.Run(() => this.ImportMap());
     }

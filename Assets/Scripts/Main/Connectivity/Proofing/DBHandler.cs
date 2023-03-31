@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using Npgsql;
 using System.Data;
 using TMPro;
+using System.Globalization;
 
 public class DBHandler : MonoBehaviour
 {
@@ -22,6 +23,8 @@ public class DBHandler : MonoBehaviour
 
     private void Awake()
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CreateSpecificCulture("en-US");
+
         this.hostInput = menuPanel.transform.Find("Information").transform.Find("Host").transform.Find("Input").GetComponent<TMP_InputField>();
         this.usernameInput = menuPanel.transform.Find("Information").transform.Find("Username").transform.Find("Input").GetComponent<TMP_InputField>();
         this.passwordInput = menuPanel.transform.Find("Information").transform.Find("Password").transform.Find("Input").GetComponent<TMP_InputField>();

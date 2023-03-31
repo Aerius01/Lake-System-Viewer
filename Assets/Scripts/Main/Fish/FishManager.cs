@@ -73,8 +73,8 @@ public class FishManager
 
         listOfKeys.Sort();
 
-        // Set so that there are 30 database queries running in parallel regardless as to number of fish
-        int chunkSize = (int)Mathf.Ceil(listOfKeys.Count / 30);
+        // Set so that there are 8 database queries running in parallel regardless as to number of fish
+        int chunkSize = (int)Mathf.Ceil(listOfKeys.Count / 8);
         List<List<int>> partialKeyLists = Tools.ChunkList(listOfKeys, chunkSize < 1 ? 1 : chunkSize);
         
         // Break the list into chunks for batch SQL queries, and then parallelize processing

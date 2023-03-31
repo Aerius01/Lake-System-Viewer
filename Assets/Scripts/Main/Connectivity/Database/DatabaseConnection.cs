@@ -93,7 +93,7 @@ public class DatabaseConnection
         // Parallelize forward queries
         if (DatabaseConnection.forwardBatch.Any())
         {
-            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 30);
+            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.forwardBatch.Count / 8);
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container
@@ -119,7 +119,7 @@ public class DatabaseConnection
         // Parallelize double-sided queries
         if (DatabaseConnection.doubleSidedBatch.Any())
         {
-            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 30);
+            int chunkSize = (int)Mathf.Ceil(DatabaseConnection.doubleSidedBatch.Count / 8);
             List<List<CommandWrapper>> partialBatchLists = new List<List<CommandWrapper>>();
 
             // Chunk all the queries into batches, and then reset the query collection container

@@ -8,6 +8,7 @@ public class Fish : MonoBehaviour
 {   
     // World position data
     public Vector3 startPos, endPos;
+    private float currentVerticalScale, currentWaterLevel;
     private readonly object locker = new object();
     public Quaternion startOrient, endOrient;
     private float extremeFishAngle = 15f;
@@ -143,21 +144,29 @@ public class Fish : MonoBehaviour
         else lock(this.locker)
         {
             this.currentPacket = this.positionCache.GetCachedBounds(updateTime);
-            if (this.currentPacket != null)
-            {
-                Vector3 workingStartVector = this.currentPacket[0].pos;
-                Vector3 workingEndVector = this.currentPacket[1].pos;
+            this.GenerateStartEnd();
+        }
+    }
 
-                this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
-                        (workingStartVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
-                        LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
-                ;
+    private void GenerateStartEnd()
+    {
+        if (this.currentPacket != null)
+        {
+            Vector3 workingStartVector = this.currentPacket[0].pos;
+            Vector3 workingEndVector = this.currentPacket[1].pos;
 
-                this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
-                        (workingEndVector.z + UserSettings.waterLevel) * UserSettings.verticalScalingFactor, 
-                        LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
-                ;
-            }
+            this.currentVerticalScale = UserSettings.verticalScalingFactor;
+            this.currentWaterLevel = UserSettings.waterLevel;
+
+            this.startPos = new Vector3(workingStartVector.x + LocalMeshData.cutoffs["minWidth"], 
+                    (workingStartVector.z + UserSettings.waterLevel) * this.currentVerticalScale, 
+                    LocalMeshData.cutoffs["maxHeight"] - workingStartVector.y)
+            ;
+
+            this.endPos = new Vector3(workingEndVector.x + LocalMeshData.cutoffs["minWidth"], 
+                    (workingEndVector.z + UserSettings.waterLevel) * this.currentVerticalScale, 
+                    LocalMeshData.cutoffs["maxHeight"] - workingEndVector.y)
+            ;
         }
     }
 
@@ -165,6 +174,11 @@ public class Fish : MonoBehaviour
     {
         float oldDepth = this.currentDepth;
         bool levelFish = false;
+
+        // Make sure the scales haven't changed since the last update
+        if (this.currentVerticalScale != UserSettings.verticalScalingFactor ||
+            this.currentWaterLevel != UserSettings.waterLevel) 
+        { this.GenerateStartEnd(); }
 
         float ratio = Convert.ToSingle((double)(updateTime - this.currentPacket[0].timestamp).Ticks 
             / (double)(this.currentPacket[1].timestamp - this.currentPacket[0].timestamp).Ticks);
