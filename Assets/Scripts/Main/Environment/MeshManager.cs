@@ -259,13 +259,6 @@ public class MeshManager : MonoBehaviour
         {
             for (int c = 0; c < this.reducedResolution - 1; c++)
             {
-                // triangles[tris + 0] = vert + resolution / this.vertexReductionFactor - 1;
-                // triangles[tris + 1] = vert + resolution / this.vertexReductionFactor;
-                // triangles[tris + 2] = vert;
-                // triangles[tris + 3] = vert;
-                // triangles[tris + 4] = vert + resolution / this.vertexReductionFactor;
-                // triangles[tris + 5] = vert + 1;
-
                 triangles[tris + 0] = vert;
                 triangles[tris + 1] = vert + this.reducedResolution;
                 triangles[tris + 2] = vert + 1;

@@ -17,9 +17,8 @@ public class Main : MonoBehaviour
     [SerializeField] private MacromapManager macromapManager;
     [SerializeField] private HeightManager heightManager;
     [SerializeField] private FishList fishList;
-    [SerializeField] private Species species;
     private bool finishedStartup = false;
-    private float highResTimer = 0f, lowResTimer = 0f;
+    private float lowResTimer = 0f;
 
     private float latitude = 53f, longitude = 13.58f;
 
@@ -114,7 +113,6 @@ public class Main : MonoBehaviour
         TimeManager.instance.PauseButton();
         this.gameCanvas.SetActive(false); 
         this.fishList.Clear();
-        // filters too ? 
 
         this.sunController.Clear();
         if (TableProofings.tables[TableProofings.checkTables[7]].status) this.thermoObject.Clear();
@@ -136,12 +134,7 @@ public class Main : MonoBehaviour
         if (this.finishedStartup)
         {
             // Update the fish at high resolution
-            if (this.highResTimer >= 0.033f) // 30fps
-            {
-                this.highResTimer = 0f;
-                fishManager.UpdateFish();
-            }
-            else this.highResTimer += Time.deltaTime;
+            fishManager.UpdateFish(); // ~50fps
 
             // Update the environment at a lower resolution
             if (this.lowResTimer >= 1f) // 1fps
