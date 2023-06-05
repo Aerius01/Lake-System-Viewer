@@ -93,8 +93,10 @@ public class MeshManager : MonoBehaviour
                 this.transform.localScale = new Vector3(1f, UserSettings.verticalScalingFactor, 1f);
 
                 // Size & position water
-                Vector3 scale = waterObject.transform.localScale;
-                scale.Set((LocalMeshData.rowCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.x, 1f, (LocalMeshData.columnCount)/waterObject.GetComponent<MeshRenderer>().bounds.size.z);
+                float empiricalRatio = 20.5f / 1025f; // a resolution of 1025 requires 20.5x the scale for the water block
+                Vector3 newScale = new Vector3(resolution * empiricalRatio, 1f, resolution * empiricalRatio);
+                waterObject.transform.localScale = newScale;
+
                 waterObject.transform.position = LocalMeshData.meshCenter;
 
                 // Set the text in the settings menu

@@ -90,9 +90,11 @@ public class Main : MonoBehaviour
                 else this.heightManager.Clear();
             }
 
+            Debug.Log("starting fish");
             // FishManager dependents
             if (await FishManager.initialized)
             {
+                Debug.Log("fish init'd");
                 TableProofings.tables[TableProofings.checkTables[0]].Imported(await FishManager.initialized);
 
                 this.gameCanvas.SetActive(true); // activates FishList and the Categorical/ContinuousFilterHandler Awake() methods, which are dependents on the FishManager

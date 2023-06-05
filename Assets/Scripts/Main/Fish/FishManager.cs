@@ -43,9 +43,48 @@ public class FishManager
         listOfCaptureTypes = new List<string>();
 
         FishManager.initialized = AsyncInitialize(managerObject);
+        // FishManager.initialized = SyncInit(managerObject);
     }
 
     public void Clear() { foreach (int key in FishManager.fishDict.Keys) { FishManager.fishDict[key].Clear(); } }
+
+    private async Task<bool> SyncInit(GameObject managerObject)
+    {
+        List<int> listOfKeys = null;
+        try {
+            listOfKeys = DatabaseConnection.GetFishKeys(); 
+            if (listOfKeys == null) throw new Exception();
+        }
+        catch (Exception) { return false; }
+
+        listOfKeys.Sort();
+        DatabaseConnection DB = new DatabaseConnection();
+        Dictionary<int, FishPacket> packetDict = await DB.GetFishMetadata(listOfKeys);
+
+        // Assemble the fish
+        int counter = -1;
+        foreach (int key in packetDict.Keys)
+        {
+            counter++;
+            if (counter % 10 == 0) { Debug.Log(string.Format("{0}/{1}", counter, packetDict.Keys.Count)); }
+            Fish newFish = managerObject.AddComponent<Fish>() as Fish;
+            fishDict.Add(key, newFish);
+            newFish.CreateFish(packetDict[key], managerObject);
+
+            // Extreme value assessments
+            if (DateTime.Compare(newFish.earliestTime, FishManager.earliestOverallTime) < 0) FishManager.earliestOverallTime = newFish.earliestTime;
+            if (DateTime.Compare(newFish.latestTime, FishManager.latestOverallTime) > 0) FishManager.latestOverallTime = newFish.latestTime;
+            minLength = newFish.length == null ? minLength : (int)newFish.length < minLength ? (int)newFish.length : minLength;
+            maxLength = newFish.length == null ? maxLength : (int)newFish.length > maxLength ? (int)newFish.length : maxLength;
+            minWeight = newFish.weight == null ? minWeight : (int)newFish.weight < minWeight ? (int)newFish.weight : minWeight;
+            maxWeight = newFish.weight == null ? maxWeight : (int)newFish.weight > maxWeight ? (int)newFish.weight : maxWeight;
+            if (!listOfSexes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.male?.ToString() ?? "") ? "Undefined" : (bool)newFish.male ? "Male" : "Female"))) { listOfSexes.Add(string.IsNullOrEmpty(newFish.male?.ToString() ?? "") ? "Undefined" : (bool)newFish.male ? "Male" : "Female"); }
+            if (!listOfCaptureTypes.Any(s => s.Contains(string.IsNullOrEmpty(newFish.captureType?.ToString() ?? "") ? "Undefined" : newFish.captureType.ToString()))) { listOfCaptureTypes.Add(string.IsNullOrEmpty(newFish.captureType?.ToString() ?? "") ? "Undefined" : newFish.captureType.ToString()); }
+        }
+
+        TimeManager.instance.SetBoundingDates(FishManager.earliestOverallTime, FishManager.latestOverallTime);
+        return true;
+    }
 
     private Task<bool> AsyncInitialize(GameObject managerObject)
     {
