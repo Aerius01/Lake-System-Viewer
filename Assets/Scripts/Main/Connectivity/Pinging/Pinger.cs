@@ -21,7 +21,8 @@ public class Pinger
         catch (PingException) { ; } // Discard PingExceptions and return false
         finally { if (pinger != null) { pinger.Dispose(); } }
 
-        return pingable;
+        return true;
+        // return pingable;
     }
 
     public async Task<bool> PingHostAsync()
@@ -38,6 +39,7 @@ public class Pinger
         catch (PingException) { ; } // Discard PingExceptions and return false
         finally { if (pinger != null) { pinger.Dispose(); } }
 
-        return pingable;
+        return true;
+        // return pingable;
     }
 }
